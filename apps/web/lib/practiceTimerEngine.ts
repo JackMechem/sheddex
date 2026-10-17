@@ -1,6 +1,7 @@
 import { stepAt } from "@/lib/practiceTimer";
 import type { PracticeSession, RunSegment } from "@/lib/practiceTimer";
 import { playNote } from "@/lib/tones";
+import type { PendingTimerEntry } from "@/lib/practiceLog";
 
 export type EngineState = {
   /** A snapshot of the session being run, not a live reference — editing or deleting the saved
@@ -40,6 +41,10 @@ export type EngineState = {
 };
 
 const STORAGE_KEY = "jam-practice-timer-running";
+/** Steps run (finished or cut short) waiting to be added to the Practice Log — it takes them
+    (`takePendingLogEntries`) when it's open, so time is logged even if it wasn't open at the time. */
+const PENDING_KEY = "jam-practice-log-pending";
+export const PENDING_EVENT = "practice-log-pending";
 const ALARM_REPEAT_MS = 1500;
 
 let state: EngineState | null = null;
@@ -58,6 +63,48 @@ function persist() {
     else window.localStorage.removeItem(STORAGE_KEY);
   } catch {
     // storage unavailable
+  }
+}
+
+/** Records the current step for the Practice Log: `done` when its time ran out, otherwise how long
+    it ran before being skipped or stopped. Breaks aren't practice, so they're left out. */
+function recordStep(done: boolean) {
+  if (!state || state.current.isBreak) return;
+  const elapsed = state.paused
+    ? state.durationMs - (state.remainingMsAtPause ?? state.durationMs)
+    : Math.min(state.durationMs, Date.now() - state.startedAt);
+  const ms = done ? state.durationMs : Math.max(0, elapsed);
+  const session = state.session;
+  const entry: PendingTimerEntry = {
+    at: Date.now(),
+    ms,
+    done,
+    session: session.name || "Practice Timer",
+    title: state.current.title,
+    segmentId: session.type === "custom" ? (session.segments[state.index]?.id ?? "") : "pomodoro",
+    ...(session.type === "custom" && session.link ? { link: session.link } : {}),
+  };
+  try {
+    const raw = window.localStorage.getItem(PENDING_KEY);
+    const list = raw ? (JSON.parse(raw) as PendingTimerEntry[]) : [];
+    list.push(entry);
+    window.localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(-500)));
+    window.dispatchEvent(new Event(PENDING_EVENT));
+  } catch {
+    // storage unavailable — the step just isn't logged
+  }
+}
+
+/** Takes (and clears) the steps waiting to be logged. */
+export function takePendingLogEntries(): PendingTimerEntry[] {
+  try {
+    const raw = window.localStorage.getItem(PENDING_KEY);
+    if (!raw) return [];
+    window.localStorage.removeItem(PENDING_KEY);
+    const list = JSON.parse(raw) as unknown;
+    return Array.isArray(list) ? (list as PendingTimerEntry[]) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -112,7 +159,7 @@ function loadStep(
   stopAlarmSound();
   const current = stepAt(session, index);
   if (!current) {
-    stop();
+    endRun();
     return;
   }
   const next = stepAt(session, index + 1);
@@ -150,6 +197,7 @@ function enterAlarm() {
 
 function advance() {
   if (!state) return;
+  recordStep(true);
   if (state.alarmMode) {
     enterAlarm();
     return;
@@ -186,12 +234,16 @@ function ensureInitialized() {
         // here on this same step rather than silently moving past it; that's the whole point of
         // alarm mode. No sound on restore, same autoplay-would-likely-be-blocked reasoning as the
         // non-alarm-mode branch below.
-        state = { ...saved, current, next: stepAt(saved.session, saved.index + 1), alarming: true };
+        state = { ...saved, current, next: stepAt(saved.session, saved.index + 1) };
+        if (!saved.alarming) recordStep(true);
+        state = { ...state, alarming: true };
       } else {
         // Enough real time passed while the tab was closed that this step is already over — move
         // on to the next one, starting fresh, rather than trying to simulate every step that
         // might have silently elapsed in between (could be a lot, for a long-closed tab and a
         // short segment) or a chime firing the instant the page loads.
+        state = { ...saved, current, next: stepAt(saved.session, saved.index + 1) };
+        recordStep(true);
         loadStep(
           saved.session,
           saved.index + 1,
@@ -269,6 +321,8 @@ export function resume() {
     any repeating alarm sound first. */
 export function skip() {
   if (!state) return;
+  // While alarming, the step already counted as done when its time ran out.
+  if (!state.alarming) recordStep(false);
   loadStep(
     state.session,
     state.index + 1,
@@ -282,6 +336,11 @@ export function skip() {
 
 /** Ends the run entirely. */
 export function stop() {
+  if (state && !state.alarming) recordStep(false);
+  endRun();
+}
+
+function endRun() {
   clearScheduled();
   stopAlarmSound();
   state = null;

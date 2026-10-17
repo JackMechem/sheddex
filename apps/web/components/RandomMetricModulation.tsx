@@ -462,7 +462,7 @@ export default function RandomMetricModulation() {
 
         {running && nextPreview && (
           <div className="flex flex-col items-center gap-1 rounded-2xl bg-surface px-6 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <span className="text-xs font-semibold text-muted">
               Next modulation
             </span>
             <span className="text-3xl font-bold tabular-nums text-accent">

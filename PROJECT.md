@@ -2648,6 +2648,111 @@ Drums kit Bass Genius uses, no other instruments, playing 17 styles, written out
   playback with every new sample loading (no 4xx), notes lit while playing, switching style mid-play,
   phone width + options sheet, no console errors. **Not heard.** Mobile: listed, placeholder screen.
 
+### Syncopation (2026-10-17, web)
+
+`/syncopation` (Drummers; `components/Syncopation.tsx`): random 16-bar snare reading exercises,
+four 4-bar lines, over a steady part underneath, written out (VexFlow, `components/syncopation/
+SyncopationScore.tsx`) and played on the Drum Generator's kit. Each beat is a figure drawn from the
+rhythm families switched on — quarters (plus half notes/rests on beats 1 and 3), eighths, sixteenths
+(incl. dotted eighth/sixteenth), eighth-note triplets — with a Rests switch. Lines: a new bar every
+bar (the last bar ends on a quarter rest), a 2-bar pattern ×2, or one bar ×4. Underneath: bass drum
+on every beat, bass drum in unison with the snare, hi-hat foot on 2 & 4 or every beat, bass drum +
+hi-hat foot, or nothing. Playback: hear the snare part (off = read against the feet), hi-hat click,
+count-in, and after the 16 bars go on to a new exercise / play it again / stop. Generator is pure
+and seeded (`packages/core/syncopation.ts`, shim `lib/syncopation.ts`; 12 ticks a beat); engine
+`lib/syncopationEngine.ts` schedules a bar at a time so option changes land on the next bar.
+**Played on: Snare / Snare and bass drum** (setting `split`): each note of the pattern goes to the
+snare or the bass drum at random (`SyncopationBar.kicks`, seeded; never both at once, at most three
+in a row on one, both in any bar of 2+ notes; a repeated bar keeps its choice). Underneath also
+offers a hand hi-hat on eighths or every beat (`hhEighths`/`hhQuarters`; on a triplet beat the
+"and" moves to the last triplet); with the split the feet options are hidden and fall back to
+hi-hat eighths (`effectiveOstinato`). With a hand hi-hat the hi-hat is written stems up above the
+staff and the pattern stems down below it. Settings key `jam-practice-syncopation`. Don't name the source these exercises were modelled on
+anywhere in the site or code (Jack's request — it's still under copyright). Verified: a script over
+every family/rests/line combination (every bar fills 48 ticks, only enabled families, no rests when
+off), `tsc`, `eslint`, `next build`, and in nix Chromium (all ostinatos, line modes, playback
+lighting the notes, 390 px, no errors). **Not heard.** Mobile: listed (placeholder screen).
+
+### Practice Log (2026-10-17, web)
+
+`/practice-log` (Practice; `components/PracticeLog.tsx`, `components/practicelog/*`): a practice
+calendar. Data is pure in `packages/core/practiceLog.ts` (shim `lib/practiceLog.ts`) and stored as
+one synced object, key `jam-practice-practice-log` (`lib/usePracticeLog.ts`): `{routines, days}`.
+- **Routines**: name, color, description, optional start time ("HH:MM"), a repeat rule
+  (`once`/`daily`/`weekly` with weekdays/`monthly` on the start's day, every N, start, optional
+  end — `occursOn`), tasks (title, decimal minutes, optional own time, notes, attachments) and
+  attachments. A task without a time follows the one before it (`scheduleTasks`). Editor at
+  `/practice-log/routine/edit?id=` (or `?date=` for a new one), page at `/practice-log/routine?id=`
+  (schedule, tasks, coming up, every recording of it grouped by day, history), list at
+  `/practice-log/routines`.
+- **Days** (`YYYY-MM-DD`, local): per routine an `Occurrence` (checked task ids, `spentMs` per task,
+  notes, skipped, a start time just for that day), `added` (routines put on just that day), timer
+  `sessions`, `extraMinutes` logged by hand, notes, attachments. `pruneDay` drops empty days.
+  Minutes practiced (`minutesOn`) = timer time + planned minutes of tasks checked by hand +
+  sessions + extra. Streak = consecutive days with any.
+- **Calendar**: Month (chips per routine, ✓ when done, minutes, mic count; dots on phones) and
+  Week (time grid with each routine's back-to-back tasks as a block, overlaps side by side, an
+  "Any time" row, now line). The day panel: routine cards (checklist with times, Start /
+  "Continue from…", time one task, ⋮: change the time for the day, skip, check all, remove), Practice
+  Timer sessions, other practice ± 5 min, notes, attachments, recordings. Nothing date-dependent
+  renders on the server (the visitor's "today" isn't known there).
+- **Timer**: a routine runs on the Practice Timer's own engine (`useRoutineTimer` → `start()` with a
+  custom session whose segment ids are task ids and `link: {routineId, date}` — new optional field
+  on `PracticeSession`'s custom variant), so the sidebar widget, alarm mode and reload survival all
+  apply. `lib/practiceTimerEngine.ts` now records every non-break step for the log
+  (`recordStep`: done when its time ran out, else the time it ran before Skip/Stop) in localStorage
+  `jam-practice-log-pending`; the Practice Log takes them (`takePendingLogEntries`,
+  `applyTimerEntries`) once its data has loaded — routine steps check off their task, plain
+  Practice Timer sessions become day `sessions`. So time is logged even if the log wasn't open, but
+  lands when it's next opened. Under 5 s cut short is ignored. Sound settings moved to
+  `lib/practiceTimerSound.ts` (shared). `PracticeTimerRing` gained `size="sm"`.
+- **Recordings**: `recordings.logDate`/`routineId` (+ indexes `by_user_logDate`,
+  `by_user_routine`; queries `listForLogRange`, `listForRoutine`; `create`/`update` accept them —
+  **dev deployed only**). `RecordClip` records with the Recorder's engine (auto gain, no
+  metronome) and opens `SaveTakeDialog`, which gained `log` (an "Attached to" choice: the day or one
+  of its routines). Signed in only, like the Recorder.
+- **Attachments** (`Attachments.tsx`): tunes (either list), setlists, chord charts, tools; stored
+  with a label so a deleted item still shows (struck through). On days, routines and tasks.
+- `useSyncedSettings` (web) now returns a third value, `ready` (auth settled and the real value
+  loaded), used so the log never writes timer entries over defaults.
+Verified: a logic script (repeat rules incl. biweekly, every-3-days with an end, monthly on the
+31st, DST, task schedule, timer entries, minutes, streak), `tsc` (web, mobile), `eslint`,
+`next build`, and in nix Chromium signed out: creating a routine in the editor, the month/week
+calendars, checking a task, running the routine (a 3 s task checked itself off when its time ran
+out; the sidebar widget showed it), a pending Practice Timer session landing on the day, the
+attach picker, notes, the routine/routines pages, dark mode, 390 px with no overflow; no console
+errors. **Not verified:** recording/saving a clip and the recordings lists (need a signed-in
+account), and anything on the mobile app (listed there, placeholder screen).
+
+**Follow-ups (same day):** routines' "Ends" is a Never / On a date switch ("…until you delete it").
+The page is full width on desktop (no max width; the day column grows to 28/32rem at xl/2xl).
+**One-off tasks**: `DayLog.tasks: DayTask[]` (title, minutes, optional time, done, notes,
+`spentMs`, attachments) — quick-add box in the day panel's Tasks card, `TaskDialog` (day, minutes,
+time, notes, attachments; moving to another day), ⋮ (edit / move to the next day / delete), Start
+all or time one on the Practice Timer (`startDayTasks`, link `routineId: DAY_TASKS_ID` = "day",
+handled in `applyTimerEntries`). They count in `minutesOn`/`dayProgress`, show as a gray chip /
+dot in the month view and as blocks (or in "Any time") in the week view. The header's blue button
+is a round **+** with a flyout: Task on <day> / Routine.
+**Motivation** (`Momentum.tsx`, `Celebrations.tsx`): `prefs` in the log object (`dailyGoal`
+minutes, default 30; `sounds`) — a speaker button in the header toggles sounds. Cards: today's goal
+ring (green when met, "x min to go" / "Goal smashed! +y bonus", change the goal ±5, today's task
+bar); streak with a flame (animated once you've practiced today, orange "keep your N-day streak
+alive" nudge when you haven't, best streak — `bestStreak`); this week as bars against a dashed goal
+line (green when the goal was hit, % vs last week); lifetime hours with a bar to the next
+milestone (`HOUR_MILESTONES`). Month cells are tinted by minutes vs the goal (a heat map) with a
+gold star on goal days; the day panel has a progress bar ("All done!" in green). Every check-off
+bursts particles from the checkbox (`burstAt`) and plays the next note up a pentatonic ladder (the
+pluck tone; it climbs with each task done that day); `useCelebrations` diffs the log (so the timer
+checking things off counts too, never on first load) and shows toasts + confetti + a fanfare for a
+routine complete, the daily goal, everything done today, the first practice of the day (streak
+toast; milestones in `STREAK_MILESTONES` get confetti) and hour milestones. CSS in globals.css
+(`log-burst`, `log-check`, `log-toast`, `log-flame`; off under reduced motion). The header line is
+a greeting that reflects the day ("3 tasks left today. Keep going.").
+Verified in nix Chromium at 2000×1300 dark and 390 wide (seeded a week of history): quick-add,
+checking tasks (streak-milestone, routine-complete and goal toasts with confetti), the + flyout,
+the task dialog, week view with a day task, no overflow, no console errors; `tsc`, `eslint`,
+`next build`. Sounds not heard.
+
 ## Tools (sidebar order)
 
 - **Jam Practice** (`components/JamPractice.tsx`) — random tune/tempo/key picker with a

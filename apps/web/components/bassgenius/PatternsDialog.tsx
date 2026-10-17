@@ -53,7 +53,7 @@ export default function PatternsDialog({
       <div role="dialog" aria-label={`Patterns: ${title}`} className="w-full max-w-3xl rounded-2xl bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-accent">Patterns · {playerName}</p>
+            <p className="text-xs font-semibold text-accent">Patterns · {playerName}</p>
             <h2 className="truncate text-2xl font-extrabold tracking-tight">{title}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface hover:bg-surface-hover">

@@ -36,7 +36,7 @@ export default function PracticeTimerAlert() {
     >
       <StopwatchIcon className="h-16 w-16 animate-pulse text-danger" />
       <div className="flex flex-col gap-1.5">
-        <p className="text-sm font-semibold uppercase tracking-widest text-danger">
+        <p className="text-sm font-semibold text-danger">
           Time&apos;s up
         </p>
         <h1 className="break-words text-3xl font-bold sm:text-5xl">{state.current.title}</h1>

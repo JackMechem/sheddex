@@ -149,8 +149,8 @@ export function LevelComplete({
             transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }, { scale: rise.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
           }}
         >
-          <Text className="font-inter-bold text-center text-xs font-bold tracking-wide" style={{ color: colors.muted }}>
-            LEVEL {result.levelNumber} · {result.levelTitle.toUpperCase()}
+          <Text className="font-inter-bold text-center text-xs font-bold" style={{ color: colors.muted }}>
+            Level {result.levelNumber} · {result.levelTitle}
           </Text>
 
           {passed ? (

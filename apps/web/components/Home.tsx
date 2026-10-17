@@ -408,7 +408,7 @@ export default function Home() {
               <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
                 {groupByCategory(TOOLS).map(({ category, items }) => (
                   <div key={category} className="min-w-0">
-                    <h3 className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-muted">{category}</h3>
+                    <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted">{category}</h3>
                     <ToolRows items={items} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
                   </div>
                 ))}

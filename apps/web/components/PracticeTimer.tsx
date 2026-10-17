@@ -41,17 +41,11 @@ import {
   subscribe,
 } from "@/lib/practiceTimerEngine";
 import { SessionInput, usePracticeSessions } from "@/lib/usePracticeSessions";
-import { DEFAULT_TONE_ID, TONES } from "@/lib/tones";
+import { TONES } from "@/lib/tones";
+import { DEFAULT_SOUND_SETTINGS, SOUND_SETTINGS_KEY } from "@/lib/practiceTimerSound";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
 const PANEL_IDS = ["practice-timer-editor", "practice-timer-sound"];
-const SOUND_SETTINGS_KEY = "practice-timer-sound-settings";
-const DEFAULT_SOUND_SETTINGS = {
-  soundEnabled: true,
-  toneId: DEFAULT_TONE_ID,
-  alarmMode: false,
-  fullScreenAlert: false,
-};
 const TONE_OPTIONS = TONES.map((t) => ({ value: t.id, label: t.label }));
 
 /** The session editor's own working copy — always keeps both `segments` and `pomodoro` around
@@ -345,7 +339,7 @@ export default function PracticeTimer() {
       {engineState ? (
         <div className="flex flex-col items-center gap-5">
           <p
-            className={`text-sm font-medium uppercase tracking-widest ${
+            className={`text-sm font-medium ${
               engineState.alarming ? "animate-pulse text-danger" : "text-muted"
             }`}
           >

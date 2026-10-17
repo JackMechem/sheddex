@@ -870,7 +870,7 @@ export default function GuessTheProgression() {
             <Hint>Which progressions can be picked for a round. At least one must stay selected.</Hint>
             {PROGRESSION_CATEGORIES.map((category) => (
               <div key={category} className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted">{category}</span>
+                <span className="text-xs font-semibold text-muted">{category}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
                     const selected = settings.progressionIds.includes(p.id);
@@ -1065,7 +1065,7 @@ export default function GuessTheProgression() {
       <div className="flex w-full flex-col items-center gap-3">
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Next progression in</span>
+            <span className="text-xs font-semibold text-muted">Next progression in</span>
             <span className="text-3xl font-bold tabular-nums sm:text-4xl" style={{ color: GRADE_COLOR[status] }}>
               <CountdownLabel active={running} timerRef={noteTimerRef} />
             </span>

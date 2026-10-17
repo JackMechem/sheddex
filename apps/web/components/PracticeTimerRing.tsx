@@ -23,6 +23,7 @@ export default function PracticeTimerRing({
   paused,
   remainingMsAtPause,
   alarming,
+  size = "lg",
 }: {
   startedAt: number;
   durationMs: number;
@@ -33,6 +34,8 @@ export default function PracticeTimerRing({
       down) and pulses it in the danger color instead of ticking, the same "something needs your
       attention" treatment as the rest of the alarm UI. */
   alarming?: boolean;
+  /** "sm": a small ring, for a running routine on the Practice Log. */
+  size?: "lg" | "sm";
 }) {
   const circleRef = useRef<SVGCircleElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -65,7 +68,7 @@ export default function PracticeTimerRing({
   }, [startedAt, durationMs, paused, remainingMsAtPause, alarming]);
 
   return (
-    <div className="relative flex h-48 w-48 items-center justify-center">
+    <div className={`relative flex shrink-0 items-center justify-center ${size === "sm" ? "h-20 w-20" : "h-48 w-48"}`}>
       <svg
         aria-hidden
         viewBox="0 0 100 100"
@@ -97,7 +100,7 @@ export default function PracticeTimerRing({
       </svg>
       <span
         ref={labelRef}
-        className={`text-4xl font-bold tabular-nums ${alarming ? "text-danger animate-pulse" : ""}`}
+        className={`${size === "sm" ? "text-lg" : "text-4xl"} font-bold tabular-nums ${alarming ? "text-danger animate-pulse" : ""}`}
       />
     </div>
   );

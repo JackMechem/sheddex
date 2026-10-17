@@ -1303,7 +1303,7 @@ export default function NoteTrainer() {
       <div className="flex flex-col items-center gap-2">
         {status && running && listenMode && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <span className="text-xs font-semibold text-muted">
               Next note in
             </span>
             <span

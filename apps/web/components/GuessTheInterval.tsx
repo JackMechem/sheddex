@@ -1057,7 +1057,7 @@ export default function GuessTheInterval() {
         )}
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <span className="text-xs font-semibold text-muted">
               Next interval in
             </span>
             <span

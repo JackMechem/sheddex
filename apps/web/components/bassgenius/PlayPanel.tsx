@@ -50,7 +50,7 @@ export function PanelSection({
 export function Field({ label, note, children }: { label: string; note?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5 text-sm">
-      {label && <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>}
+      {label && <span className="text-xs font-semibold text-muted">{label}</span>}
       {children}
       {note && <span className="text-xs leading-relaxed text-muted">{note}</span>}
     </div>

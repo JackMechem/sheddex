@@ -201,7 +201,7 @@ export default function JamPractice() {
     >
       <div className="flex flex-col items-center gap-3">
         {pick && (
-          <p className="text-sm font-medium uppercase tracking-widest text-muted">Now practicing</p>
+          <p className="text-sm font-medium text-muted">Now practicing</p>
         )}
         <h1 className="break-words text-4xl font-bold sm:text-5xl">
           {pick ? pick.tune.name : "—"}

@@ -34,6 +34,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
     loading: PaneLoading,
   }),
   "/practice-timer": dynamic(() => import("@/components/PracticeTimer"), { loading: PaneLoading }),
+  "/practice-log": dynamic(() => import("@/components/PracticeLog"), { loading: PaneLoading }),
   "/metronome": dynamic(() => import("@/components/Metronome"), { loading: PaneLoading }),
   "/random-metric-modulation": dynamic(() => import("@/components/RandomMetricModulation"), {
     loading: PaneLoading,
@@ -49,6 +50,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
     loading: PaneLoading,
   }),
   "/drum-generator": dynamic(() => import("@/components/DrumGenerator"), { loading: PaneLoading }),
+  "/syncopation": dynamic(() => import("@/components/Syncopation"), { loading: PaneLoading }),
   "/community": dynamic(() => import("@/components/Community"), { loading: PaneLoading }),
   "/account": dynamic(() => import("@/components/AccountPage"), { loading: PaneLoading }),
   // "/privacy", "/terms", and "/credits" aren't here — unlike every page above, those three don't

@@ -749,7 +749,7 @@ function GuessTheProgressionScreen() {
                       <Hint>Which progressions can be picked for a round. At least one must stay selected.</Hint>
                       {PROGRESSION_CATEGORIES.map((category) => (
                         <View key={category} className="gap-1.5">
-                          {label(category.toUpperCase())}
+                          {label(category)}
                           <View className="flex-row flex-wrap gap-1.5">
                             {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
                               const selected = settings.progressionIds.includes(p.id);

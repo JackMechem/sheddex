@@ -68,7 +68,7 @@ export default function PhraseDialog({
       <div role="dialog" aria-label={`How ${barsLabel.toLowerCase()} were made`} className="w-full max-w-3xl rounded-2xl bg-background p-4 text-left shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-accent">{barsLabel} · how it was made</p>
+            <p className="text-xs font-semibold text-accent">{barsLabel} · how it was made</p>
             <h2 className="text-xl font-extrabold tracking-tight sm:text-2xl">
               {src
                 ? `From ${src.title}, ${srcBars.from === srcBars.to ? `bar ${srcBars.from}` : `bars ${srcBars.from}–${srcBars.to}`}`

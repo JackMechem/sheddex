@@ -82,6 +82,13 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Ear Training",
   },
   {
+    href: "/practice-log",
+    label: "Practice Log",
+    description:
+      "A practice calendar: repeating routines with tasks to check off and times for each, run on the Practice Timer, with notes, recordings and tunes, setlists and charts attached to each day.",
+    category: "Practice",
+  },
+  {
     href: "/practice-timer",
     label: "Practice Timer",
     description:
@@ -137,6 +144,13 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     label: "Drum Generator",
     description:
       "A drummer to play along with — jazz and Latin American grooves from Brazil, Cuba, the Caribbean and Argentina on a real kit, written out as it plays.",
+    category: "Drummers",
+  },
+  {
+    href: "/syncopation",
+    label: "Syncopation",
+    description:
+      "Random 16-bar snare reading exercises — quarters, eighths, sixteenths and triplets — over a steady bass drum or hi-hat, written out and played.",
     category: "Drummers",
   },
   {

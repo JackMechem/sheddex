@@ -286,11 +286,18 @@ export default defineSchema({
     /** How it plays back over its tune's song (`tuneSongs`): each side's volume (0..1) and where
         in the song the take starts, in seconds (negative = the take starts before the song). */
     mix: v.optional(v.object({ songVolume: v.number(), takeVolume: v.number(), offsetSec: v.number() })),
+    /** The Practice Log day it belongs to (YYYY-MM-DD, the recorder's local day), and optionally
+        the routine on that day — routines live in the `jam-practice-practice-log` synced blob,
+        so this is a plain string id like `tuneId`. */
+    logDate: v.optional(v.string()),
+    routineId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_tune", ["userId", "tuneId"]),
+    .index("by_user_tune", ["userId", "tuneId"])
+    .index("by_user_logDate", ["userId", "logDate"])
+    .index("by_user_routine", ["userId", "routineId"]),
 
   /** A tune's song — an audio file of the actual recording, uploaded by the owner to play
       behind their takes of that tune (and along with them while recording). One per tune; the

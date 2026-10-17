@@ -400,7 +400,7 @@ export default function DrumGenerator() {
         <LevelRow label="Drums" value={settings.volume} onChange={(v) => update({ volume: v })} />
         <LevelRow label="Room" value={settings.room} onChange={(v) => update({ room: v })} />
         <div className="flex items-baseline justify-between border-t border-foreground/10 pt-3">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Kit</span>
+          <span className="text-xs font-semibold text-muted">Kit</span>
           {Object.keys(settings.parts).length > 0 && (
             <button type="button" onClick={() => update({ parts: {} })} className="text-xs font-semibold text-accent hover:underline">
               Reset kit

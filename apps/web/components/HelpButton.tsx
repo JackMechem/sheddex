@@ -59,7 +59,7 @@ export default function HelpButton({ title, groups }: { title: string; groups: H
             <div className="flex flex-col gap-6 overflow-y-auto px-5 pb-6 pt-4 sm:px-6">
               {groups.map((group) => (
                 <section key={group.heading} className="flex flex-col gap-2">
-                  <h3 className="text-sm font-semibold uppercase tracking-widest text-muted">
+                  <h3 className="text-sm font-semibold text-muted">
                     {group.heading}
                   </h3>
                   <dl className="flex flex-col">

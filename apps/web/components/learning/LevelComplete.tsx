@@ -114,7 +114,7 @@ export default function LevelComplete({
       )}
 
       <div className="level-rise relative flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-surface p-6 text-center shadow-[0_24px_60px_-16px_rgba(0,0,0,0.45)]">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+        <p className="text-xs font-semibold text-muted">
           Level {result.levelNumber} · {result.levelTitle}
         </p>
 
@@ -142,7 +142,7 @@ export default function LevelComplete({
             </p>
             {result.firstPass && result.unlocked && (
               <div className="w-full rounded-2xl bg-accent/10 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-accent">Unlocked</p>
+                <p className="text-xs font-semibold text-accent">Unlocked</p>
                 <p className="text-lg font-semibold">
                   Level {result.unlocked.number}: {result.unlocked.title}
                 </p>

@@ -105,6 +105,7 @@ export const FileMusicIcon = mci('file-music-outline');
 export const MicrophoneIcon = mci('microphone');
 export const UnlinkIcon = mci('link-variant-off');
 export const ProgressionIcon = mci('stairs-up');
+export const CalendarCheckIcon = mci('calendar-check-outline');
 
 export function StarIcon({ color, size = 18, filled }: IconProps & { filled?: boolean }) {
   return <MaterialCommunityIcons name={filled ? 'star' : 'star-outline'} size={size} color={color} />;
@@ -125,6 +126,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/guess-the-chord': ChordIcon,
   '/guess-the-progression': ProgressionIcon,
   '/practice-timer': StopwatchIcon,
+  '/practice-log': CalendarCheckIcon,
   '/metronome': MetronomeIcon,
   '/random-metric-modulation': MetricModulationIcon,
   '/tempo-trainer': TempoTrainerIcon,
@@ -135,5 +137,6 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/recorder': RecordIcon,
   '/random-sticking-warmup': DrumIcon,
   '/drum-generator': DrumIcon,
+  '/syncopation': DrumIcon,
   '/community': UsersIcon,
 };

@@ -364,7 +364,7 @@ export default function Tuner() {
         </div>
 
         <div className="pointer-events-auto flex flex-col items-center">
-          <span className="text-[0.65rem] font-medium uppercase tracking-wider text-muted">
+          <span className="text-[0.65rem] font-medium text-muted">
             Octave
           </span>
           <div className="flex items-center gap-3">

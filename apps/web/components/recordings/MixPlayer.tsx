@@ -690,7 +690,7 @@ export default function MixPlayer({
       <div ref={tracksAreaRef} className={full ? "min-h-0 flex-1" : ""}>
       <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] overflow-hidden rounded-xl border border-surface-hover bg-surface sm:grid-cols-[11rem_minmax(0,1fr)]">
         <div className="border-r border-surface-hover">
-          <div className="flex items-center border-b border-surface-hover/60 bg-background px-2 text-[10px] font-semibold uppercase tracking-wide text-muted" style={{ height: RULER_H }}>
+          <div className="flex items-center border-b border-surface-hover/60 bg-background px-2 text-[10px] font-semibold text-muted" style={{ height: RULER_H }}>
             Tracks
           </div>
           <TrackHeader

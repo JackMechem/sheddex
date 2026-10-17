@@ -163,10 +163,14 @@ export function SaveTakeDialog({
   initialMix,
   onSaved,
   onDiscard,
+  log,
 }: {
   blob: Blob;
   durationSec: number;
   initialTuneId: string | null;
+  /** A Practice Log clip: the day it's on, and the routines that day it can be attached to
+      (`routineId` preselects one; null = the day itself). */
+  log?: { date: string; routineId: string | null; routines: { id: string; name: string }[] };
   /** The mix it was recorded with, when the tune's song played along (its line-up measured). */
   initialMix?: RecordingMix | null;
   onSaved: (id: string) => void;
@@ -189,6 +193,7 @@ export function SaveTakeDialog({
   const [error, setError] = useState<string | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [mix, setMix] = useState<RecordingMix>(initialMix ?? DEFAULT_MIX);
+  const [logRoutineId, setLogRoutineId] = useState<string | null>(log?.routineId ?? null);
   const song = useTuneSong(tuneId);
 
   const defaultName = initialTuneId && forTune ? `Take ${forTune.length + 1}` : formatRecordedAt(recordedAt);
@@ -208,6 +213,7 @@ export function SaveTakeDialog({
         mimeType: blob.type || "audio/webm",
         ...(tuneId ? { tuneId } : {}),
         ...(tuneId && (song?.url || initialMix) ? { mix } : {}),
+        ...(log ? { logDate: log.date, ...(logRoutineId ? { routineId: logRoutineId } : {}) } : {}),
       });
       URL.revokeObjectURL(url);
       onSaved(id);
@@ -235,6 +241,24 @@ export function SaveTakeDialog({
           <span className="font-medium text-muted">Name</span>
           <input value={shownName} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent" />
         </label>
+        {log && log.routines.length > 0 && (
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-muted">Attached to</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[{ id: null as string | null, name: "Just the day" }, ...log.routines].map((r) => (
+                <button
+                  key={r.id ?? "day"}
+                  type="button"
+                  onClick={() => setLogRoutineId(r.id)}
+                  aria-pressed={logRoutineId === r.id}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium ${logRoutineId === r.id ? "bg-accent text-accent-foreground" : "bg-background hover:bg-surface-hover"}`}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-muted">Tune</span>
           <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-2">

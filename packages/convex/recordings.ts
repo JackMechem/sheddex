@@ -12,6 +12,8 @@ import { mutation, query, type QueryCtx } from "./_generated/server";
 const MAX_NAME = 120;
 const MAX_NOTES = 20000;
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 const mixValidator = v.object({ songVolume: v.number(), takeVolume: v.number(), offsetSec: v.number() });
 
 function cleanMix(mix: { songVolume: number; takeVolume: number; offsetSec: number }) {
@@ -32,6 +34,8 @@ async function withUrl(ctx: QueryCtx, row: Doc<"recordings">) {
     mimeType: row.mimeType,
     tuneId: row.tuneId ?? null,
     mix: row.mix ?? null,
+    logDate: row.logDate ?? null,
+    routineId: row.routineId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     url: await ctx.storage.getUrl(row.storageId),
@@ -56,6 +60,8 @@ export const create = mutation({
     mimeType: v.string(),
     tuneId: v.optional(v.string()),
     mix: v.optional(mixValidator),
+    logDate: v.optional(v.string()),
+    routineId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -70,6 +76,8 @@ export const create = mutation({
       mimeType: args.mimeType,
       ...(args.tuneId ? { tuneId: args.tuneId } : {}),
       ...(args.mix ? { mix: cleanMix(args.mix) } : {}),
+      ...(args.logDate && DATE_RE.test(args.logDate) ? { logDate: args.logDate } : {}),
+      ...(args.routineId ? { routineId: args.routineId.slice(0, 100) } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -106,6 +114,35 @@ export const listForTune = query({
   },
 });
 
+/** The caller's Practice Log recordings from `from` to `to` (YYYY-MM-DD, inclusive), oldest day first. */
+export const listForLogRange = query({
+  args: { from: v.string(), to: v.string() },
+  handler: async (ctx, { from, to }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const rows = await ctx.db
+      .query("recordings")
+      .withIndex("by_user_logDate", (q) => q.eq("userId", userId).gte("logDate", from).lte("logDate", to))
+      .collect();
+    return Promise.all(rows.map((row) => withUrl(ctx, row)));
+  },
+});
+
+/** Every recording of one Practice Log routine, newest first. */
+export const listForRoutine = query({
+  args: { routineId: v.string() },
+  handler: async (ctx, { routineId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const rows = await ctx.db
+      .query("recordings")
+      .withIndex("by_user_routine", (q) => q.eq("userId", userId).eq("routineId", routineId))
+      .order("desc")
+      .collect();
+    return Promise.all(rows.map((row) => withUrl(ctx, row)));
+  },
+});
+
 export const get = query({
   args: { id: v.id("recordings") },
   handler: async (ctx, { id }) => {
@@ -125,8 +162,10 @@ export const update = mutation({
     notes: v.optional(v.string()),
     tuneId: v.optional(v.union(v.string(), v.null())),
     mix: v.optional(mixValidator),
+    logDate: v.optional(v.union(v.string(), v.null())),
+    routineId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, { id, name, notes, tuneId, mix }) => {
+  handler: async (ctx, { id, name, notes, tuneId, mix, logDate, routineId }) => {
     const userId = await getAuthUserId(ctx);
     const row = await ctx.db.get(id);
     if (!userId || !row || row.userId !== userId) throw new Error("Recording not found.");
@@ -135,6 +174,8 @@ export const update = mutation({
       ...(notes !== undefined ? { notes: notes.slice(0, MAX_NOTES) } : {}),
       ...(tuneId !== undefined ? { tuneId: tuneId ?? undefined } : {}),
       ...(mix ? { mix: cleanMix(mix) } : {}),
+      ...(logDate !== undefined ? { logDate: logDate && DATE_RE.test(logDate) ? logDate : undefined } : {}),
+      ...(routineId !== undefined ? { routineId: routineId ?? undefined } : {}),
       updatedAt: Date.now(),
     });
   },

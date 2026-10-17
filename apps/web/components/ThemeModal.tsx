@@ -174,7 +174,7 @@ export default function ThemeModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold uppercase tracking-widest text-muted">Font</h3>
+            <h3 className="text-sm font-semibold text-muted">Font</h3>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {FONTS.map((font) => {
                 const selected = state.font === font.id;
@@ -202,7 +202,7 @@ export default function ThemeModal({ onClose }: { onClose: () => void }) {
           {isCustom && (
             <section className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-muted">
+                <h3 className="text-sm font-semibold text-muted">
                   Custom colors
                 </h3>
                 <div className="flex items-center gap-2 text-sm">

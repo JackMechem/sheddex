@@ -54,6 +54,16 @@ export function StopwatchIcon({ className }: { className?: string }) {
   );
 }
 
+/** A calendar page with a check — the Practice Log. */
+export function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4M9 15.5l2 2 4-4" />
+    </svg>
+  );
+}
+
 export function MeterIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -565,6 +575,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/guess-the-chord": ChordIcon,
   "/guess-the-progression": ProgressionIcon,
   "/practice-timer": StopwatchIcon,
+  "/practice-log": CalendarIcon,
   "/metronome": MetronomeIcon,
   "/random-metric-modulation": MetricModulationIcon,
   "/tempo-trainer": TempoTrainerIcon,
@@ -575,6 +586,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
   "/drum-generator": DrumIcon,
+  "/syncopation": SyncopationIcon,
   "/community": UsersIcon,
 };
 
@@ -586,6 +598,18 @@ export const NAV_LINKS: (NavLinkInfo & { icon: (props: { className?: string }) =
 
 export function filterLinks(query: string) {
   return filterNavLinks(NAV_LINKS, query);
+}
+
+/** Syncopation: an off-beat figure — an eighth rest, then two beamed notes. */
+export function SyncopationIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 6l3-1-2 4" />
+      <path d="M12 18V5h8v11" />
+      <circle cx="10" cy="18" r="2" />
+      <circle cx="18" cy="16" r="2" />
+    </svg>
+  );
 }
 
 /** A setlist — a numbered list with a note. */

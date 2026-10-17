@@ -28,7 +28,16 @@ export type PomodoroConfig = {
 };
 
 export type PracticeSession =
-  | { id: string; name: string; type: "custom"; segments: Segment[]; updatedAt: number }
+  | {
+      id: string;
+      name: string;
+      type: "custom";
+      segments: Segment[];
+      updatedAt: number;
+      /** Set when this run is a Practice Log routine on a day — each segment's id is then a task's
+          id, and finished steps check those tasks off (`practiceLog.applyTimerEntries`). */
+      link?: { routineId: string; date: string };
+    }
   | { id: string; name: string; type: "pomodoro"; pomodoro: PomodoroConfig; updatedAt: number };
 
 export const DEFAULT_POMODORO: PomodoroConfig = {

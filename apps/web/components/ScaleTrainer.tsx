@@ -1104,7 +1104,7 @@ export default function ScaleTrainer() {
 
             {SCALE_CATEGORIES.map((category) => (
               <div key={category} className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                <span className="text-xs font-semibold text-muted">
                   {category}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -1436,7 +1436,7 @@ export default function ScaleTrainer() {
       <div className="flex flex-col items-center gap-3">
         {status && running && (
           <div className="flex flex-col items-center gap-0.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            <span className="text-xs font-semibold text-muted">
               Next scale in
             </span>
             <span

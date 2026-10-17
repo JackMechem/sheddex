@@ -33,8 +33,9 @@ import {
 export function useSyncedSettings<T extends object>(
   key: string,
   defaults: T,
-): [T, (patch: Partial<T>) => void] {
-  const { isAuthenticated } = useConvexAuth();
+): [T, (patch: Partial<T>) => void, boolean] {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [localSettings, updateLocal] = usePersistedSettings(key, defaults);
   const remote = useQuery(api.syncedSettings.get, isAuthenticated ? { key } : "skip");
   const setRemote = useMutation(api.syncedSettings.set);
@@ -74,8 +75,14 @@ export function useSyncedSettings<T extends object>(
     [isAuthenticated, key, setRemote, updateLocal],
   );
 
-  return [isAuthenticated ? synced : localSettings, update];
+  // The third value: true once the real value is in hand (signed in: the account's has loaded;
+  // signed out: this browser's), so a caller about to *write* something derived from the current
+  // value (rather than from a user's edit) doesn't write it over defaults.
+  const ready = !isLoading && (isAuthenticated ? raw !== null : mounted);
+  return [isAuthenticated ? synced : localSettings, update, ready];
 }
+
+const noopSubscribe = () => () => {};
 
 function safeParse(raw: string): Record<string, unknown> {
   try {
