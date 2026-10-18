@@ -38,7 +38,7 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const VIEW_KEY = "jam-practice-practice-log-view";
-const VIEW_DEFAULTS = { view: "month" as "month" | "week", showStats: true, dayWidth: 448 };
+const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448 };
 const DAY_MIN = 300;
 const DAY_DEFAULT = 448;
 const noopSubscribe = () => () => {};
@@ -91,6 +91,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
 
   const range = useMemo(() => {
     if (!selected) return null;
+    if (view === "day") return { from: selected, to: selected };
     if (view === "week") {
       const from = startOfWeek(selected);
       return { from, to: addDays(from, 6) };
@@ -125,6 +126,26 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           return `${formatShortDate(from)} – ${formatShortDate(to)}${fromDateKey(to).getFullYear() !== new Date().getFullYear() ? `, ${fromDateKey(to).getFullYear()}` : ""}`;
         })();
   const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, 7 * n));
+  const viewSwitch = (
+    <div className="w-[10.5rem] shrink-0 sm:w-56">
+      <Segmented
+        label="Calendar view"
+        onPage
+        value={view}
+        onChange={(v) => setView({ view: v })}
+        options={[
+          { value: "month", label: "Month" },
+          { value: "week", label: "Week" },
+          { value: "day", label: "Day" },
+        ]}
+      />
+    </div>
+  );
+  const todayButton = selected !== today && (
+    <button type="button" onClick={() => setPicked(today)} className="rounded-full bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-surface-hover">
+      Today
+    </button>
+  );
 
   return (
     <Shell>
@@ -245,84 +266,89 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         </div>
       </div>
 
-      {/* Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
-          (right) fills the rest; the page itself only scrolls if the window's too short for it. */}
-      <div
-        className="grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0"
-        style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
-      >
-        <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button type="button" onClick={() => step(-1)} aria-label={view === "month" ? "Previous month" : "Previous week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <button type="button" onClick={() => step(1)} aria-label={view === "month" ? "Next month" : "Next week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
-            <h2 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{title}</h2>
-            {selected !== today && (
-              <button type="button" onClick={() => setPicked(today)} className="rounded-full bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-surface-hover">
-                Today
-              </button>
-            )}
-            <div className="w-[7.5rem] shrink-0 sm:w-40">
-              <Segmented
-                label="Calendar view"
-                onPage
-                value={view}
-                onChange={(v) => setView({ view: v })}
-                options={[
-                  { value: "month", label: "Month" },
-                  { value: "week", label: "Week" },
-                ]}
-              />
-            </div>
-          </div>
-          {view === "month" ? (
-            <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
-          ) : (
-            <WeekView data={data} selected={selected} onSelect={setPicked} />
-          )}
+      {/* Day view: no calendar — the day has the whole page. */}
+      {view === "day" ? (
+        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <DayPanel
+            date={selected}
+            log={log}
+            recordings={recordings}
+            onDateChange={setPicked}
+            wide
+            controls={
+              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+                {todayButton}
+                {viewSwitch}
+              </div>
+            }
+          />
           {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
         </div>
-        <div className="min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
-          <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
-        </div>
-        {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
+      ) : (
+        // Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
+        // (right) fills the rest; the page itself only scrolls if the window's too short for it.
         <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize the day panel"
-          aria-valuenow={shownDayWidth}
-          tabIndex={0}
-          title="Drag to resize · double-click to reset"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.currentTarget.setPointerCapture(e.pointerId);
-            setDragWidth(dayWidth);
-          }}
-          onPointerMove={(e) => {
-            if (dragWidth === null) return;
-            const grid = e.currentTarget.parentElement;
-            const left = grid?.getBoundingClientRect().left ?? 0;
-            setDragWidth(clampDay(e.clientX - left - 12, grid));
-          }}
-          onPointerUp={() => {
-            if (dragWidth !== null) setView({ dayWidth: dragWidth });
-            setDragWidth(null);
-          }}
-          onPointerCancel={() => setDragWidth(null)}
-          onDoubleClick={() => setView({ dayWidth: DAY_DEFAULT })}
-          onKeyDown={(e) => {
-            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-            e.preventDefault();
-            setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
-          }}
-          className="group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
+          className="grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0"
+          style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
         >
-          <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
+          <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button type="button" onClick={() => step(-1)} aria-label={view === "month" ? "Previous month" : "Previous week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
+                <ChevronLeftIcon className="h-5 w-5" />
+              </button>
+              <button type="button" onClick={() => step(1)} aria-label={view === "month" ? "Next month" : "Next week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
+                <ChevronRightIcon className="h-5 w-5" />
+              </button>
+              <h2 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{title}</h2>
+              {todayButton}
+              {viewSwitch}
+            </div>
+            {view === "month" ? (
+              <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
+            ) : (
+              <WeekView data={data} selected={selected} onSelect={setPicked} />
+            )}
+            {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
+          </div>
+          <div className="min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+            <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
+          </div>
+          {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize the day panel"
+            aria-valuenow={shownDayWidth}
+            tabIndex={0}
+            title="Drag to resize · double-click to reset"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+              setDragWidth(dayWidth);
+            }}
+            onPointerMove={(e) => {
+              if (dragWidth === null) return;
+              const grid = e.currentTarget.parentElement;
+              const left = grid?.getBoundingClientRect().left ?? 0;
+              setDragWidth(clampDay(e.clientX - left - 12, grid));
+            }}
+            onPointerUp={() => {
+              if (dragWidth !== null) setView({ dayWidth: dragWidth });
+              setDragWidth(null);
+            }}
+            onPointerCancel={() => setDragWidth(null)}
+            onDoubleClick={() => setView({ dayWidth: DAY_DEFAULT })}
+            onKeyDown={(e) => {
+              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+              e.preventDefault();
+              setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
+            }}
+            className="group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
+          >
+            <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
+          </div>
         </div>
-      </div>
+      )}
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
       {tourOpen && <ShedLogTour onClose={() => setTourOpen(false)} />}
       {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}

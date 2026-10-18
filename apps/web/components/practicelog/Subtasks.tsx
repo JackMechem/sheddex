@@ -43,7 +43,7 @@ export default function Subtasks({
             </button>
             <span className={`min-w-0 flex-1 truncate ${done ? "text-muted line-through" : ""}`}>{x.title}</span>
             {onRemove && (
-              <button type="button" onClick={() => onRemove(x.id)} aria-label={`Remove ${x.title}`} className="rounded p-0.5 text-muted opacity-0 hover:text-foreground group-hover/sub:opacity-100">
+              <button type="button" onClick={() => onRemove(x.id)} aria-label={`Remove ${x.title}`} className="rounded p-1 text-muted hover:text-foreground lg:p-0.5 lg:opacity-0 lg:group-hover/sub:opacity-100">
                 <CloseIcon className="h-3 w-3" />
               </button>
             )}
