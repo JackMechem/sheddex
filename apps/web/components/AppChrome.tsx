@@ -8,6 +8,7 @@ import { installIosAudio } from "@/lib/iosAudio";
 import FeedbackDialog from "@/components/feedback/FeedbackDialog";
 import FeedbackFab from "@/components/feedback/FeedbackFab";
 import UsageTracker from "@/components/UsageTracker";
+import { SidebarToggle } from "@/components/Sidebar";
 import { MaintenanceScreen, SiteBanner, SiteGate, useMaintenance } from "@/components/site/SiteNotices";
 
 /** Shows the app's chrome (sidebar, ⌘K palette, timer badge, tool dock) and `AppShell` around
@@ -35,6 +36,7 @@ export default function AppChrome({ chrome, children }: { chrome: ReactNode; chi
   return (
     <>
       {chrome}
+      <SidebarToggle />
       <AppShell>
         <SiteGate>{children}</SiteGate>
       </AppShell>

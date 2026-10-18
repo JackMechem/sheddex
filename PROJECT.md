@@ -8261,3 +8261,29 @@ Verified:
   storage; the tooltip and axis ticks were right; no horizontal overflow at 390 px.
 - `next build`.
 - The test usage rows were cleared (`convex import --replace` with an empty file).
+
+### Landing page: new screenshots and a teaching section (2026-10-18, web)
+
+- **Screenshots:** `public/landing/v3/` (`SHOTS = "v3"` in `Landing.tsx`; `v2` deleted). Shots: `app`
+  (dashboard, 1440×900), `setlist` (1024×640), `phone` (390×700), `split` (Metronome + Tuner,
+  1050×550), and the new `lessons` and `lesson` (1280×800). All are light + dark at 2× (a
+  `deviceScaleFactor: 2` context, signed in to Jack's **dev** account inside the script).
+- **What was masked before each shot:** the account email, the scrollbars, the sidebar chevron, the
+  bug button and the intros. A few test names were swapped in the page text: "Another test
+  Setlist" → "Friday night gig", "@jack2" → "@maya.plays", "Test Student" → "Sam Rivera".
+- **The lesson shots** used a temporary demo pair: Jack teaching "Maya Chen" (@jack2 joined), four
+  dated lessons, notes, two charts and two assignments. It was deleted afterwards with
+  `lessons.removeStudent`.
+- **Teaching section:** `TeachingSection` (nav link "Teaching", `#teaching`): a heading and intro,
+  the student-page shot with the lesson-page shot overlapping it, then four points across.
+- **Retaking:** use a new folder (`v4`) and bump `SHOTS`.
+
+**Sidebar (same day):**
+- Admin is in the ⋮ menus again (desktop, collapsed, phone; admins only), and the always-visible
+  Admin button was removed.
+- The account row lost its ⋮ (Sign out is on the Account page).
+- The sidebar's Recent row was removed; Community / Tunes / Lessons are bolder cards with a "Tools"
+  heading under them.
+- A faint chevron at the page's top-left (`SidebarToggle`) hides and shows the sidebar.
+- The resize handle is a 16px grab strip with a faint pill; double-click resets the width.
+- Width: min 220, default 244.

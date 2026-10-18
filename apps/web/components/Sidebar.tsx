@@ -34,14 +34,13 @@ import { useIsAdmin } from "@/lib/useIsAdmin";
 import { collectLeaves } from "@/lib/tilingLayout";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import { useFavorites } from "@/lib/useFavorites";
-import { useRecentTools } from "@/lib/toolRecents";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { openInSplit, useTilingState } from "@/lib/useTilingLayout";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 
 const STORAGE_KEY = "jam-practice-sidebar";
-const DEFAULT_WIDTH = 220;
-const MIN_WIDTH = 160;
+const DEFAULT_WIDTH = 244;
+const MIN_WIDTH = 220;
 const MAX_WIDTH = 420;
 const COLLAPSED_WIDTH = 68;
 
@@ -164,6 +163,32 @@ function subscribeLayout(listener: () => void) {
 export function useSidebarShownWidth(): number {
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   return collapsed ? COLLAPSED_WIDTH : width;
+}
+
+/**
+ * The maximize button in the page's top-left corner (desktop): collapses the sidebar to its icon
+ * strip so the page gets the room, and in the collapsed state shows a restore icon that brings it
+ * back. Fixed-positioned against the sidebar's edge, since the page panel itself scrolls.
+ */
+export function SidebarToggle() {
+  const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
+  const left = (collapsed ? COLLAPSED_WIDTH : width) + 8 + 10;
+  const label = collapsed ? "Show the sidebar" : "Hide the sidebar";
+  return (
+    <button
+      type="button"
+      onClick={() => updateLayout({ collapsed: !collapsed })}
+      aria-label={label}
+      title={label}
+      style={{ left }}
+      className="fixed top-[18px] z-30 hidden h-6 w-6 items-center justify-center text-muted/50 transition-colors hover:text-foreground lg:flex"
+    >
+      {/* Just a chevron: ‹ hides the sidebar, › brings it back. */}
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={collapsed ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} />
+      </svg>
+    </button>
+  );
 }
 
 function SearchBox({
@@ -368,14 +393,6 @@ function NavItems({
   // A subset of `filtered`, in NAV_LINKS' own order (stable regardless of favoriting order) —
   // shown as a section of its own above the normal categories, where each item also still stays
   // in its own category below (a quick-access shortcut, not a "moved out of" relocation).
-  // The last few tools you opened (device-local), as a row of tiles — not while searching.
-  const recentHrefs = useRecentTools();
-  const recentItems = searching
-    ? []
-    : recentHrefs
-        .map((h) => NAV_LINKS.find((l) => l.href === h))
-        .filter((l): l is NavLink => !!l && l.category !== "Community" && l.href !== "/shed-log" && l.href !== effectivePathname)
-        .slice(0, 3);
   const favoriteItems = isAuthenticated
     ? filtered.filter((link) => favorites.includes(link.href))
     : [];
@@ -563,7 +580,7 @@ function NavItems({
           ) : (
             // Your library — Community and Tunes (which takes in the chord charts) side by side, and
             // Lessons under them — as cards under the Dashboard / Shed Log cards, a step quieter.
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-2 gap-1.5">
               {libraryItems.map((link, i) => {
                 const { href, label, icon: Icon } = link;
                 const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isChartsPath(effectivePathname));
@@ -573,18 +590,18 @@ function NavItems({
                     key={href}
                     href={href}
                     onClick={onNavigate}
-                    className={`@container flex min-w-0 rounded-xl border px-1.5 py-1.5 transition-colors ${i === libraryItems.length - 1 && i % 2 === 0 ? "col-span-2" : ""} ${
-                      active ? "border-foreground/15 bg-surface-hover" : "border-transparent bg-surface-hover/60 hover:bg-surface-hover"
+                    className={`@container flex min-w-0 rounded-2xl border px-2 py-2.5 transition-colors ${i === libraryItems.length - 1 && i % 2 === 0 ? "col-span-2" : ""} ${
+                      active ? "border-foreground/20 bg-surface-hover shadow-sm" : "border-foreground/5 bg-surface-hover hover:border-foreground/15"
                     }`}
                   >
                     <span className="flex w-full min-w-0 flex-col items-center gap-1 text-center @[7.5rem]:flex-row @[7.5rem]:gap-1.5 @[7.5rem]:text-left">
                       <span
-                        className={`flex shrink-0 items-center justify-center rounded-lg ${large ? "h-8 w-8" : "h-6 w-6"}`}
-                        style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}
+                        className={`flex shrink-0 items-center justify-center rounded-xl ${large ? "h-9 w-9" : "h-8 w-8"}`}
+                        style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
                       >
-                        <Icon className={large ? "h-4 w-4" : "h-3.5 w-3.5"} />
+                        <Icon className={large ? "h-[18px] w-[18px]" : "h-4 w-4"} />
                       </span>
-                      <span className={`min-w-0 max-w-full truncate font-semibold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
+                      <span className={`min-w-0 max-w-full truncate font-bold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
                     </span>
                   </Link>
                 );
@@ -593,27 +610,11 @@ function NavItems({
           )}
         </div>
       )}
-      {recentItems.length >= 2 && (
-        <div className="flex flex-col gap-1">
-          <h3 className={`px-3 font-semibold text-muted ${large ? "text-sm" : "text-xs"}`}>Recent</h3>
-          <div className="grid grid-cols-3 gap-1">
-            {recentItems.map((l) => {
-              const active = effectivePathname === l.href;
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  onClick={onNavigate}
-                  title={l.label}
-                  className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1.5 transition-colors ${active ? "bg-surface-hover" : "hover:bg-surface-hover/70"}`}
-                >
-                  <ToolTile link={l} active={active} large={large} />
-                  <span className={`w-full truncate text-center font-medium leading-tight text-muted ${large ? "text-xs" : "text-[10px]"}`}>{l.short ?? l.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+      {!searching && !collapsed && (
+        <h2 className={`flex items-center gap-2 px-3 pt-1 font-extrabold text-foreground ${large ? "text-base" : "text-sm"}`}>
+          Tools
+          <span className="h-px flex-1 bg-foreground/10" />
+        </h2>
       )}
       {favoriteItems.length > 0 && (
         <CategoryBlock
@@ -818,7 +819,6 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 p-1 bg-background rounded-2xl">
             <PracticeTimerWidget />
-            {isAdmin && <AdminButton onNavigate={() => setMobileOpen(false)} />}
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -906,14 +906,6 @@ export default function Sidebar() {
                     }}
                   />
                 )}
-                <FlyoutItem
-                  icon={ChevronsIcon}
-                  label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                  onSelect={() => {
-                    setCollapsed(!collapsed);
-                    close();
-                  }}
-                />
               </>
             )}
           </Flyout>
@@ -955,6 +947,16 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    {isAdmin && (
+                      <FlyoutItem
+                        icon={ShieldIcon}
+                        label="Admin"
+                        onSelect={() => {
+                          router.push("/admin");
+                          close();
+                        }}
+                      />
+                    )}
                     <FlyoutItem
                       icon={HelpIcon}
                       label="Help"
@@ -981,16 +983,6 @@ export default function Sidebar() {
                         }}
                       />
                     )}
-                    {isAdmin && (
-                      <FlyoutItem
-                        icon={ShieldIcon}
-                        label="Admin"
-                        onSelect={() => {
-                          router.push("/admin");
-                          close();
-                        }}
-                      />
-                    )}
                   </>
                 )}
               </Flyout>
@@ -1005,7 +997,6 @@ export default function Sidebar() {
               </button>
             </div>
           )}
-          {isAdmin && <AdminButton collapsed={collapsed} />}
           <AccountMenu collapsed={collapsed} />
         </div>
 
@@ -1022,11 +1013,18 @@ export default function Sidebar() {
           onPointerUp={() => setDragging(false)}
           onPointerCancel={() => setDragging(false)}
           onKeyDown={onKeyResize}
-          className="group absolute -right-1 top-0 z-10 flex h-full w-2 cursor-col-resize touch-none justify-center outline-none"
+          onDoubleClick={() => updateLayout({ collapsed: false, width: DEFAULT_WIDTH })}
+          title="Drag to resize · double-click to reset"
+          // A 16px grab area covering the gap between the sidebar and the page, with a faint pill
+          // in the middle as the handle; a hairline shows the edge while hovering or dragging.
+          className="group absolute -right-3 top-0 z-10 flex h-full w-4 cursor-col-resize touch-none items-center justify-center outline-none"
         >
           <div
-            className={`h-full w-0.5 transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${
-              dragging ? "bg-accent" : ""
+            className={`absolute inset-y-3 w-px transition-colors ${dragging ? "bg-accent/50" : "group-hover:bg-foreground/10 group-focus-visible:bg-accent/50"}`}
+          />
+          <div
+            className={`relative w-1 rounded-full transition-all duration-150 ${
+              dragging ? "h-14 bg-accent" : "h-10 bg-foreground/15 group-hover:h-14 group-hover:bg-accent/70 group-focus-visible:bg-accent"
             }`}
           />
         </div>
@@ -1036,29 +1034,6 @@ export default function Sidebar() {
 }
 
 /** The version under the logo: "v0.9.0" and a small Beta tag. */
-/** The site admin's way into /admin. Only rendered when `api.admin.amIAdmin` says so — and every
-    admin query and mutation checks again on the server, so this button isn't the lock. */
-function AdminButton({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const active = pathname === "/admin";
-  return (
-    <Link
-      href="/admin"
-      onClick={onNavigate}
-      title="Admin"
-      aria-label="Admin"
-      className={`flex items-center gap-2.5 rounded-xl text-sm font-semibold transition-colors ${
-        collapsed ? "h-10 w-10 justify-center self-center" : "px-3 py-2"
-      } ${active ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-foreground hover:bg-surface-hover"}`}
-    >
-      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? "" : "bg-gradient-to-br from-zinc-900 to-indigo-950 text-white"}`}>
-        <ShieldIcon className="h-4 w-4" />
-      </span>
-      {!collapsed && <span>Admin</span>}
-    </Link>
-  );
-}
-
 function VersionTag() {
   return (
     <span className="mt-0.5 flex items-center gap-1 pl-0.5 text-[10px] font-semibold leading-none text-muted">

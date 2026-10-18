@@ -13,6 +13,7 @@ import {
   CloseIcon,
   DrumIcon,
   EarIcon,
+  GraduationCapIcon,
   MetronomeIcon,
   NAV_LINKS,
   NoteIcon,
@@ -50,6 +51,7 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
       <Hero signedIn={signedIn} onSignUp={signUp} onOpenApp={openApp} onDashboard={goDashboard} />
       <Showcase />
       <PracticeLogSection />
+      <TeachingSection />
       <ToolMarquee />
       <Features />
       <Bento />
@@ -127,7 +129,7 @@ function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; 
 
 /** The screenshot set's folder. Bump it (and move the files) whenever the screenshots are retaken:
     Next caches optimized images by URL, so replacing a file in place keeps serving the old one. */
-const SHOTS = "v2";
+const SHOTS = "v3";
 
 /** A real screenshot of the app, swapped for the dark-theme one in dark themes. */
 function Shot({ name, alt, width, height, priority, className = "" }: { name: string; alt: string; width: number; height: number; priority?: boolean; className?: string }) {
@@ -148,6 +150,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
         </Link>
         <div className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium text-muted md:flex">
           <a href="#practice-log" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Shed Log</a>
+          <a href="#teaching" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Teaching</a>
           <a href="#tools" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Tools</a>
           <a href="#features" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Features</a>
           <a href="#free" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Why it&apos;s free</a>
@@ -315,6 +318,55 @@ function PracticeLogSection() {
           <RoutineDemo />
           <DemoProgressCard />
           <p className="text-center text-xs text-muted">Go on — tick them off.</p>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/** Lessons: teachers and students, with the student page and one lesson as screenshots. */
+function TeachingSection() {
+  const points: [string, string][] = [
+    ["A page for every lesson", "Notes, chord charts, files and assignments, kept with the lesson they're from."],
+    ["Assignments they hand in", "Students tick them off or hand in a recording, a link or a file. You leave feedback."],
+    ["See how practice is going", "Give a Shed Log routine and see the days they did it, and the time they put in."],
+    ["Booking without the back-and-forth", "Set your hours, send a few times, and they pick one. Both get a calendar invite."],
+  ];
+  return (
+    <section id="teaching" className="scroll-mt-24 px-4 pb-28">
+      <div className="mx-auto max-w-6xl">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <p className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold text-accent">
+            <GraduationCapIcon className="h-4 w-4" /> For teachers and students
+          </p>
+          <h2 className="text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">Everything from your lessons, in one place.</h2>
+          <p className="mt-5 text-lg leading-relaxed text-muted">
+            Invite a student with a link. Each lesson gets its own page, the week&apos;s work goes in their Shed Log, and nothing gets lost in a text thread.
+          </p>
+        </Reveal>
+        <div className="relative mt-12 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+          <Reveal className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
+            <div className="overflow-hidden rounded-[18px]">
+              <Shot name="lessons" alt="A student's page in sheddex: their lessons, practice stats and booking" width={2560} height={1600} />
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <div className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_30px_80px_-30px_color-mix(in_srgb,var(--foreground)_40%,transparent)] lg:-ml-16 lg:mt-16">
+              <div className="overflow-hidden rounded-[18px]">
+                <Shot name="lesson" alt="One lesson in sheddex, with an assignment, a chord chart and notes" width={2560} height={1600} />
+              </div>
+            </div>
+          </Reveal>
+        </div>
+        <Reveal delay={160}>
+          <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {points.map(([t, d]) => (
+              <li key={t} className="flex flex-col gap-1">
+                <span className="font-semibold">{t}</span>
+                <span className="text-sm leading-relaxed text-muted">{d}</span>
+              </li>
+            ))}
+          </ul>
         </Reveal>
       </div>
     </section>

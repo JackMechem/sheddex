@@ -2,34 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { api } from "@jam-practice/convex/_generated/api";
-import Flyout, { FlyoutItem } from "@/components/Flyout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
 import StreakBadge from "@/components/practicelog/StreakBadge";
-import { GoogleIcon, UserIcon, svgProps } from "@/components/tools";
+import { GoogleIcon, UserIcon } from "@/components/tools";
 import { useSiteStatus } from "@/lib/useSiteStatus";
 
-function DotsIcon({ className }: { className?: string }) {
-  return (
-    <svg {...svgProps(className)} fill="currentColor" stroke="none">
-      <circle cx="12" cy="5" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="12" cy="19" r="1.6" />
-    </svg>
-  );
-}
 
-function SignOutIcon({ className }: { className?: string }) {
-  return (
-    <svg {...svgProps(className)}>
-      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-    </svg>
-  );
-}
 
 /** Same button shape as Sidebar's ThemeButton (collapsed/large props, identical styling) so this
     drops into either sidebar footer without special-casing. */
@@ -337,8 +319,6 @@ export default function AccountMenu({
   onNavigate?: () => void;
 }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const { signOut } = useAuthActions();
-  const router = useRouter();
   const user = useQuery(api.users.current);
   const profile = useQuery(api.profiles.getMine, isAuthenticated ? {} : "skip");
   const [signInOpen, setSignInOpen] = useState(false);
@@ -379,17 +359,14 @@ export default function AccountMenu({
       );
     }
 
-    // The avatar/label row is still a plain link to `/account` (least surprise — clicking the row
-    // itself does what it always did); the "..." flyout is a sibling, not nested inside it (a
-    // button inside an anchor is invalid HTML and breaks click handling), absolutely positioned
-    // over padding the row reserves for it, same "star over a nav link" pattern `Sidebar.tsx`'s
-    // own `NavItems` already uses.
+    // The avatar/label row is a plain link to `/account` (Sign out is there). The streak badge is a
+    // sibling, not nested inside it, absolutely positioned over padding the row reserves for it.
     return (
       <div className="group relative flex items-center">
         <Link
           href="/account"
           onClick={onNavigate}
-          className={`${buttonClass(false, large)} ${large ? "pr-32" : "pr-28"}`}
+          className={`${buttonClass(false, large)} ${large ? "pr-24" : "pr-20"}`}
         >
           <UserAvatar url={profile?.avatarUrl ?? null} size="sm" />
           <span className="flex min-w-0 flex-col items-start">
@@ -397,41 +374,9 @@ export default function AccountMenu({
 
           </span>
         </Link>
-        <span className={`absolute top-1/2 -translate-y-1/2 ${large ? "right-11" : "right-9"}`}>
+        <span className={`absolute top-1/2 -translate-y-1/2 ${large ? "right-3" : "right-2"}`}>
           <StreakBadge onNavigate={onNavigate} />
         </span>
-        <Flyout
-          icon={DotsIcon}
-          label="Account options"
-          align="end"
-          buttonClassName={`absolute right-1 top-1/2 flex -translate-y-1/2 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${
-            large ? "h-9 w-9" : "h-8 w-8"
-          }`}
-        >
-          {(close) => (
-            <>
-              <FlyoutItem
-                icon={UserIcon}
-                label="Account settings"
-                onSelect={() => {
-                  router.push("/account");
-                  onNavigate?.();
-                  close();
-                }}
-              />
-              <FlyoutItem
-                icon={SignOutIcon}
-                label="Sign out"
-                danger
-                onSelect={() => {
-                  void signOut();
-                  onNavigate?.();
-                  close();
-                }}
-              />
-            </>
-          )}
-        </Flyout>
       </div>
     );
   }
