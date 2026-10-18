@@ -26,6 +26,10 @@ import {
 } from "@/lib/metronomeEngine";
 import { getAudioContext } from "@/lib/metronome";
 import { sectionAt } from "@/lib/structure";
+import { beginMicUse, endMicUse } from "@/lib/iosAudio";
+
+/** Whether this engine currently holds the microphone (for the iOS audio session). */
+let micInUse = false;
 
 export type RecorderMetronome = {
   enabled: boolean;
@@ -148,6 +152,10 @@ function releaseInput() {
   meterSource = null;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
+  if (micInUse) {
+    micInUse = false;
+    endMicUse();
+  }
   if (recordStream !== null) for (const node of monoNodes) node.disconnect();
   monoNodes = [];
   recordStream = null;
@@ -232,11 +240,15 @@ export async function startRecording(
     el.addEventListener("loadedmetadata", () => (el.currentTime = songStartSec), { once: true });
     songEl = el;
   }
+  beginMicUse();
+  micInUse = true;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { autoGainControl: options.autoGain, echoCancellation: false, noiseSuppression: false },
     });
   } catch {
+    micInUse = false;
+    endMicUse();
     stopSong();
     setSnapshot({ phase: "idle", error: "Microphone access is needed to record." });
     return;

@@ -1,5 +1,6 @@
 import { getAudioContext } from "@/lib/metronome";
 import { detectPitch } from "@/lib/pitchDetect";
+import { beginMicUse, endMicUse } from "@/lib/iosAudio";
 
 export type InputDevice = { id: string; label: string };
 
@@ -60,7 +61,14 @@ export async function startAudioInput(
 ): Promise<AudioInput> {
   const ctx = getAudioContext();
   if (ctx.state === "suspended") await ctx.resume();
-  const stream = await openStream(deviceId);
+  beginMicUse();
+  let stream: MediaStream;
+  try {
+    stream = await openStream(deviceId);
+  } catch (error) {
+    endMicUse();
+    throw error;
+  }
 
   const source = ctx.createMediaStreamSource(stream);
   const analyser = ctx.createAnalyser();
@@ -85,6 +93,7 @@ export async function startAudioInput(
       clearInterval(id);
       source.disconnect();
       for (const track of stream.getTracks()) track.stop();
+      endMicUse();
     },
   };
 }
