@@ -64,9 +64,20 @@ changes with every preview backend), so use email and password.
    - `SITE_URL` — the branch's stable Vercel address (e.g.
      `https://sheddex-git-preview-<team>.vercel.app`), so links in emails go to the preview site.
 
+**If a preview has no variables** (it was made before the defaults were set), copy them from dev
+without printing them, from `packages/convex`:
+`for n in JWT_PRIVATE_KEY JWKS AUTH_RESEND_KEY AUTH_EMAIL_FROM; do npx convex env get $n | npx convex env set $n --deployment <preview-deployment>; done`
+(the deployment name is in the dashboard's picker, e.g. `proper-puffin-311` for `preview/preview`).
+Variables take effect at once; no redeploy needed. `npx convex run previewSeed:state --deployment
+<preview-deployment>` shows whether the demo account exists.
+
+**If sign-in fails on the preview site** but works against the backend, the site is talking to a
+different backend: make sure `NEXT_PUBLIC_CONVEX_URL` isn't set for Preview in Vercel, then
+redeploy.
+
 The seed runs only when a preview backend is created. If one was created before
 `PREVIEW_DEMO_PASSWORD` was set, run it by hand:
-`npx convex run previewSeed:seed --preview-name <branch>` from `packages/convex`. Running it again
+`npx convex run previewSeed:seed --deployment <preview-deployment>` from `packages/convex`. Running it again
 does nothing (it skips once the demo account exists, and refuses on any backend that already has
 real accounts).
 
