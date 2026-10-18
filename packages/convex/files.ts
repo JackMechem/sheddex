@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
-import { action, internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { communityHidden, assertUploadsOpen } from "./lib/site";
 import { resolveLinkedChart } from "./lib/chordCharts";
 import { ownerTune } from "./lib/tunes";
+import { MAX_FILE_BYTES, assertFits, assertHasRoom, bytesUsed, quotaFor, storedItems } from "./lib/storage";
 import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTunes";
 
 /**
@@ -18,146 +19,7 @@ import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTune
  * which shows the tune with its chord chart, files and recordings.
  */
 
-/** Largest single file. */
-export const MAX_FILE_BYTES = 100 * 1024 * 1024;
-/** Everything one account can store in total (files, recordings, songs, lesson uploads…). */
-export const ACCOUNT_QUOTA_BYTES = 1024 * 1024 * 1024;
 const MAX_NAME = 200;
-
-const MB = 1024 * 1024;
-
-async function fileSize(ctx: QueryCtx, storageId: Id<"_storage">) {
-  const meta = await ctx.db.system.get(storageId);
-  return meta?.size ?? 0;
-}
-
-// ---------------------------------------------------------------- everything stored
-
-type StoredKind = "file" | "recording" | "song" | "lesson" | "handin" | "profile";
-
-type StoredItem = {
-  kind: StoredKind;
-  id: string;
-  name: string;
-  mimeType: string;
-  size: number;
-  createdAt: number;
-  url: string | null;
-  tuneId: string | null;
-  /** Where it's managed, for kinds other than plain files. */
-  href: string | null;
-};
-
-/** Every file the account stores, newest first. `withUrls: false` skips the download links (for
-    totting up the size). */
-async function storedItems(ctx: QueryCtx, userId: Id<"users">, withUrls: boolean): Promise<StoredItem[]> {
-  const url = (id: Id<"_storage">) => (withUrls ? ctx.storage.getUrl(id) : Promise.resolve(null));
-  const out: StoredItem[] = [];
-
-  const files = await ctx.db.query("files").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
-  for (const f of files) {
-    out.push({ kind: "file", id: f._id, name: f.name, mimeType: f.mimeType, size: f.size, createdAt: f.createdAt, url: await url(f.storageId), tuneId: f.tuneId ?? null, href: null });
-  }
-
-  const recordings = await ctx.db.query("recordings").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
-  for (const r of recordings) {
-    out.push({
-      kind: "recording",
-      id: r._id,
-      name: r.name,
-      mimeType: r.mimeType,
-      size: await fileSize(ctx, r.storageId),
-      createdAt: r.createdAt,
-      url: await url(r.storageId),
-      tuneId: r.tuneId ?? null,
-      href: `/recordings/view?id=${r._id}`,
-    });
-  }
-
-  const songs = await ctx.db.query("tuneSongs").withIndex("by_user_tune", (q) => q.eq("userId", userId)).collect();
-  for (const s of songs) {
-    out.push({
-      kind: "song",
-      id: s._id,
-      name: s.name,
-      mimeType: s.mimeType,
-      size: await fileSize(ctx, s.storageId),
-      createdAt: s.createdAt,
-      url: await url(s.storageId),
-      tuneId: s.tuneId,
-      href: null,
-    });
-  }
-
-  // Files you gave your students in Lessons.
-  const pairs = await ctx.db.query("lessonStudents").withIndex("by_teacher", (q) => q.eq("teacherId", userId)).collect();
-  for (const pair of pairs) {
-    const items = await ctx.db.query("lessonItems").withIndex("by_lesson", (q) => q.eq("lessonId", pair._id)).collect();
-    for (const item of items) {
-      if (!item.fileId) continue;
-      out.push({
-        kind: "lesson",
-        id: item._id,
-        name: item.fileName || item.title,
-        mimeType: item.fileType ?? "",
-        size: await fileSize(ctx, item.fileId),
-        createdAt: item.createdAt,
-        url: await url(item.fileId),
-        tuneId: null,
-        href: `/lessons/lesson?pair=${pair._id}&id=${item.sessionId ?? "earlier"}`,
-      });
-    }
-  }
-
-  // Work you handed in to your teachers.
-  const asStudent = await ctx.db.query("lessonStudents").withIndex("by_student", (q) => q.eq("studentId", userId)).collect();
-  for (const pair of asStudent) {
-    const subs = await ctx.db.query("lessonSubmissions").withIndex("by_lesson", (q) => q.eq("lessonId", pair._id)).collect();
-    for (const sub of subs) {
-      if (sub.studentId !== userId) continue;
-      const item = await ctx.db.get(sub.itemId);
-      for (const f of sub.files) {
-        out.push({
-          kind: "handin",
-          id: `${sub._id}:${f.fileId}`,
-          name: f.name,
-          mimeType: f.type,
-          size: f.size,
-          createdAt: sub.submittedAt,
-          url: await url(f.fileId),
-          tuneId: null,
-          href: `/lessons/lesson?pair=${pair._id}&id=${item?.sessionId ?? "earlier"}`,
-        });
-      }
-    }
-  }
-
-  const profile = await ctx.db.query("profiles").withIndex("by_user", (q) => q.eq("userId", userId)).unique();
-  for (const [storageId, name] of [
-    [profile?.avatarStorageId, "Profile picture"],
-    [profile?.bannerStorageId, "Profile banner"],
-  ] as const) {
-    if (!storageId) continue;
-    const meta = await ctx.db.system.get(storageId);
-    out.push({
-      kind: "profile",
-      id: storageId,
-      name,
-      mimeType: meta?.contentType ?? "image/jpeg",
-      size: meta?.size ?? 0,
-      createdAt: meta?._creationTime ?? 0,
-      url: await url(storageId),
-      tuneId: null,
-      href: "/account?tab=profile",
-    });
-  }
-
-  return out.sort((a, b) => b.createdAt - a.createdAt);
-}
-
-async function bytesUsed(ctx: QueryCtx, userId: Id<"users">) {
-  return (await storedItems(ctx, userId, false)).reduce((sum, item) => sum + item.size, 0);
-}
 
 /** Everything the caller's account stores, plus how much space it takes. */
 export const storage = query({
@@ -166,7 +28,7 @@ export const storage = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const items = await storedItems(ctx, userId, true);
-    return { items, used: items.reduce((sum, item) => sum + item.size, 0), quota: ACCOUNT_QUOTA_BYTES, maxFile: MAX_FILE_BYTES };
+    return { items, used: items.reduce((sum, item) => sum + item.size, 0), quota: await quotaFor(ctx, userId), maxFile: MAX_FILE_BYTES };
   },
 });
 
@@ -191,7 +53,7 @@ export const generateUploadUrl = mutation({
     await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
-    if ((await bytesUsed(ctx, userId)) >= ACCOUNT_QUOTA_BYTES) throw new Error("Your account is full — delete some files to make room.");
+    await assertHasRoom(ctx, userId);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -203,17 +65,7 @@ export const create = mutation({
   handler: async (ctx, { storageId, name, tuneId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to upload files.");
-    const meta = await ctx.db.system.get(storageId);
-    if (!meta) throw new Error("That upload didn't arrive — try again.");
-    if (meta.size > MAX_FILE_BYTES) {
-      await ctx.storage.delete(storageId);
-      throw new Error(`Files can be up to ${MAX_FILE_BYTES / MB} MB.`);
-    }
-    // The new file is already in storage but not in any table yet, so it isn't counted.
-    if ((await bytesUsed(ctx, userId)) + meta.size > ACCOUNT_QUOTA_BYTES) {
-      await ctx.storage.delete(storageId);
-      throw new Error("There isn't room for that file — delete some files to make room.");
-    }
+    const meta = await assertFits(ctx, userId, storageId);
     const now = Date.now();
     return await ctx.db.insert("files", {
       userId,
@@ -399,7 +251,11 @@ export const sharedTuneFiles = internalQuery({
       .query("files")
       .withIndex("by_user_tune", (q) => q.eq("userId", row.userId).eq("tuneId", row.tuneId))
       .collect();
-    return { files: files.map((f) => ({ storageId: f.storageId, name: f.name, size: f.size })), used: await bytesUsed(ctx, userId) };
+    return {
+      files: files.map((f) => ({ storageId: f.storageId, name: f.name, size: f.size })),
+      used: await bytesUsed(ctx, userId),
+      quota: await quotaFor(ctx, userId),
+    };
   },
 });
 
@@ -436,7 +292,7 @@ export const copySharedFiles = action({
     let copied = 0;
     let skipped = 0;
     for (const f of shared.files) {
-      if (used + f.size > ACCOUNT_QUOTA_BYTES) {
+      if (used + f.size > shared.quota) {
         skipped += 1;
         continue;
       }

@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and any files you upload (PDFs,
-            images, audio, video and so on, on their own or attached to a tune). Each account can store up to 1 GB.
+            images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
             When you sign in, sheddex uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
           <li>

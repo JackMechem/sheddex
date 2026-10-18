@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { assertUploadsOpen } from "./lib/site";
+import { assertHasRoom } from "./lib/storage";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -428,7 +429,9 @@ export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     await assertUploadsOpen(ctx);
-    if (!(await me(ctx))) throw new Error("Sign in to upload files.");
+    const userId = await me(ctx);
+    if (!userId) throw new Error("Sign in to upload files.");
+    await assertHasRoom(ctx, userId);
     return ctx.storage.generateUploadUrl();
   },
 });
@@ -785,6 +788,7 @@ export const generateSubmitUploadUrl = mutation({
       .withIndex("by_student", (q) => q.eq("studentId", userId))
       .first();
     if (!learning) throw new Error("Only students can hand work in.");
+    await assertHasRoom(ctx, userId);
     return ctx.storage.generateUploadUrl();
   },
 });

@@ -144,7 +144,14 @@ export default function FilesPage() {
               <div className="h-2 overflow-hidden rounded-full bg-background">
                 <div className={`h-full rounded-full ${pct > 90 ? "bg-danger" : "bg-accent"}`} style={{ width: `${Math.max(pct, used ? 1 : 0)}%` }} />
               </div>
-              <p className="text-xs text-muted">Drop files anywhere on this page to upload them. Each file can be up to {formatBytes(storage?.maxFile ?? 0)}.</p>
+              {used >= quota ? (
+                <p className="text-sm text-danger">Your storage is full. Delete some files or recordings to upload more.</p>
+              ) : (
+                <p className="text-xs text-muted">
+                  Every account has {formatBytes(quota)} for uploads, recordings, songs and lesson files. Drop files anywhere on this page to upload them.
+                </p>
+              )}
+              <p className="text-xs text-muted">Need more room? Plans with more storage are coming.</p>
               <UploadProgress progress={uploader.progress} />
               {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
             </div>

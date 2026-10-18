@@ -22,7 +22,8 @@ export type UserFile = {
   url: string | null;
 };
 
-/** Same limits as the backend (it checks again). */
+/** Largest single file — same as the backend (`packages/convex/lib/storage.ts`), which checks
+    again, along with the account's 100 MB total. */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;
 
 export type FileKind = "pdf" | "image" | "audio" | "video" | "notation" | "document" | "other";

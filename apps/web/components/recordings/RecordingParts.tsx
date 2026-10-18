@@ -9,6 +9,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import MixPlayer, { SavedMixPlayer } from "@/components/recordings/MixPlayer";
 import { CloseIcon, LinkIcon, MicIcon, NoteIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
+import { errorText } from "@/lib/files";
 import {
   type Recording,
   type RecordingMix,
@@ -219,7 +220,7 @@ export function SaveTakeDialog({
       onSaved(id);
     } catch (e) {
       setSaving(false);
-      setError(e instanceof Error ? e.message : "Couldn't save the recording.");
+      setError(errorText(e, "Couldn't save the recording."));
     }
   }
 
@@ -422,7 +423,7 @@ function TuneSongPanel({ tuneId }: { tuneId: string }) {
         durationSec,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't upload the song.");
+      setError(errorText(e, "Couldn't upload the song."));
     } finally {
       setUploading(false);
     }

@@ -11,9 +11,9 @@ stores.
 - **Upload** is the usual two steps: `generateUploadUrl` (refuses while Mayday "pause uploads" is
   on, or when the account is full), POST the file, then `create({storageId, name, tuneId?})`.
   `create` reads the real size and type from `_storage` (it never trusts the client), and deletes
-  the upload and throws when it's over **100 MB** (`MAX_FILE_BYTES`) or over the account's
-  **1 GB** (`ACCOUNT_QUOTA_BYTES`). The quota counts **everything** the account stores (uploads,
-  recordings, tune songs, lesson files, hand-ins, profile images), via `storedItems`.
+  the upload and throws when it's over **100 MB** (`MAX_FILE_BYTES`) or doesn't fit the account's
+  limit. The limit counts **everything** the account stores (uploads, recordings, tune songs, lesson
+  files, hand-ins, profile images). See "The storage limit" below.
 - `list`, `listForTune`, `update` (rename; `tuneId` to attach, `null` to detach), `remove`
   (deletes the stored file too).
 - **`storage`**: everything the account stores, newest first, each with kind
@@ -85,6 +85,51 @@ stores.
 - Not exercised: the quota limits for real (a 100 MB+ upload, a full account), video and audio
   previews with real media, Save to my tunes **signed in** through the page (only the action itself,
   via the CLI), and the Mayday "Community off" gate on `/tune/<id>`.
-- Convex's free plan has 1 GB of storage for the **whole** deployment, not per account. The 1 GB per
-  account limit here is about fairness between people; the plan's total will run out first if
-  several people upload a lot. Check usage in the Convex dashboard.
+- See "The storage limit" below for how the per-account limit relates to Convex's free plan.
+
+## The storage limit: 100 MB per account (2026-10-18)
+
+First built as 1 GB per account, then lowered to **100 MB** after Jack asked whether 30 users would
+stay on Convex's free plan. They wouldn't at 1 GB: the free plan has **1 GB of file storage for the
+whole deployment (backups included)** and **1 GB a month of downloads (data egress)** — every
+played recording, opened PDF or profile picture counts — plus 0.5 GB of database.
+
+- **`packages/convex/lib/storage.ts`** holds it all now (moved out of `files.ts`):
+  `ACCOUNT_QUOTA_BYTES` (100 MB), `MAX_FILE_BYTES` (100 MB), `storedItems` / `bytesUsed`,
+  `quotaFor(ctx, userId)` (the one place a per-account limit comes from — everyone gets the same
+  for now), `assertHasRoom` (before handing out an upload URL) and `assertFits` (once the upload
+  has arrived: deletes it and throws if it's too big or doesn't fit; `replacing` frees the size of
+  a tune's old song).
+- **Every upload path checks it**: `files` (URL + create), `recordings` (URL + create),
+  `tuneSongs.set` (fits, counting the replaced song as freed), `lessons.generateUploadUrl` and
+  `generateSubmitUploadUrl` (refused when already full — lesson files and hand-ins aren't checked
+  again after upload, so one upload can take an account a little past 100 MB). Profile pictures
+  and feedback screenshots aren't limited (small, resized).
+- Existing data over the limit isn't touched; those accounts just can't upload more until they
+  delete something.
+- Web: the Files page says how much every account has, turns the note red when full, and says
+  "Need more room? Plans with more storage are coming." Recording, song and lesson-file errors now
+  show the backend's message (`errorText`) instead of the raw Convex error. Help topic and privacy
+  policy say 100 MB.
+- Checked on a local throwaway Convex backend: two 60 MB uploads — the first saved, the second
+  refused with the "There isn't room" message and deleted (usage stayed at 60 MB).
+- 30 accounts × 100 MB is still 3 GB, so the free plan isn't guaranteed if everyone fills up; a
+  site-wide stop (refuse uploads when the whole deployment nears ~800 MB) was suggested but not
+  built yet.
+
+## Planned: paid plans for more storage
+
+Jack wants people to be able to **subscribe for more storage** later (100 MB stays free). Not built.
+When it is:
+- `quotaFor` in `lib/storage.ts` returns the account's plan limit (e.g. from a `subscriptions` table
+  kept up to date by the payment provider's webhook).
+- Payments: Stripe, or Lemon Squeezy / Paddle (they handle sales tax as merchant of record). A
+  checkout, a webhook into Convex, a "manage subscription" link on the Account page.
+- Convex: paid storage pushes past the free plan, so move to the pay-as-you-go plan and price the
+  subscription above what the storage and downloads cost.
+- Wording: the landing page, README and privacy policy say sheddex is free and non-commercial;
+  they'd need updating (the tools stay free), plus Terms (payments, refunds, cancelling).
+- **Licenses first:** the Rhodes samples (jRhodes3d, Jeff Learman) are **CC BY-NC**. A site with a
+  paid tier is arguably commercial even though the Rhodes itself stays free — ask the author for
+  permission or switch to a CC0 / CC BY Rhodes **before** charging. Re-check the other samples'
+  licenses too (they're CC0 / CC BY today).

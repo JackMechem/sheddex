@@ -519,7 +519,7 @@ export function ItemDialog({
       }
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save that.");
+      setError(errorText(e, "Couldn't save that."));
       setBusy(false);
     }
   }

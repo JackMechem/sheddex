@@ -231,11 +231,11 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Attach to a tune", text: "A file on a tune shows on the tune's page and goes along when you share the tune." },
       { title: "Find anything", text: "Search, filter by where it came from (uploads, recordings, songs, lessons) and by type, and open it right there." },
     ],
-    features: ["PDFs, images, audio and video open in place", "Attach files to tunes", "Recordings, songs and lesson files in the same list", "Up to 100 MB a file, 1 GB an account"],
+    features: ["PDFs, images, audio and video open in place", "Attach files to tunes", "Recordings, songs and lesson files in the same list", "100 MB of storage per account"],
     options: [
       { name: "Uploads", text: "Files you uploaded. Rename them, attach them to a tune (or move them to another), or delete them from the ⋮ menu." },
       { name: "Recordings, songs, lesson files, hand-ins", text: "Everything else your account stores, listed here too. Open them here; change them where they live (the recording's page, the tune, the lesson)." },
-      { name: "Storage", text: "How much of your 1 GB is used. Everything counts: uploads, recordings, songs and lesson files." },
+      { name: "Storage", text: "How much of your 100 MB is used. Everything counts: uploads, recordings, songs, lesson files and hand-ins. Plans with more storage are coming." },
     ],
   },
 

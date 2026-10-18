@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
+import { assertFits } from "./lib/storage";
 
 /**
  * A tune's song: an audio file of the actual recording, uploaded to play behind your takes of
@@ -48,6 +49,10 @@ export const set = mutation({
       .query("tuneSongs")
       .withIndex("by_user_tune", (q) => q.eq("userId", userId).eq("tuneId", args.tuneId))
       .collect();
+    // The old song is about to be deleted, so its space counts as free.
+    let replacing = 0;
+    for (const row of existing) replacing += (await ctx.db.system.get(row.storageId))?.size ?? 0;
+    await assertFits(ctx, userId, args.storageId, replacing);
     for (const row of existing) {
       await ctx.storage.delete(row.storageId);
       await ctx.db.delete(row._id);

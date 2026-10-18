@@ -172,6 +172,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   the book its patterns were transcribed from.
 - **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — fine for a free site with credit,
   not for anything commercial. Every bundled sample/font is credited on `/credits`.
+- **Storage:** every account has 100 MB in total (`packages/convex/lib/storage.ts`; every upload
+  path must call `assertHasRoom` / `assertFits`). Paid plans for more storage are planned, not
+  built — and the Rhodes license has to be sorted out before sheddex charges for anything
+  (`docs/notes/files-and-tune-sharing.md`).
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
 - **Be honest about verification:** say what was checked and how, and what wasn't (especially

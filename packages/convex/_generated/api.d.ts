@@ -30,6 +30,7 @@ import type * as lib_roles from "../lib/roles.js";
 import type * as lib_routines from "../lib/routines.js";
 import type * as lib_setlists from "../lib/setlists.js";
 import type * as lib_site from "../lib/site.js";
+import type * as lib_storage from "../lib/storage.js";
 import type * as lib_tunes from "../lib/tunes.js";
 import type * as practiceSessions from "../practiceSessions.js";
 import type * as previewSeed from "../previewSeed.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   "lib/routines": typeof lib_routines;
   "lib/setlists": typeof lib_setlists;
   "lib/site": typeof lib_site;
+  "lib/storage": typeof lib_storage;
   "lib/tunes": typeof lib_tunes;
   practiceSessions: typeof practiceSessions;
   previewSeed: typeof previewSeed;
