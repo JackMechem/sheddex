@@ -61,7 +61,7 @@ export default function TermsPage() {
       <LegalSection title="Your content">
         <p>
           You keep all rights to what you make or upload — tunes, chord charts, recordings,
-          setlists, routines, lesson materials, posts and profile pictures. You&apos;re responsible
+          setlists, routines, files, lesson materials, posts and profile pictures. You&apos;re responsible
           for having the right to use whatever you upload (for example, not uploading copyrighted
           recordings or scans you don&apos;t have permission to share). By posting something
           publicly (a public profile, a Community post, a shared link), you let sheddex show it to

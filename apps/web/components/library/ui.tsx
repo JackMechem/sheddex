@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { ICON_BY_ID } from "@/components/help/helpParts";
 import { BackButton, MenuButton, tuneSummary } from "@/components/library/shared";
-import { ChevronRightIcon, ChordChartIcon, NoteIcon, SearchIcon, SetlistIcon, ShareIcon } from "@/components/tools";
+import { ChevronRightIcon, ChordChartIcon, FileIcon, NoteIcon, SearchIcon, SetlistIcon, ShareIcon } from "@/components/tools";
 import { formatComposer, keyPitchClass } from "@/lib/iRealPro";
 import { topicById } from "@/lib/helpContent";
 import type { Tune } from "@/lib/types";
@@ -111,8 +111,8 @@ export function Pill({
   );
 }
 
-/** Tunes · Setlists · Chord Charts — the library's own tabs, in each page's header. */
-export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts" }) {
+/** Tunes · Setlists · Chord Charts · Files — the library's own tabs, in each page's header. */
+export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts" | "files" }) {
   const tabs = [
     { id: "tunes", label: "Tunes", href: "/tunes", icon: NoteIcon },
     {
@@ -124,23 +124,32 @@ export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts
     {
       id: "charts",
       label: "Chord Charts",
+      short: "Charts",
       href: "/chord-charts",
       icon: ChordChartIcon,
     },
+    { id: "files", label: "Files", href: "/files", icon: FileIcon },
   ] as const;
   return (
-    <nav className="flex gap-1 rounded-full bg-background/70 p-1" aria-label="Library">
+    <nav className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-background/70 p-1 [scrollbar-width:none] sm:gap-1" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href}
           aria-current={active === t.id ? "page" : undefined}
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm ${
+          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
             active === t.id ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
-          <t.icon className="h-3.5 w-3.5" />
-          {t.label}
+          <t.icon className="hidden h-3.5 w-3.5 sm:block" />
+          {"short" in t ? (
+            <>
+              <span className="sm:hidden">{t.short}</span>
+              <span className="hidden sm:inline">{t.label}</span>
+            </>
+          ) : (
+            t.label
+          )}
         </Link>
       ))}
     </nav>

@@ -14,7 +14,9 @@ import Select from "@/components/Select";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import { TuneRecordings } from "@/components/recordings/RecordingParts";
-import { ChordChartIcon, LinkIcon, PencilIcon, TrashIcon } from "@/components/tools";
+import { TuneFiles } from "@/components/files/FileParts";
+import TuneShareDialog from "@/components/files/TuneShareDialog";
+import { ChordChartIcon, LinkIcon, PencilIcon, ShareIcon, TrashIcon } from "@/components/tools";
 import { KEY_NAMES, keyPitchClass, transposeSong } from "@/lib/iRealPro";
 import { makeId, type Tune } from "@/lib/types";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
@@ -110,6 +112,11 @@ function Hub({
   onDeleted: () => void;
 }) {
   const router = useRouter();
+  const { isAuthenticated } = useConvexAuth();
+  const [sharing, setSharing] = useState(false);
+  const [allTunes] = useSyncedTunes();
+  const [allLearn] = useTunesToLearn();
+  const tuneName = (tuneId: string) => [...allTunes, ...allLearn].find((t) => t.id === tuneId)?.name;
   const { selectedSong: chart, selectedSongLoading, loading: libraryLoading, allSongs } = useChordChartsLibrary(tune.chordChartId ?? null);
   const [previewKey, setPreviewKey] = useState("");
   const [editing, setEditing] = useState(false);
@@ -211,6 +218,7 @@ function Hub({
         actions={
           <>
             <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
+            {isAuthenticated && <Pill icon={ShareIcon} label="Share" onClick={() => setSharing(true)} />}
             {(other === "tunes" || canUseLearn) && <Pill label={`Move to ${LIST_LABEL[other]}`} onClick={() => moveTo(other)} />}
             <button
               type="button"
@@ -294,6 +302,8 @@ function Hub({
             )}
           </ChartPaper>
 
+          <TuneFiles tuneId={tune.id} tuneName={tuneName} />
+
           <div className="rounded-2xl bg-surface p-4 sm:p-5">
             <TuneRecordings tuneId={tune.id} />
           </div>
@@ -353,6 +363,7 @@ function Hub({
         </div>
       </div>
 
+      {sharing && <TuneShareDialog tuneId={tune.id} tuneName={tune.name} hasChart={!!chart} onClose={() => setSharing(false)} />}
       {editing && <TuneEditorModal initial={tune} isNew={false} onSave={(t) => { patch(t); setEditing(false); }} onClose={() => setEditing(false)} />}
       {picking && (
         <ChartLinkPicker

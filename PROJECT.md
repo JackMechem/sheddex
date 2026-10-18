@@ -232,6 +232,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
+| Files (uploads, the `/files` browser, storage quota) and sharing a tune by link (`/tune/<id>`) | `files-and-tune-sharing.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
@@ -251,8 +252,8 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 
 - **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
-  `/recordings*`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
-  shared links `/setlist/[id]`, `/routine/[id]`, plus `/privacy`, `/terms`, `/credits`.
+  `/recordings*`, `/files`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
+  shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, plus `/privacy`, `/terms`, `/credits`.
 - **Mobile:** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and native
   screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]` placeholder.
   Bass Genius, Drum Generator, Syncopation, the Shed Log and Lessons are **web only** so far.

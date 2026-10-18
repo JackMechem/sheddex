@@ -11,6 +11,8 @@ import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 /** Pages that show other people's content: hidden while Community is switched off. */
 function isCommunityPath(path: string, params: URLSearchParams | null) {
   if (/^\/(community|post|u|setlist|routine)(\/|$)/.test(path)) return true;
+  // A tune shared by link (`/tune/<id>`; plain `/tune` is an old redirect).
+  if (/^\/tune\/[^/]+/.test(path)) return true;
   if (path === "/setlist-charts" && (params?.get("post") || params?.get("shared"))) return true;
   return false;
 }

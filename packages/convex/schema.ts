@@ -546,6 +546,37 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_user_tune", ["userId", "tuneId"]),
 
+  /** Files the owner uploaded (PDFs, images, audio, video, documents…) — the Files page, and a
+      tune's Files section. `tuneId` (a plain string, like `recordings`) attaches one to a tune; a
+      file without one is just in the account. Private to the owner, except that a tune shared by
+      link (`sharedTunes`) shows its attached files. The file lives in Convex file storage. */
+  files: defineTable({
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+    name: v.string(),
+    mimeType: v.string(),
+    size: v.number(),
+    tuneId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_tune", ["userId", "tuneId"]),
+
+  /** A tune shared by link (`/tune/<id>`): the link shows the tune as it is now (read from the
+      owner's synced tune lists), its chord chart, attached files and recordings — never its notes.
+      `snapshot` (a `PublicTune` without notes) is only shown if the tune has since been deleted.
+      One row per (owner, tune); deleting the row stops the link working. */
+  sharedTunes: defineTable({
+    userId: v.id("users"),
+    tuneId: v.string(),
+    snapshot: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_tune", ["userId", "tuneId"]),
+
   /** Bass Genius's bass players (the "Bass players" tab) — a name to file transcriptions under.
       Later Bass Genius will learn each player's style from their transcriptions. */
   bassPlayers: defineTable({

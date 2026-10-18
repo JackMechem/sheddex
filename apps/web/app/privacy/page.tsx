@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 17, 2026">
+    <LegalPage title="Privacy Policy" updated="October 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         sheddex (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
@@ -34,7 +34,8 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and other files you upload.
+            <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and any files you upload (PDFs,
+            images, audio, video and so on, on their own or attached to a tune). Each account can store up to 1 GB.
             When you sign in, sheddex uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
           <li>
@@ -54,8 +55,10 @@ export default function PrivacyPage() {
             account. Make it private again at any time.
           </li>
           <li>
-            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist or routine you share by link, can be seen by
-            whoever has it. Recordings attached to a shared setlist can be played by them too.
+            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist, routine or tune you share by link, can be seen by
+            whoever has it. Recordings attached to a shared setlist can be played by them too. A shared tune shows its keys, tempos, chord chart, the
+            files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. Stop sharing
+            at any time and the link stops working.
           </li>
           <li>
             <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you

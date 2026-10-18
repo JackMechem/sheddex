@@ -173,10 +173,11 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Open a tune", text: "See its chart, the keys you know it in, notes and recordings." },
       { title: "Make a setlist", text: "Order tunes for a gig, with a key and tempo for each." },
     ],
-    features: ["Tunes I Know and Tunes to Learn", "Keys, tempos and notes per tune", "Setlists with drag to reorder", "Read all a setlist's charts in a row", "Share setlists by link"],
+    features: ["Tunes I Know and Tunes to Learn", "Keys, tempos and notes per tune", "Files on each tune", "Share a tune by link", "Setlists with drag to reorder", "Read all a setlist's charts in a row", "Share setlists by link"],
     options: [
       { name: "Tunes I Know / Tunes to Learn", text: "Two lists: what you can play now, and what you're working on." },
-      { name: "A tune's page", text: "The chart linked to it (transposable), the keys you know it in, tempos, notes, recordings and the song to play along with." },
+      { name: "A tune's page", text: "The chart linked to it (transposable), the keys you know it in, tempos, notes, files, recordings and the song to play along with." },
+      { name: "Share a tune", text: "Share on a tune's page makes a link anyone can open: the tune with its chord chart, files and recordings (never your notes). They can save a copy. Stop sharing whenever you like." },
       { name: "Setlists", text: "Tunes in order, each with its own key and tempo for that set. Drag to reorder, share by link, or read all the charts in a row." },
     ],
     shot: "tunes",
@@ -216,6 +217,26 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Listen back", text: "Play it on its own or over the tune's song with a mixer." },
     ],
     features: ["Saved to your account", "Linked to tunes and Shed Log days", "Play over the original song", "Notes per take"],
+  },
+
+  {
+    id: "files",
+    title: "Files",
+    group: "Your library",
+    href: "/files",
+    tagline: "Everything stored with your account.",
+    purpose: "Keep PDFs, lead sheets, photos of charts, audio and video with your account — on their own or attached to a tune — and see everything your account stores in one place.",
+    steps: [
+      { title: "Upload", text: "Upload on the Files page (or drop files on it), or in the Files section of any tune's page." },
+      { title: "Attach to a tune", text: "A file on a tune shows on the tune's page and goes along when you share the tune." },
+      { title: "Find anything", text: "Search, filter by where it came from (uploads, recordings, songs, lessons) and by type, and open it right there." },
+    ],
+    features: ["PDFs, images, audio and video open in place", "Attach files to tunes", "Recordings, songs and lesson files in the same list", "Up to 100 MB a file, 1 GB an account"],
+    options: [
+      { name: "Uploads", text: "Files you uploaded. Rename them, attach them to a tune (or move them to another), or delete them from the ⋮ menu." },
+      { name: "Recordings, songs, lesson files, hand-ins", text: "Everything else your account stores, listed here too. Open them here; change them where they live (the recording's page, the tune, the lesson)." },
+      { name: "Storage", text: "How much of your 1 GB is used. Everything counts: uploads, recordings, songs and lesson files." },
+    ],
   },
 
   {

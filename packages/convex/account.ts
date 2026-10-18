@@ -268,6 +268,21 @@ export const performDelete = internalMutation({
       await ctx.db.delete(row._id);
     }
 
+    // Uploaded files, and tunes shared by link.
+    const files = await ctx.db
+      .query("files")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of files) {
+      await ctx.storage.delete(row.storageId);
+      await ctx.db.delete(row._id);
+    }
+    const sharedTunes = await ctx.db
+      .query("sharedTunes")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of sharedTunes) await ctx.db.delete(row._id);
+
     // Bass Genius players and their transcriptions.
     for (const table of ["bassTranscriptions", "bassPlayers"] as const) {
       const rows = await ctx.db
