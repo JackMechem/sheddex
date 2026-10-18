@@ -67,8 +67,13 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   bigger work goes on `<type>/<short-name>` branches off `preview` (naming rules in `README.md`
   under "Branches"). Check `git branch --show-current` at the start of a session, and if you're
   on `main`, ask before changing anything.
-- Commits: he commits himself unless he asks. After a version bump, tell him it's a good point to
-  commit. Pushing needs his hardware key, so you can't push.
+- **Commits: you make them.** When a piece of work is finished and checked, commit it on the
+  current branch (never on `main`) with `git commit --no-gpg-sign`. His global git config signs
+  every commit with his security key, which you can't touch; don't change that config — the flag
+  keeps his own commits signed. Write detailed messages: a short first line (what changed, in
+  plain words), a blank line, then what and why, and anything not verified. End with the
+  `Co-Authored-By` line. One commit per coherent change; don't commit half-done work, secrets or
+  `.env*` files. Never push (that needs his key) — tell him when there's something to push.
 
 ## Repo layout
 
