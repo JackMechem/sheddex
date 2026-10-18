@@ -22,7 +22,11 @@ Jack can deploy to production (it needs his accounts and his push).
 
 - The Vercel project's **Root Directory** is `apps/web`.
 - `apps/web/vercel.json`'s build command deploys Convex first, then builds the site:
-  `cd ../../packages/convex && npx convex deploy --preview-run previewSeed:seed --cmd 'cd ../../apps/web && pnpm build'`.
+  `cd ../../packages/convex && npx convex deploy --preview-run previewSeed:seed --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL --cmd 'cd ../../apps/web && pnpm build'`.
+- `--cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL` is needed: the command runs from
+  `packages/convex`, which isn't a Next.js package, so Convex can't tell which variable name the
+  site reads and would otherwise hand the build `CONVEX_URL`. Without it, preview sites crash with
+  "Missing environment variable NEXT_PUBLIC_CONVEX_URL".
 - It authenticates with `CONVEX_DEPLOY_KEY`. Vercel has **two** of them: the production deploy
   key, scoped to Production only, and a preview deploy key, scoped to Preview only. The type of key
   decides where `convex deploy` goes, so the same build command serves both.
