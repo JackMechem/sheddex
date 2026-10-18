@@ -1,7 +1,9 @@
 "use client";
 
 import { useConvexAuth } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
+import { api } from "@jam-practice/convex/_generated/api";
 import Celebrations, { SHARE_PROGRESS_EVENT, useCelebrations } from "@/components/practicelog/Celebrations";
 import { ProgressShareDialog } from "@/components/practicelog/Sharing";
 import type { ProgressCardKind } from "@/lib/practiceLog";
@@ -17,8 +19,18 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 export default function PracticeLogGlobal() {
   // The Shed Log is for account holders: nothing is timed, logged or celebrated signed out.
   const { isAuthenticated } = useConvexAuth();
-  const { data, ready: loaded } = usePracticeLog({ drainTimer: true });
+  const { data, ready: loaded, syncAssigned } = usePracticeLog({ drainTimer: true });
   const ready = loaded && isAuthenticated;
+  // Routines your teachers assigned (Lessons) come into your Shed Log, and stay in step.
+  const teachers = useQuery(api.lessons.myTeachers, isAuthenticated ? {} : "skip");
+  useEffect(() => {
+    if (!ready || teachers === undefined) return;
+    syncAssigned(
+      teachers.flatMap((t) =>
+        t.items.filter((i) => i.kind === "routine" && i.routine).map((i) => ({ itemId: i.id, teacher: t.teacher.name, version: i.updatedAt, routine: i.routine! })),
+      ),
+    );
+  }, [ready, teachers, syncAssigned]);
   useCelebrations(data, ready);
   useToolTimeTracker(ready && data.prefs.trackTools !== false);
   const [sharing, setSharing] = useState<{ kind: ProgressCardKind; date?: string; celebrate?: boolean } | null>(null);

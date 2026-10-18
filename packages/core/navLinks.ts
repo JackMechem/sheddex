@@ -181,6 +181,12 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     description: "Import, build, and read chord charts, styled to match the rest of the site.",
     category: "Community",
   },
+  {
+    href: "/lessons",
+    label: "Lessons",
+    description: "Teach with sheddex: a page per lesson with notes, assignments, PDFs and charts, Shed Log routines, booking, and your students' practice. Or open your teacher's link.",
+    category: "Community",
+  },
 ];
 
 /** Case-insensitive substring match on `label`, same rule `apps/web/components/tools.tsx`'s own

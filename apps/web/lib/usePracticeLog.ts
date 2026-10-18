@@ -11,6 +11,8 @@ import {
   type Occurrence,
   type PracticeLogData,
   type Routine,
+  type AssignedRoutine,
+  reconcileAssigned,
   applyTimerEntries,
   pruneDay,
   setDayTaskDone,
@@ -223,7 +225,16 @@ export function usePracticeLog({ drainTimer = false }: { drainTimer?: boolean } 
 
   const setPrefs = useCallback((patch: Partial<PracticeLogPrefs>) => write((prev) => ({ ...prev, prefs: { ...prev.prefs, ...patch } })), [write]);
 
-  return { data, ready, updateDay, setAllTasks, addDayTime, saveDayTask, removeDayTask, toggleDayTask, moveDayTask, setPrefs, updateOccurrence, toggleTask, saveRoutine, deleteRoutine, addToDay, removeFromDay };
+  /** Brings in, updates or drops the routines teachers assigned (Lessons). */
+  const syncAssigned = useCallback(
+    (assigned: AssignedRoutine[]) => {
+      const base = latest ?? data;
+      if (reconcileAssigned(base, assigned, todayKey()) !== base) write((prev) => reconcileAssigned(prev, assigned, todayKey()));
+    },
+    [write, data],
+  );
+
+  return { data, ready, syncAssigned, updateDay, setAllTasks, addDayTime, saveDayTask, removeDayTask, toggleDayTask, moveDayTask, setPrefs, updateOccurrence, toggleTask, saveRoutine, deleteRoutine, addToDay, removeFromDay };
 }
 
 /** The Practice Timer as the Shed Log uses it: what's running, and starting a routine on it.

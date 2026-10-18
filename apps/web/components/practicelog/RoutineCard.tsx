@@ -103,6 +103,7 @@ export default function RoutineCard({
           <Link href={`/shed-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-lg font-bold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
           </Link>
+          {routine.assigned && <span className="text-[11px] font-semibold text-accent">From {routine.assigned.teacher}</span>}
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
             <span className={timeOverride ? "font-semibold text-foreground" : ""}>
               {span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : "Any time"}

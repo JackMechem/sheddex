@@ -39,6 +39,7 @@ import { useSetlists } from "@/lib/useSetlists";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
 import TodayPractice from "@/components/practicelog/TodayPractice";
+import LessonsDashboard from "@/components/lessons/LessonsDashboard";
 import { DEFAULT_LEARNING_PROGRESS, LEARNING_KEY, summarizeLearning } from "@/lib/learningPath";
 
 type ToolLink = (typeof NAV_LINKS)[number];
@@ -222,6 +223,7 @@ export default function Home() {
         ) : (
           <>
           <TodayPractice />
+          <LessonsDashboard />
           <div className="grid gap-4 lg:grid-cols-12">
             {/* Where you left off */}
             <section className="flex flex-col gap-4 rounded-3xl bg-accent/10 p-5 ring-1 ring-accent/15 lg:col-span-8">

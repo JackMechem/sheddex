@@ -12,11 +12,14 @@ export async function sendEmail({
   subject,
   text,
   html,
+  attachments,
 }: {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  /** Files to attach: `content` is base64. */
+  attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
   const apiKey = process.env.AUTH_RESEND_KEY;
   if (!apiKey) {
@@ -31,7 +34,16 @@ export async function sendEmail({
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from, to: [to], subject, text, ...(html ? { html } : {}) }),
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      text,
+      ...(html ? { html } : {}),
+      ...(attachments?.length
+        ? { attachments: attachments.map((a) => ({ filename: a.filename, content: a.content, ...(a.contentType ? { content_type: a.contentType } : {}) })) }
+        : {}),
+    }),
   });
   if (!response.ok) {
     const body = await response.text().catch(() => "");

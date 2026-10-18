@@ -1,6 +1,7 @@
 import { Doc, Id } from "./_generated/dataModel";
 import { ActionCtx, MutationCtx, action, internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { deleteLessonsFor } from "./lessons";
 import {
   createAccount,
   getAuthSessionId,
@@ -239,6 +240,8 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of shared) await ctx.db.delete(row._id);
+    // Lessons: your students (and what you gave them) go; you're unlinked from your teachers.
+    await deleteLessonsFor(ctx, userId);
     const sharedRoutines = await ctx.db
       .query("sharedRoutines")
       .withIndex("by_user", (q) => q.eq("userId", userId))

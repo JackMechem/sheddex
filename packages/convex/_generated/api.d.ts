@@ -17,6 +17,8 @@ import type * as chordCharts from "../chordCharts.js";
 import type * as communityTunes from "../communityTunes.js";
 import type * as follows from "../follows.js";
 import type * as http from "../http.js";
+import type * as lessonSchedule from "../lessonSchedule.js";
+import type * as lessons from "../lessons.js";
 import type * as lib_chordCharts from "../lib/chordCharts.js";
 import type * as lib_resend from "../lib/resend.js";
 import type * as lib_routines from "../lib/routines.js";
@@ -46,6 +48,8 @@ declare const fullApi: ApiFromModules<{
   communityTunes: typeof communityTunes;
   follows: typeof follows;
   http: typeof http;
+  lessonSchedule: typeof lessonSchedule;
+  lessons: typeof lessons;
   "lib/chordCharts": typeof lib_chordCharts;
   "lib/resend": typeof lib_resend;
   "lib/routines": typeof lib_routines;

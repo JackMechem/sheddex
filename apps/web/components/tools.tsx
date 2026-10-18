@@ -387,6 +387,15 @@ export function StopIcon({ className }: { className?: string }) {
   );
 }
 
+export function GraduationCapIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M22 10 12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c3 2 9 2 12 0v-5" />
+    </svg>
+  );
+}
+
 export function DownloadIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -588,6 +597,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/guess-the-interval": EarIcon,
   "/guess-the-chord": ChordIcon,
   "/guess-the-progression": ProgressionIcon,
+  "/lessons": GraduationCapIcon,
   "/practice-timer": StopwatchIcon,
   "/shed-log": CalendarIcon,
   "/metronome": MetronomeIcon,

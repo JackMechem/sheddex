@@ -554,10 +554,10 @@ function NavItems({
           {searching || collapsed ? (
             (searching ? communityItems : libraryItems).map((l) => renderLink(l))
           ) : (
-            // Your library — Community and Tunes (which takes in the chord charts) — as two cards,
-            // under the Dashboard / Shed Log cards and a step quieter than them.
+            // Your library — Community and Tunes (which takes in the chord charts) side by side, and
+            // Lessons under them — as cards under the Dashboard / Shed Log cards, a step quieter.
             <div className="grid grid-cols-2 gap-1">
-              {libraryItems.map((link) => {
+              {libraryItems.map((link, i) => {
                 const { href, label, icon: Icon } = link;
                 const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isChartsPath(effectivePathname));
                 const color = CATEGORY_COLORS[link.category];
@@ -566,7 +566,7 @@ function NavItems({
                     key={href}
                     href={href}
                     onClick={onNavigate}
-                    className={`@container flex min-w-0 rounded-xl border px-1.5 py-1.5 transition-colors ${
+                    className={`@container flex min-w-0 rounded-xl border px-1.5 py-1.5 transition-colors ${i === libraryItems.length - 1 && i % 2 === 0 ? "col-span-2" : ""} ${
                       active ? "border-foreground/15 bg-surface-hover" : "border-transparent bg-surface-hover/60 hover:bg-surface-hover"
                     }`}
                   >

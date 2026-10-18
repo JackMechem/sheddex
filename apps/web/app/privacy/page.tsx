@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="September 29, 2026">
+    <LegalPage title="Privacy Policy" updated="October 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         sheddex (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free
         collection of browser-based music practice tools, built and operated by Jack Mechem as a
@@ -129,6 +129,43 @@ export default function PrivacyPage() {
           Profile pictures are uploaded files, stored via Convex&apos;s file storage (see
           &quot;Who else sees your data&quot; below) — resized in your own browser before
           uploading, so only the resized version ever reaches sheddex&apos;s servers.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Lessons (teachers and students)">
+        <p>
+          A teacher can add students on the Lessons page and give them lesson notes, files (PDFs,
+          images, audio), chord charts, assignments and Shed Log routines. Files are stored on
+          sheddex&apos;s servers (Convex file storage) and can be opened by the teacher and that
+          student only. Each student gets a private invite link; anyone with the link can see the
+          teacher&apos;s name and the student&apos;s name on it, and the first signed-in person to
+          join with it becomes that student.
+        </p>
+        <p>
+          <strong>What your teacher sees once you join:</strong> a summary of your Shed Log (your
+          streak, hours and days practiced, days you hit your goal, the day you last practiced) and,
+          for each routine they gave you, every day of it in your Shed Log — whether you did it,
+          the tasks you checked off and the time logged on each, your notes on it, and recordings
+          you attached to it. They don&apos;t see your own routines, other notes, or other
+          recordings. Ticking an assignment done is shared with them too, and so is anything you
+          hand in for an assignment (text, links and files, stored on sheddex&apos;s servers and
+          visible to you and that teacher only — deleted when the assignment, the lesson or you as
+          their student is removed). Lessons a teacher makes for a booked time stay hidden from
+          you until the lesson starts. You can leave a
+          teacher at any time from their page in Lessons; they stop seeing your practice
+          immediately. A teacher can remove a student at any time, which deletes what they gave
+          that student. Deleting your account removes your students and everything you gave them,
+          and unlinks you from your teachers.
+        </p>
+        <p>
+          <strong>Scheduling lessons:</strong> a teacher can save their usual teaching hours and
+          time zone, and email a student some lesson times — a private link anyone with it can open
+          to pick one (it shows the teacher&apos;s and student&apos;s names and the times). A
+          student can ask for one of their teacher&apos;s open times. Booked, accepted, declined
+          and cancelled lessons are emailed (with a calendar file) to the teacher&apos;s and
+          student&apos;s email addresses — the student&apos;s account email, or the address the
+          teacher entered for them — and we keep the time zone a student booked from so their
+          emails show their own times. Removing a student deletes their lessons and offers.
         </p>
       </LegalSection>
 

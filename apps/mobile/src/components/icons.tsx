@@ -105,6 +105,7 @@ export const FileMusicIcon = mci('file-music-outline');
 export const MicrophoneIcon = mci('microphone');
 export const UnlinkIcon = mci('link-variant-off');
 export const ProgressionIcon = mci('stairs-up');
+export const LessonsIcon = mci('school');
 export const CalendarCheckIcon = mci('calendar-check-outline');
 
 export function StarIcon({ color, size = 18, filled }: IconProps & { filled?: boolean }) {
@@ -127,6 +128,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/guess-the-progression': ProgressionIcon,
   '/practice-timer': StopwatchIcon,
   '/shed-log': CalendarCheckIcon,
+  '/lessons': LessonsIcon,
   '/metronome': MetronomeIcon,
   '/random-metric-modulation': MetricModulationIcon,
   '/tempo-trainer': TempoTrainerIcon,

@@ -69,6 +69,9 @@ export type Routine = {
   attachments: Attachment[];
   createdAt: number;
   updatedAt: number;
+  /** Set on a routine a teacher assigned (Lessons): who, which lesson item, and the version of it
+      this copy was made from. The app keeps it in step with the teacher's version. */
+  assigned?: { teacher: string; itemId: string; version: number };
 };
 
 /** What happened with one routine on one day. */
@@ -1169,4 +1172,116 @@ export function publicPracticeStats(data: PracticeLogData, today: string): Publi
     ...STREAK_MILESTONES.filter((n) => best >= n).map((value) => ({ kind: "streak" as const, value })),
   ].sort((a, b) => (a.kind === b.kind ? b.value - a.value : a.kind === "streak" ? -1 : 1));
   return { streak: s, best, hours: Math.round(hours * 10) / 10, weekHours: Math.round((week / 60) * 10) / 10, days, goalDays, start, levels, achievements };
+}
+
+
+// ---------------------------------------------------------------- lessons
+
+/** The Shed Log id a lesson's assigned routine gets in the student's log. */
+export const lessonRoutineId = (itemId: string) => `lesson-${itemId}`;
+
+export type RoutineReportTask = { id: string; title: string; done: boolean; minutes: number; planned: number; subtasks: { title: string; done: boolean }[] };
+export type RoutineReportDay = {
+  date: string;
+  /** null = today (not over yet). */
+  status: DayStatus | null;
+  skipped: boolean;
+  added: boolean;
+  tasks: RoutineReportTask[];
+  minutes: number;
+  notes: string;
+};
+export type RoutineReport = {
+  days: RoutineReportDay[];
+  totals: { done: number; partial: number; missed: number; minutes: number; tasksDone: number; tasksTotal: number };
+};
+
+/** How a student has done with one routine (Lessons → a routine's practice report): every day it
+    was on, newest first, from `from` (or the routine's start) up to today — each day's status,
+    tasks ticked with the minutes logged on each, subtasks and notes — plus totals. */
+export function routineReport(data: PracticeLogData, routineId: string, today: string, from?: string): RoutineReport | null {
+  const routine = data.routines.find((r) => r.id === routineId);
+  if (!routine) return null;
+  let start = routine.repeat.start;
+  if (from && from > start) start = from;
+  const days: RoutineReportDay[] = [];
+  const totals = { done: 0, partial: 0, missed: 0, minutes: 0, tasksDone: 0, tasksTotal: 0 };
+  // Days it was scheduled, or added by hand, between `start` and today (at most a year back).
+  const keys = new Set<string>();
+  for (let key = start, n = 0; key <= today && n < 400; key = addDays(key, 1), n++) {
+    if (occursOn(routine.repeat, key)) keys.add(key);
+  }
+  for (const [key, day] of Object.entries(data.days)) if (key >= start && key <= today && day.added?.includes(routineId)) keys.add(key);
+  for (const key of [...keys].sort().reverse()) {
+    const day = data.days[key];
+    const occurrence = day?.routines?.[routineId] ?? {};
+    const added = !occursOn(routine.repeat, key);
+    const status = routineStatus({ routine, occurrence, added }, key, today);
+    const done = new Set(occurrence.done ?? []);
+    const subDone = new Set(occurrence.subDone ?? []);
+    const tasks = tasksOf(routine, occurrence).map((t) => ({
+      id: t.id,
+      title: t.title,
+      done: done.has(t.id),
+      minutes: Math.round(((occurrence.spentMs?.[t.id] ?? 0) / 60000) * 10) / 10,
+      planned: t.minutes,
+      subtasks: (t.subtasks ?? []).map((st) => ({ title: st.title, done: subDone.has(st.id) })),
+    }));
+    const minutes = tasks.reduce((sum, t) => sum + t.minutes, 0);
+    days.push({ date: key, status, skipped: !!occurrence.skipped, added, tasks, minutes, notes: occurrence.notes ?? "" });
+    if (status) totals[status]++;
+    totals.minutes += minutes;
+    if (key < today) {
+      totals.tasksDone += tasks.filter((t) => t.done).length;
+      totals.tasksTotal += tasks.length;
+    }
+  }
+  totals.minutes = Math.round(totals.minutes);
+  return { days, totals };
+}
+
+/** The last day with practice logged on it, or null. */
+export function lastPracticed(data: PracticeLogData, today: string): string | null {
+  const keys = Object.keys(data.days).filter((k) => k <= today).sort().reverse();
+  for (const key of keys) if (minutesOn(data, key) > 0) return key;
+  return null;
+}
+
+export type AssignedRoutine = { itemId: string; teacher: string; version: number; routine: Routine };
+
+/**
+ * Keeps the routines teachers assigned (Lessons) in step with a student's Shed Log: each one is
+ * a routine with id `lesson-<item id>`, added when it's first seen (starting today if the
+ * teacher's start date has passed), replaced when the teacher changes it (keeping its start, so
+ * past days stay), and removed when the teacher deletes it or the student leaves. Past days'
+ * entries are never touched. Returns `data` itself when nothing changed.
+ */
+export function reconcileAssigned(data: PracticeLogData, assigned: AssignedRoutine[], today: string): PracticeLogData {
+  let changed = false;
+  const wanted = new Map(assigned.map((a) => [lessonRoutineId(a.itemId), a]));
+  const routines: Routine[] = [];
+  for (const r of data.routines) {
+    if (!r.id.startsWith("lesson-")) {
+      routines.push(r);
+      continue;
+    }
+    const a = wanted.get(r.id);
+    if (!a) {
+      changed = true;
+      continue;
+    }
+    wanted.delete(r.id);
+    if ((r.assigned?.version ?? 0) >= a.version) {
+      routines.push(r);
+      continue;
+    }
+    changed = true;
+    routines.push({ ...a.routine, id: r.id, repeat: { ...a.routine.repeat, start: r.repeat.start }, createdAt: r.createdAt, updatedAt: Date.now(), assigned: { teacher: a.teacher, itemId: a.itemId, version: a.version } });
+  }
+  for (const [id, a] of wanted) {
+    changed = true;
+    const start = a.routine.repeat.start > today ? a.routine.repeat.start : today;
+    routines.push({ ...a.routine, id, repeat: { ...a.routine.repeat, start }, createdAt: Date.now(), updatedAt: Date.now(), assigned: { teacher: a.teacher, itemId: a.itemId, version: a.version } });
+  }
+  return changed ? { ...data, routines } : data;
 }

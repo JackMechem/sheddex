@@ -218,6 +218,36 @@ export const HELP_TOPICS: HelpTopic[] = [
     features: ["Saved to your account", "Linked to tunes and Shed Log days", "Play over the original song", "Notes per take"],
   },
 
+  {
+    id: "lessons",
+    title: "Lessons",
+    group: "Getting started",
+    href: "/lessons",
+    tagline: "For teachers and their students.",
+    purpose: "Each student's lessons, one page per lesson — its notes, assignments (they hand in files, text or links), PDFs and charts — plus Shed Log routines and their practice, day by day.",
+    steps: [
+      { title: "Add a student", text: "Give them a name. You get an invite link for them, and can start adding things straight away." },
+      { title: "Make a lesson", text: "New lesson on their page (booked lessons get one automatically). In it, add lesson notes, assignments, PDFs and images, and chord charts. Routines go on the student's page." },
+      { title: "Send the link", text: "They sign in (or sign up, free) and join — everything is waiting, and your routines are in their Shed Log." },
+      { title: "Follow along", text: "Review what they hand in, see their streak and hours, and every day of each routine you gave them: tasks, time, notes and recordings." },
+    ],
+    features: ["A page per lesson", "Notes, PDFs, images, charts", "Assignments with hand-ins and feedback", "Routines straight into their Shed Log", "Practice reports", "Scheduling with calendar invites"],
+    options: [
+      { name: "Lessons", text: "One page per lesson, with a date and a title. Everything except routines lives in a lesson. A lesson can be hidden from the student until it starts (booked ones are, automatically) — get it ready, then it opens for them. Things added before lessons existed are under \"Before lessons\"." },
+      { name: "All materials", text: "Every note, assignment, file and chart from all your lessons on one page, grouped by lesson, newest first — filter by type or search. \"All materials\" next to the lesson list, for teachers and students." },
+      { name: "Lesson notes", text: "Notes inside a lesson: a notes page with the lesson's notes in a sidebar, written in a rich text editor — headings, lists, checklists, quotes, links; type Markdown or use the toolbar. Saved as you type; your student reads them there." },
+      { name: "Assignment", text: "A title, details, an optional due date and attachment, and how they hand it in: a file (pick the types — audio, video, PDF, images, notation, documents, your own extensions, or any file), text, a link, or just ticking it off. You see what they handed in and mark it reviewed or ask for changes, with feedback." },
+      { name: "Lesson settings", text: "Lessons → Settings: switch assignments, notes, routines, files, chord charts or lesson booking off for all your students (nothing is deleted), and set your teaching hours." },
+      { name: "Routine", text: "Pick one of your Shed Log routines. Your student gets a copy in their Shed Log; change it (Edit → pick again) and theirs updates." },
+      { name: "Chord chart", text: "A copy of one of your charts. Your student can read it here or save it to their own charts." },
+      { name: "Invite link", text: "One per student. Make a new one from the student's ⋮ menu if it got out — the old one stops working." },
+      { name: "Teaching hours", text: "Lessons → Settings: the times you usually teach each week (in your time zone), lesson length, a break after each lesson, minimum notice, how far ahead, and days off. Students can request lessons from these open times (switch it off to only offer times yourself)." },
+      { name: "Offer times", text: "On a student's page, Lessons → Offer times: tap a few open times (or add your own) and we email them a link. They pick one and it's booked — you both get a confirmation with a calendar invite." },
+      { name: "Requests", text: "A student taps Request a lesson on your page and picks an open time. You get an email; accept it (they get a confirmation and calendar invite) or decline it with a note." },
+      { name: "Cancelling", text: "Either of you can cancel a booked lesson; the other gets an email with a calendar update that removes it." },
+      { name: "Leaving", text: "A student can leave any time; you stop seeing their practice. Removing a student deletes what you gave them." },
+    ],
+  },
   // ---------------------------------------------------------------- tools
   {
     id: "jam-practice",

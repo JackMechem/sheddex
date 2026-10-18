@@ -26,9 +26,7 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     type: v.union(v.literal("custom"), v.literal("pomodoro")),
-    segments: v.optional(
-      v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number() })),
-    ),
+    segments: v.optional(v.array(v.object({ id: v.string(), title: v.string(), minutes: v.number() }))),
     pomodoro: v.optional(
       v.object({
         workMinutes: v.number(),
@@ -300,6 +298,158 @@ export default defineSchema({
       owner's `syncedSettings` blob (`"tunes"` / `"jam-practice-tunes-to-learn"`), so it's a plain
       string id, not a document id; a recording whose tune has since been deleted just shows as
       unlinked. Private to the owner. */
+  /** Lessons: a teacher's student. The teacher adds them by name (and can start adding things
+      for them straight away); `code` is the student's invite link (`/lessons/join?invite=`). Opening
+      it signed in and joining sets `studentId`. One row per teacher–student pair. */
+  lessonStudents: defineTable({
+    teacherId: v.id("users"),
+    name: v.string(),
+    code: v.string(),
+    studentId: v.optional(v.id("users")),
+    joinedAt: v.optional(v.number()),
+    /** The address the invite was last emailed to, and when. */
+    inviteEmail: v.optional(v.string()),
+    invitedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_teacher", ["teacherId"])
+    .index("by_student", ["studentId"])
+    .index("by_code", ["code"]),
+
+  /** One thing a teacher gave a student (`lessonId`): lesson notes, a file (PDF / image, in
+      Convex storage), a chord chart (a copy, `chart`), an assignment (due date, ticked done by the
+      student) or a Shed Log routine (`routine`, a full `Routine`; the student's app copies it into
+      their Shed Log as `lesson-<item id>`, and the teacher reads their log for it). */
+  lessonItems: defineTable({
+    lessonId: v.id("lessonStudents"),
+    teacherId: v.id("users"),
+    /** The lesson (`lessonSessions`) it belongs to. Routines have none (they're for the student,
+        not one lesson); items from before lessons existed have none and show under "Earlier". */
+    sessionId: v.optional(v.id("lessonSessions")),
+    kind: v.union(v.literal("note"), v.literal("file"), v.literal("chart"), v.literal("assignment"), v.literal("routine")),
+    title: v.string(),
+    body: v.string(),
+    fileId: v.optional(v.id("_storage")),
+    fileName: v.optional(v.string()),
+    fileType: v.optional(v.string()),
+    chart: v.optional(v.any()),
+    routine: v.optional(v.any()),
+    dueDate: v.optional(v.string()),
+    done: v.optional(v.boolean()),
+    doneAt: v.optional(v.number()),
+    /** On an assignment: what the student hands in (core `lessonFiles.ts`'s `SubmitConfig`). */
+    submit: v.optional(v.object({ file: v.boolean(), text: v.boolean(), link: v.boolean(), fileKinds: v.array(v.string()), extensions: v.array(v.string()) })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_lesson", ["lessonId"])
+    .index("by_session", ["sessionId"]),
+
+  /** One lesson with a student (`lessonId` is the teacher–student pair): a date and title, holding
+      its notes, assignments, files and charts. Made by the teacher, or automatically when a lesson
+      is booked (`bookingId`) — those stay hidden from the student until they start
+      (`hiddenUntil`). */
+  lessonSessions: defineTable({
+    lessonId: v.id("lessonStudents"),
+    teacherId: v.id("users"),
+    title: v.string(),
+    start: v.number(),
+    end: v.optional(v.number()),
+    bookingId: v.optional(v.id("lessonBookings")),
+    /** The student sees it from this time on (missing = straight away). */
+    hiddenUntil: v.optional(v.number()),
+    cancelled: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_lesson", ["lessonId"])
+    .index("by_booking", ["bookingId"]),
+
+  /** A student's hand-in for an assignment (one per assignment; handing in again replaces it):
+      text, links and files, then the teacher's feedback — `reviewed`, or `changes` (asked to
+      redo it). */
+  lessonSubmissions: defineTable({
+    itemId: v.id("lessonItems"),
+    lessonId: v.id("lessonStudents"),
+    teacherId: v.id("users"),
+    studentId: v.id("users"),
+    text: v.string(),
+    links: v.array(v.string()),
+    files: v.array(v.object({ fileId: v.id("_storage"), name: v.string(), type: v.string(), size: v.number() })),
+    status: v.union(v.literal("submitted"), v.literal("reviewed"), v.literal("changes")),
+    feedback: v.optional(v.string()),
+    reviewedAt: v.optional(v.number()),
+    submittedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_item", ["itemId"])
+    .index("by_lesson", ["lessonId"]),
+
+  /** Which parts of Lessons a teacher uses (core `lessonFiles.ts`'s `LessonFeatures`). */
+  lessonPrefs: defineTable({
+    teacherId: v.id("users"),
+    features: v.object({ scheduling: v.boolean(), notes: v.boolean(), files: v.boolean(), charts: v.boolean(), assignments: v.boolean(), routines: v.boolean() }),
+    updatedAt: v.number(),
+  }).index("by_teacher", ["teacherId"]),
+
+  /** A teacher's usual teaching times (weekly windows in their own time zone) and booking rules —
+      what students can request lessons from (`lessonSchedule.ts`, core `lessonSchedule.ts`). */
+  lessonAvailability: defineTable({
+    teacherId: v.id("users"),
+    timeZone: v.string(),
+    windows: v.array(v.object({ weekday: v.number(), start: v.string(), end: v.string() })),
+    lengthMin: v.number(),
+    bufferMin: v.number(),
+    noticeHours: v.number(),
+    aheadDays: v.number(),
+    blockedDates: v.array(v.string()),
+    allowRequests: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_teacher", ["teacherId"]),
+
+  /** One lesson time with a student: asked for by the student (`requested`, until the teacher
+      accepts or declines) or booked (`confirmed` — from an offer, or an accepted request), then
+      maybe `cancelled`. `sequence` goes up on each change (for the calendar invite). */
+  lessonBookings: defineTable({
+    teacherId: v.id("users"),
+    lessonId: v.id("lessonStudents"),
+    start: v.number(),
+    end: v.number(),
+    status: v.union(v.literal("requested"), v.literal("confirmed"), v.literal("declined"), v.literal("cancelled")),
+    source: v.union(v.literal("request"), v.literal("offer")),
+    offerId: v.optional(v.id("lessonOffers")),
+    /** The student's note with a request, and the teacher's reply / reason. */
+    note: v.optional(v.string()),
+    reply: v.optional(v.string()),
+    /** The time zone the student booked from (their emails use it). */
+    studentTz: v.optional(v.string()),
+    /** Where the student's emails go when they have no account linked yet. */
+    studentEmail: v.optional(v.string()),
+    cancelledBy: v.optional(v.union(v.literal("teacher"), v.literal("student"))),
+    sequence: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_teacher_start", ["teacherId", "start"])
+    .index("by_lesson", ["lessonId"]),
+
+  /** Times a teacher offered a student by email: the student opens `/lessons/book?offer=<token>`
+      (no sign-in needed) and picks one, which books it. */
+  lessonOffers: defineTable({
+    teacherId: v.id("users"),
+    lessonId: v.id("lessonStudents"),
+    token: v.string(),
+    slots: v.array(v.object({ start: v.number(), end: v.number() })),
+    message: v.string(),
+    email: v.optional(v.string()),
+    status: v.union(v.literal("open"), v.literal("booked"), v.literal("withdrawn")),
+    bookingId: v.optional(v.id("lessonBookings")),
+    sentAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_lesson", ["lessonId"]),
+
   recordings: defineTable({
     userId: v.id("users"),
     storageId: v.id("_storage"),

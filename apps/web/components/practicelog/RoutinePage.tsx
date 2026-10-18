@@ -125,14 +125,22 @@ export default function RoutinePage({ id }: { id: string }) {
             {describeRepeat(routine.repeat)}
             {start !== null ? ` · ${formatTime(start)}` : ""} · {formatMinutesShort(totalMinutes(routine))}
           </p>
+          {routine.assigned && (
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent">
+              From {routine.assigned.teacher} · they see how it goes
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setSharing(true)} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
             <ShareIcon className="h-4 w-4" /> Share
           </button>
-          <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-            <PencilIcon className="h-4 w-4" /> Edit
-          </Link>
+          {/* A teacher's routine is theirs to change (edits here would be overwritten by theirs). */}
+          {!routine.assigned && (
+            <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+              <PencilIcon className="h-4 w-4" /> Edit
+            </Link>
+          )}
           {!running && routine.tasks.some((t) => t.minutes > 0) && (
             <button type="button" onClick={startToday} className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
               <PlayIcon className="h-4 w-4" /> Start today
