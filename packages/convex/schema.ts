@@ -473,6 +473,18 @@ export default defineSchema({
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
 
+  // Admin corrections to the changelog (apps/web/lib/changelog.ts): one row per version, whose
+  // `release` replaces that version's entry on /changelog. `base` is the file's entry when the
+  // correction was made, so the admin panel can say when it has changed since.
+  changelogEdits: defineTable({
+    version: v.string(),
+    release: v.any(),
+    hidden: v.boolean(),
+    base: v.string(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_version", ["version"]),
+
   // Extra admins the owner (admin.ts's OWNER_EMAIL) has made. The owner is never in here.
   admins: defineTable({
     userId: v.id("users"),

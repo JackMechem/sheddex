@@ -13,15 +13,17 @@ import { BugIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, Spa
 import { VERSION_LABEL } from "@/lib/version";
 import { useSiteStatus } from "@/lib/useSiteStatus";
 import Mayday from "@/components/admin/Mayday";
+import ChangelogAdmin from "@/components/admin/ChangelogAdmin";
 import Analytics from "@/components/admin/Analytics";
 
-type Tab = "overview" | "analytics" | "inbox" | "posts" | "users" | "mayday";
+type Tab = "overview" | "analytics" | "inbox" | "posts" | "users" | "changelog" | "mayday";
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "analytics", label: "Analytics" },
   { id: "inbox", label: "Inbox" },
   { id: "posts", label: "Posts" },
   { id: "users", label: "Users" },
+  { id: "changelog", label: "Changelog" },
   { id: "mayday", label: "Mayday" },
 ];
 
@@ -121,6 +123,7 @@ export default function AdminPage() {
       {tab === "posts" && <Posts />}
       {tab === "users" && <Users />}
       {tab === "mayday" && <Mayday />}
+      {tab === "changelog" && <ChangelogAdmin />}
       {tab === "analytics" && <Analytics />}
     </LibraryPage>
   );

@@ -10,7 +10,8 @@ import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import { LogoMark } from "@/components/Logo";
-import { CHANNEL, VERSION_LABEL } from "@/lib/version";
+import { APP_VERSION, CHANNEL, VERSION_LABEL } from "@/lib/version";
+import { useChangelogUnseen } from "@/lib/useChangelogUnseen";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
@@ -18,6 +19,7 @@ import {
   CATEGORY_COLORS,
   BugIcon,
   FeedbackIcon,
+  MegaphoneIcon,
   HelpIcon,
   ShieldIcon,
   NAV_LINKS,
@@ -728,15 +730,17 @@ export default function Sidebar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 flex flex-col bg-surface px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:hidden">
           <div className="mb-6 flex items-center justify-between gap-1">
-            <Link
-              href={LANDING_PATH}
-              onClick={() => setMobileOpen(false)}
-              aria-label="About sheddex"
-              className="min-w-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <AnimatedLogo height={24} />
-              <VersionTag />
-            </Link>
+            <div className="min-w-0">
+              <Link
+                href={LANDING_PATH}
+                onClick={() => setMobileOpen(false)}
+                aria-label="About sheddex"
+                className="block w-fit rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <AnimatedLogo height={24} />
+              </Link>
+              <VersionTag onNavigate={() => setMobileOpen(false)} />
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
@@ -844,14 +848,12 @@ export default function Sidebar() {
               <LogoMark size={30} />
             </Link>
           ) : (
-            <Link
-              href={LANDING_PATH}
-              aria-label="About sheddex"
-              className="min-w-0 flex-1 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <AnimatedLogo height={22} />
+            <div className="min-w-0 flex-1">
+              <Link href={LANDING_PATH} aria-label="About sheddex" className="block w-fit rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                <AnimatedLogo height={22} />
+              </Link>
               <VersionTag />
-            </Link>
+            </div>
           )}
           {!collapsed && (
           <div className="flex shrink-0 items-center">
@@ -870,6 +872,14 @@ export default function Sidebar() {
           >
             {(close) => (
               <>
+                <FlyoutItem
+                  icon={MegaphoneIcon}
+                  label={`What's new · v${APP_VERSION}`}
+                  onSelect={() => {
+                    router.push("/changelog");
+                    close();
+                  }}
+                />
                 <FlyoutItem
                   icon={FeedbackIcon}
                   label="Send feedback"
@@ -966,6 +976,14 @@ export default function Sidebar() {
                       }}
                     />
                     <FlyoutItem
+                      icon={MegaphoneIcon}
+                      label={`What's new · v${APP_VERSION}`}
+                      onSelect={() => {
+                        router.push("/changelog");
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
                       icon={FeedbackIcon}
                       label="Send feedback"
                       onSelect={() => {
@@ -1033,12 +1051,24 @@ export default function Sidebar() {
   );
 }
 
-/** The version under the logo: "v0.9.0" and a small Beta tag. */
-function VersionTag() {
+/** The version under the logo: "v0.9.0" and a small Beta tag, linking to what's new (with a dot
+    when there's a version this device hasn't seen there yet). */
+function VersionTag({ onNavigate }: { onNavigate?: () => void }) {
+  const unseen = useChangelogUnseen();
   return (
-    <span className="mt-0.5 flex items-center gap-1 pl-0.5 text-[10px] font-semibold leading-none text-muted">
+    <Link
+      href="/changelog"
+      onClick={onNavigate}
+      title="What's new"
+      className="mt-0.5 flex w-fit items-center gap-1 rounded-full py-0.5 pl-0.5 pr-1 text-[10px] font-semibold leading-none text-muted hover:text-foreground"
+    >
       {VERSION_LABEL.replace(/ beta$/, "")}
       {CHANNEL === "beta" && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">Beta</span>}
-    </span>
+      {unseen && (
+        <span className="flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 text-[9px] font-bold text-accent-foreground">
+          <span className="h-1 w-1 rounded-full bg-accent-foreground" /> New
+        </span>
+      )}
+    </Link>
   );
 }

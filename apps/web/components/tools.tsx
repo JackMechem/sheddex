@@ -713,6 +713,14 @@ export function BugIcon({ className }: { className?: string }) {
   );
 }
 
+export function MegaphoneIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zM17 9a4 4 0 0 1 0 6M8 14l1 5h2.5l-1-4.3" />
+    </svg>
+  );
+}
+
 export function SparkIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>

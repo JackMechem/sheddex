@@ -15,6 +15,7 @@ import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as auth from "../auth.js";
 import type * as bassPlayers from "../bassPlayers.js";
+import type * as changelog from "../changelog.js";
 import type * as chordCharts from "../chordCharts.js";
 import type * as communityTunes from "../communityTunes.js";
 import type * as feedback from "../feedback.js";
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   adminAnalytics: typeof adminAnalytics;
   auth: typeof auth;
   bassPlayers: typeof bassPlayers;
+  changelog: typeof changelog;
   chordCharts: typeof chordCharts;
   communityTunes: typeof communityTunes;
   feedback: typeof feedback;

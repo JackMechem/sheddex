@@ -448,6 +448,7 @@ export default function Home() {
         <a href="https://github.com/JackMechem/sheddex.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
         <Link href="/" className="hover:text-foreground">About</Link>
         <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
+        <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
         <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
         <Link href="/terms" className="hover:text-foreground">Terms</Link>
         <Link href="/credits" className="hover:text-foreground">Credits</Link>
