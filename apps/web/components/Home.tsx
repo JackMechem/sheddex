@@ -445,7 +445,7 @@ export default function Home() {
             Jack Mechem
           </a>
         </span>
-        <a href="https://github.com/JackMechem/sheddex.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
+        <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
         <Link href="/" className="hover:text-foreground">About</Link>
         <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
         <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>

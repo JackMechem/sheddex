@@ -90,7 +90,7 @@ export default function TermsPage() {
           is built with a number of open-source libraries, each under their own license; using
           sheddex doesn&apos;t grant you any license to sheddex&apos;s own code or design beyond
           what&apos;s stated in its{" "}
-          <LegalLink href="https://github.com/JackMechem/sheddex.com">
+          <LegalLink href="https://github.com/JackMechem/sheddex">
             public GitHub repository
           </LegalLink>
           , if anything.

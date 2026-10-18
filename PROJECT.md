@@ -52,7 +52,7 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   `docs/notes/overview.md`). Don't reuse old names (jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
-- GitHub: `git@github.com:JackMechem/sheddex.com.git`.
+- GitHub: `git@github.com:JackMechem/sheddex.git` (the in-app GitHub links in `Home.tsx`, `Landing.tsx` and `app/terms` point at it).
 
 ## Working with Jack
 

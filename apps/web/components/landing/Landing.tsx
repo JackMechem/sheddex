@@ -724,7 +724,7 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-foreground/10 pt-8 text-sm text-muted sm:flex-row">
         <Logo height={18} />
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <a href="https://github.com/JackMechem/sheddex.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
+          <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
           <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
           <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>
           <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
