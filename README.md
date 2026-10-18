@@ -40,6 +40,34 @@ The web app reads `NEXT_PUBLIC_CONVEX_URL` from `apps/web/.env.local`; the mobil
 | `packages/convex` | The backend ([Convex](https://convex.dev)) |
 | `docs` | [How it fits together](docs/architecture.md), [style guide](docs/guides/style.md), [versioning](docs/guides/versioning.md), [testing](docs/guides/testing.md), [deploying](docs/guides/deploying.md), and [feature notes](docs/notes/) |
 
+## Branches
+
+Nobody works directly on `main` any more.
+
+| Branch | What it's for |
+| --- | --- |
+| `main` | What's live on sheddex.com. Only changes from `preview` are merged in, when a version is ready to release. |
+| `preview` | Where day-to-day work happens and gets tested before release. |
+| `<type>/<short-name>` | Optional, for a bigger or riskier piece of work. Branch off `preview`, merge back into `preview` when done, then delete it. |
+
+**Naming work branches:** `<type>/<short-name>`, lowercase, words joined by hyphens, a few words
+at most, no dates or version numbers.
+
+| Type | Use it for | Example |
+| --- | --- | --- |
+| `feature/` | A new tool, page or ability | `feature/bass-genius-mobile` |
+| `fix/` | A bug fix | `fix/shed-log-streak-reset` |
+| `design/` | Visual or wording changes, no new behavior | `design/sidebar-cards` |
+| `refactor/` | Restructuring code without changing what it does | `refactor/synced-settings-cache` |
+| `docs/` | Documentation only | `docs/branch-guidelines` |
+| `chore/` | Dependencies, build and tooling | `chore/expo-sdk-58` |
+
+**Releasing:** bump the version on `preview` (see [docs/guides/versioning.md](docs/guides/versioning.md)),
+check it, then merge `preview` into `main`. Merging into `main` is what updates the live site.
+
+Every branch except `main` also gets a Vercel preview site with its own separate backend and demo
+data; see [docs/guides/deploying.md](docs/guides/deploying.md#preview-deployments).
+
 ## Versioning
 
 sheddex uses semantic versioning and is in beta until 1.0. The version is set in

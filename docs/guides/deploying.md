@@ -8,6 +8,7 @@ Jack can deploy to production (it needs his accounts and his push).
 | | Deployment | Used by |
 | --- | --- | --- |
 | Dev | `befitting-cobra-264` | `localhost`, the "sheddex" Android app |
+| Preview | a new one per branch | Vercel preview builds (e.g. of `preview`) |
 | Prod | `grandiose-dolphin-564` | sheddex.com, the "sheddex prod" Android app |
 
 - Day-to-day work pushes to **dev**: `npx convex dev --once` from `packages/convex`.
@@ -21,8 +22,49 @@ Jack can deploy to production (it needs his accounts and his push).
 
 - The Vercel project's **Root Directory** is `apps/web`.
 - `apps/web/vercel.json`'s build command deploys Convex first, then builds the site:
-  `cd ../../packages/convex && npx convex deploy --cmd 'cd ../../apps/web && pnpm build'`.
-- It authenticates with a production-scoped `CONVEX_DEPLOY_KEY` set in Vercel (Production only).
+  `cd ../../packages/convex && npx convex deploy --preview-run previewSeed:seed --cmd 'cd ../../apps/web && pnpm build'`.
+- It authenticates with `CONVEX_DEPLOY_KEY`. Vercel has **two** of them: the production deploy
+  key, scoped to Production only, and a preview deploy key, scoped to Preview only. The type of key
+  decides where `convex deploy` goes, so the same build command serves both.
+
+## Preview deployments
+
+Every Vercel preview build (any branch except `main`) gets its own Convex backend, named after the
+branch, with its own empty database. It never touches dev or prod data, and no prod data is ever
+copied into it. On the free plan a preview backend is deleted 5 days after it was created; the next
+push makes a fresh one.
+
+**Demo data:** when a preview backend is first created, the build runs `previewSeed:seed`
+(`packages/convex/previewSeed.ts`; Convex runs `--preview-run` only on new preview deployments,
+never on prod). It makes:
+- a demo account to sign in as: `demo@sheddex.test`, with the password you set in
+  `PREVIEW_DEMO_PASSWORD`. It has tunes (some linked to chord charts), a "Jazz standards" playlist
+  with three charts, a setlist, a public profile, and three weeks of Shed Log history;
+- a second musician, @maya.plays (can't sign in), with tunes and a Community post. She and the demo
+  account follow each other.
+
+Or sign up with your own email for an empty account. Signing up as mechemjack@gmail.com makes you
+the owner there too (`/admin` works). Google sign-in doesn't work on previews (its redirect address
+changes with every preview backend), so use email and password.
+
+**One-time setup** (in this order, before pushing a branch):
+1. Convex dashboard → the project's Settings → **Generate Preview Deploy Key**.
+2. Vercel → Project Settings → Environment Variables → add `CONVEX_DEPLOY_KEY` = that key, with only
+   **Preview** ticked. Leave the production key on Production only.
+3. Convex dashboard → the project's Settings → **default environment variables for preview
+   deployments**:
+   - `PREVIEW_DEMO_PASSWORD` — any password; the demo account's.
+   - `JWT_PRIVATE_KEY` and `JWKS` — copy them from the dev deployment's environment variables.
+     Sign-in doesn't work without them.
+   - `AUTH_RESEND_KEY` and `AUTH_EMAIL_FROM` — so sign-up codes and password resets are sent.
+   - `SITE_URL` — the branch's stable Vercel address (e.g.
+     `https://sheddex-git-preview-<team>.vercel.app`), so links in emails go to the preview site.
+
+The seed runs only when a preview backend is created. If one was created before
+`PREVIEW_DEMO_PASSWORD` was set, run it by hand:
+`npx convex run previewSeed:seed --preview-name <branch>` from `packages/convex`. Running it again
+does nothing (it skips once the demo account exists, and refuses on any backend that already has
+real accounts).
 
 ## Environment variables (Convex)
 

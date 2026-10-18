@@ -63,6 +63,10 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   screenshot his phone** (details in `docs/guides/testing.md`).
 - He watches `localhost:3000` while you work: don't add temporary pages under `apps/web/app/`
   (see testing).
+- **Branches:** never work on `main` (it's the live site). Day-to-day work is on `preview`;
+  bigger work goes on `<type>/<short-name>` branches off `preview` (naming rules in `README.md`
+  under "Branches"). Check `git branch --show-current` at the start of a session, and if you're
+  on `main`, ask before changing anything.
 - Commits: he commits himself unless he asks. After a version bump, tell him it's a good point to
   commit. Pushing needs his hardware key, so you can't push.
 
@@ -98,6 +102,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   function. That's why the chart library uses one row per song (bars in their own table), imports
   go in chunks of 150, big deletes are batched by the scheduler, and the `library` query will need
   paging at around 4,000 charts.
+- Vercel preview builds get their own empty Convex backend per branch, seeded with demo data by
+  `packages/convex/previewSeed.ts` (setup in `docs/guides/deploying.md`). When the schema or data
+  shapes it writes change (tunes, charts, setlists, Shed Log, profiles, posts), update the seed.
 - New backend code is on **dev** only until a Vercel production build runs `convex deploy`. The
   prod mobile app and sheddex.com don't have new functions until then.
 - Convex Auth's Next.js middleware treats any `?code=` URL parameter as an OAuth callback (it
