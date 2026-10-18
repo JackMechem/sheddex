@@ -15,11 +15,13 @@ import { useChangelogUnseen } from "@/lib/useChangelogUnseen";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
+import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
 import {
   CATEGORY_COLORS,
   BugIcon,
   FeedbackIcon,
   MegaphoneIcon,
+  HeartIcon,
   HelpIcon,
   ShieldIcon,
   NAV_LINKS,
@@ -686,7 +688,8 @@ export default function Sidebar() {
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const fabHidden = useFeedbackFabHidden();
-  const onHelp = usePathname() === "/help";
+  const currentPath = usePathname();
+  const onHelp = currentPath === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
   const setCollapsed = (c: boolean) => updateLayout({ collapsed: c });
@@ -792,6 +795,15 @@ export default function Sidebar() {
                       />
                     )}
                     <FlyoutItem
+                      icon={HeartIcon}
+                      label="Support sheddex"
+                      onSelect={() => {
+                        setMobileOpen(false);
+                        router.push(SUPPORT_PATH);
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
                       icon={PaletteIcon}
                       label="Theme"
                       onSelect={() => {
@@ -838,6 +850,7 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 p-1 bg-background rounded-2xl">
             <PracticeTimerWidget />
+            <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -903,6 +916,14 @@ export default function Sidebar() {
                     close();
                   }}
                 />
+                <FlyoutItem
+                  icon={HeartIcon}
+                  label="Support sheddex"
+                  onSelect={() => {
+                    router.push(SUPPORT_PATH);
+                    close();
+                  }}
+                />
                 {fabHidden && (
                   <FlyoutItem
                     icon={BugIcon}
@@ -959,6 +980,7 @@ export default function Sidebar() {
           className={`mt-1 flex flex-col gap-1 ${collapsed ? "" : "bg-background rounded-2xl p-1"}`}
         >
           <PracticeTimerWidget collapsed={collapsed} />
+          <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />
           {collapsed && (
             <div className="flex flex-col items-center gap-1 pb-1">
               <Flyout icon={DotsIcon} label="Sidebar options" align="start">
@@ -1003,6 +1025,14 @@ export default function Sidebar() {
                       label="Send feedback"
                       onSelect={() => {
                         openFeedback();
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
+                      icon={HeartIcon}
+                      label="Support sheddex"
+                      onSelect={() => {
+                        router.push(SUPPORT_PATH);
                         close();
                       }}
                     />

@@ -240,6 +240,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser, storage quota) and sharing a tune by link (`/tune/<id>`) | `files-and-tune-sharing.md` |
+| Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
@@ -259,7 +260,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 
 - **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
-  `/recordings*`, `/files`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
+  `/recordings*`, `/files`, `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, plus `/privacy`, `/terms`, `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
   native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
