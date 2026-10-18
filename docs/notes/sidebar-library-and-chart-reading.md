@@ -147,3 +147,14 @@ Checked signed in to Jack's dev account in nix Chromium: the reader at 1600 wide
 (next with the arrow keys, the phone sheet), the chart page, transposing to Fm from the key grid,
 full screen, the ⋮ menu, and the tune page. No errors.
 
+
+### Tunes → Library in the sidebar (2026-10-18, web)
+
+The sidebar's "Tunes" card is now **Library** (new `LibraryIcon`, books on a shelf), since it leads
+to tunes, setlists, chord charts and files. Only the name changed: `navLinks.ts`'s `/tunes` entry is
+labelled "Library" (its description lists all four, so searching "tunes" still finds it), the
+route is still `/tunes`, and the Tunes page keeps its own title and tabs. The card stays lit on
+every library page (`isLibraryPath` in `Sidebar.tsx`, which replaced `isChartsPath` and adds
+`/files`). Community's "Post a setlist" hint says "make one in your Library first". This was the
+first step of a sidebar rethink Jack is considering (group "Your stuff" vs "Tools", one row style,
+favorites shown once, the streak shown once, a sign-in card where the account features are).

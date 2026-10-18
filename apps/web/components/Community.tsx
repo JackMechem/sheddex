@@ -129,7 +129,7 @@ export default function Community() {
                   0,
                 ),
             }
-          : { label: "Post a setlist (make one in Tunes first)", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/tunes") },
+          : { label: "Post a setlist (make one in your Library first)", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/tunes") },
         { label: "Share a routine or progress (from the Shed Log)", icon: <CalendarIcon className="h-4 w-4 text-accent" />, onSelect: () => router.push("/shed-log/routines") },
       ],
     });

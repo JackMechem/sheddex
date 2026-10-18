@@ -255,9 +255,10 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
-/** The chord charts pages (and the setlist chart reader), which the sidebar files under Tunes. */
-function isChartsPath(path: string) {
-  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts";
+/** The library's other pages (chord charts, the setlist chart reader, files), which the sidebar
+    files under Library (`/tunes`). */
+function isLibraryPath(path: string) {
+  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts" || path === "/files";
 }
 
 /** Shared by Favorites and every real category in `NavItems` below — a collapsible section with
@@ -523,7 +524,7 @@ function NavItems({
     // favorites, then a group per tool category (its name on hover).
     const iconLink = (link: NavLink) => {
       const { href, label, icon: Icon } = link;
-      const active = effectivePathname === href || (href !== "/" && effectivePathname.startsWith(`${href}/`)) || (href === "/tunes" && isChartsPath(effectivePathname));
+      const active = effectivePathname === href || (href !== "/" && effectivePathname.startsWith(`${href}/`)) || (href === "/tunes" && isLibraryPath(effectivePathname));
       const color = CATEGORY_COLORS[link.category];
       return (
         <Link
@@ -585,7 +586,7 @@ function NavItems({
             <div className="grid grid-cols-2 gap-1.5">
               {libraryItems.map((link, i) => {
                 const { href, label, icon: Icon } = link;
-                const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isChartsPath(effectivePathname));
+                const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
                 const color = CATEGORY_COLORS[link.category];
                 return (
                   <Link

@@ -171,8 +171,9 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
   },
   {
     href: "/tunes",
-    label: "Tunes",
-    description: "Your tune lists — the tunes you know and the ones you're learning, with keys, notes and charts.",
+    label: "Library",
+    description:
+      "Your library: the tunes you know and the ones you're learning, setlists, chord charts and files.",
     category: "Community",
   },
   {

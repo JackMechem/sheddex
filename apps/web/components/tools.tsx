@@ -107,6 +107,17 @@ export function DotsVerticalIcon({ className }: { className?: string }) {
   );
 }
 
+/** Books on a shelf — the Library (tunes, setlists, charts, files). */
+export function LibraryIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 4h3v16H4zM9 4h3v16H9z" />
+      <path d="M14.5 5.2l2.9-.8 3.9 14.8-2.9.8z" />
+      <path d="M3 20h18" />
+    </svg>
+  );
+}
+
 export function BookIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -653,7 +664,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/tuner": TunerIcon,
   "/slow-downer": WaveIcon,
   "/chord-charts": ChordChartIcon,
-  "/tunes": NoteIcon,
+  "/tunes": LibraryIcon,
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
   "/drum-generator": DrumIcon,
