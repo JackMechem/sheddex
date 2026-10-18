@@ -450,6 +450,53 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_lesson", ["lessonId"]),
 
+  /** What people send through "Send feedback": a bug, an idea, something else, or a report of a
+      post / profile (`target`). Only the admin reads these (`admin.ts`); the sender sees their own
+      on /feedback. */
+  // Anonymous usage counts (usage.ts): totals per UTC day, per kind ("visit" | "view" | "play" |
+  // "time") and key (a page path, a tool's href, or "account"/"guest" for visits). No user ids.
+  usageDaily: defineTable({
+    day: v.string(),
+    kind: v.string(),
+    key: v.string(),
+    n: v.number(),
+    ms: v.number(),
+  })
+    .index("by_day_kind_key", ["day", "kind", "key"])
+    .index("by_day", ["day"]),
+
+  // The site's mayday switches (lib/site.ts), one row with key "site".
+  siteFlags: defineTable({
+    key: v.string(),
+    flags: v.any(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
+
+  // Extra admins the owner (admin.ts's OWNER_EMAIL) has made. The owner is never in here.
+  admins: defineTable({
+    userId: v.id("users"),
+    grantedBy: v.id("users"),
+    grantedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  feedback: defineTable({
+    userId: v.optional(v.id("users")),
+    email: v.optional(v.string()),
+    kind: v.union(v.literal("bug"), v.literal("feature"), v.literal("other"), v.literal("report")),
+    message: v.string(),
+    page: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    screenshotId: v.optional(v.id("_storage")),
+    target: v.optional(v.object({ type: v.union(v.literal("post"), v.literal("profile")), id: v.string(), label: v.string() })),
+    status: v.union(v.literal("new"), v.literal("seen"), v.literal("planned"), v.literal("done"), v.literal("closed")),
+    adminNote: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_user", ["userId"]),
+
   recordings: defineTable({
     userId: v.id("users"),
     storageId: v.id("_storage"),

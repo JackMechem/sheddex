@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertUploadsOpen } from "./lib/site";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
@@ -45,6 +46,7 @@ async function withUrl(ctx: QueryCtx, row: Doc<"recordings">) {
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save recordings.");
     return await ctx.storage.generateUploadUrl();

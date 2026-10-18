@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ResetPassword from "@/components/ResetPassword";
 
-export const metadata: Metadata = { title: "Reset your password · sheddex" };
+export const metadata: Metadata = { title: "Reset your password" };
 
 /** `/reset-password` — "forgot password". Without `?token=` it asks for your email and sends a
     reset link; the link (from `packages/convex/ResendPasswordReset.ts`) comes back here with

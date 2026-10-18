@@ -3,6 +3,8 @@ import { convexAuth } from "@convex-dev/auth/server";
 import Google from "@auth/core/providers/google";
 import { ResendOTP } from "./ResendOTP";
 import { ResendPasswordReset } from "./ResendPasswordReset";
+import { siteFlags } from "./lib/site";
+import type { QueryCtx } from "./_generated/server";
 
 // Google only actually works once AUTH_GOOGLE_ID/AUTH_GOOGLE_SECRET are set on the deployment
 // (`npx convex env set ...`) and the matching OAuth Client ID's redirect URI is configured in
@@ -17,4 +19,12 @@ import { ResendPasswordReset } from "./ResendPasswordReset";
 // `/reset-password` page (see that file).
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [Password({ verify: ResendOTP, reset: ResendPasswordReset }), Google],
+  callbacks: {
+    // Mayday → "Pause sign-ups": refuse brand-new accounts. This runs in the same transaction
+    // that creates the user, so throwing here means the account is never made.
+    async afterUserCreatedOrUpdated(ctx, { existingUserId }) {
+      if (existingUserId) return;
+      if ((await siteFlags(ctx as unknown as QueryCtx)).signupsPaused) throw new Error("New sign-ups are paused right now.");
+    },
+  },
 });

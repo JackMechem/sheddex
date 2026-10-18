@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertUploadsOpen } from "./lib/site";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -426,6 +427,7 @@ export const removeStudent = mutation({
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await assertUploadsOpen(ctx);
     if (!(await me(ctx))) throw new Error("Sign in to upload files.");
     return ctx.storage.generateUploadUrl();
   },
@@ -775,6 +777,7 @@ async function deleteSubmissions(ctx: MutationCtx, itemId: Id<"lessonItems">) {
 export const generateSubmitUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await assertUploadsOpen(ctx);
     const userId = await me(ctx);
     if (!userId) throw new Error("Sign in first.");
     const learning = await ctx.db

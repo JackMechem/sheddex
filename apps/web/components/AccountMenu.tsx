@@ -11,6 +11,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
 import StreakBadge from "@/components/practicelog/StreakBadge";
 import { GoogleIcon, UserIcon, svgProps } from "@/components/tools";
+import { useSiteStatus } from "@/lib/useSiteStatus";
 
 function DotsIcon({ className }: { className?: string }) {
   return (
@@ -53,6 +54,7 @@ export function AuthForm({
   googleRedirectTo?: string;
 }) {
   const { signIn } = useAuthActions();
+  const site = useSiteStatus();
   const [flow, setFlow] = useState<"signIn" | "signUp">(initialFlow);
   // "code" means Convex Auth's Password provider (configured with `verify: ResendOTP` in
   // convex/auth.ts) emailed a confirmation code instead of completing sign-in/sign-up directly —
@@ -178,6 +180,11 @@ export function AuthForm({
         <h2 className="text-lg font-semibold">
           {flow === "signIn" ? "Sign in" : "Create an account"}
         </h2>
+        {flow === "signUp" && site?.signupsPaused && (
+          <p className="rounded-xl bg-amber-500/15 px-3 py-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+            New sign-ups are paused for a bit. Every tool still works without an account — try again later.
+          </p>
+        )}
         <p className="text-sm text-muted">
           Sign in to sync your tune list, chord charts and practice stats across devices. Every
           tool still works fine without an account.

@@ -1,288 +1,144 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Privacy Policy — sheddex",
+  title: "Privacy Policy",
 };
 
 export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated="October 17, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        sheddex (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free
-        collection of browser-based music practice tools, built and operated by Jack Mechem as a
-        personal, non-commercial project. This page explains what data sheddex collects, why, and
-        what your options are. It isn&apos;t written in dense legal boilerplate on purpose — if
-        anything here is unclear, use the contact method at the bottom and ask.
+        sheddex (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
+        Mechem. This page says what it collects and why, in plain words.
       </p>
 
       <LegalSection title="The short version">
-        <p>
-          Recorder and Slow Downer&apos;s actual recordings and loaded audio files always stay in
-          your own browser and are never sent anywhere, account or not. Every other tool&apos;s
-          data (tune lists, settings, chord charts, practice history and stats) works the same way
-          when you&apos;re signed out — but if you create an account, that data syncs to
-          sheddex&apos;s servers instead, so it follows you to another device signed into the same
-          account. Signing in is entirely optional; every tool works fully without one. There&apos;s
-          also an entirely separate, opt-in public profile (a username, picture, instruments, and
-          your tunes) that only becomes visible to anyone — including people without an account —
-          if you explicitly turn it on; see &quot;Public profiles&quot; below. There are no ads, no
-          analytics, and no trackers anywhere on this site.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="Data that stays on your device">
-        <p>
-          Signed out, every tool on sheddex — the trainers, the metronome, Chord Charts, Slow
-          Downer, the Recorder — stores its data (settings, tune lists, imported chord charts,
-          practice history, recordings, and any audio files you load) directly in your
-          browser&apos;s own local storage, using standard browser technology (localStorage and
-          IndexedDB). None of it is uploaded to sheddex&apos;s servers or seen by Jack Mechem. It
-          stays on your device until you clear it yourself (through your browser&apos;s own
-          settings, or a tool&apos;s own reset controls where available) — clearing your
-          browser&apos;s site data for sheddex.com will delete it.
-        </p>
-        <p>
-          Recorder&apos;s and Slow Downer&apos;s actual audio (recordings and loaded files) always
-          works this way, signed in or not — see &quot;Data collected if you create an
-          account&quot; below for what does sync.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="Data collected if you create an account">
-        <p>Creating an account is entirely optional — every tool works fully without one.</p>
-        <p>If you sign up with email and password, sheddex collects and stores:</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Your email address.</li>
+          <li>Every tool works without an account. Signed out, your stuff stays in your browser.</li>
+          <li>With an account, your stuff is saved to sheddex&apos;s servers so it follows you between devices.</li>
+          <li>Only what you choose to make public (a public profile, a post, a shared link) is seen by anyone else.</li>
+          <li>sheddex counts which pages and tools get used, anonymously. No ads, no third-party trackers, nothing sold.</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="Signed out">
+        <p>
+          Your settings, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage. They aren&apos;t
+          sent to sheddex. Clearing your browser&apos;s data for sheddex.com deletes them.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="With an account">
+        <ul className="list-disc space-y-1 pl-5">
           <li>
-            Your password, but never in a readable form — it&apos;s run through a one-way hashing
-            function before it&apos;s stored, and can&apos;t be recovered from the stored value,
-            by sheddex or anyone else.
+            <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
+          </li>
+          <li>
+            <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and other files you upload.
+            When you sign in, sheddex uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
+          </li>
+          <li>
+            <strong>Profile:</strong> your username, and if you add them, a picture, banner and instruments.
+          </li>
+          <li>Emailed confirmation codes are stored hashed and expire after 15 minutes.</li>
+        </ul>
+        <p>Slow Downer&apos;s audio files always stay in your browser, signed in or not.</p>
+      </LegalSection>
+
+      <LegalSection title="What others can see">
+        <ul className="list-disc space-y-1 pl-5">
+          <li>
+            <strong>Public profile</strong> (off until you turn it on): your username, picture, instruments, all your Tunes I Know and Tunes to Learn
+            (names, keys, tempos; never your notes), ear-training levels and stars, who you follow and who follows you, and unless you turn it off, a
+            Shed Log summary (streaks, hours, days practiced, milestones; never your routines, tasks or notes). Anyone can view it, with or without an
+            account. Make it private again at any time.
+          </li>
+          <li>
+            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist or routine you share by link, can be seen by
+            whoever has it. Recordings attached to a shared setlist can be played by them too.
+          </li>
+          <li>
+            <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you
+            (including notes and recordings on those), and anything you hand in. Not your other routines, notes or recordings. Lesson materials, hand-ins
+            and booking details are shared only between the teacher and that student, and booking emails go to both. Leave a teacher at any time.
           </li>
         </ul>
-        <p>If you sign in with Google instead, Google shares with sheddex:</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>The email address and name associated with your Google account.</li>
-          <li>
-            Whatever else Google&apos;s own sign-in screen tells you it&apos;s sharing at the time
-            you sign in — sheddex only requests the minimum needed to create an account (your
-            email), nothing broader.
-          </li>
-        </ul>
+      </LegalSection>
+
+      <LegalSection title="Usage counts">
         <p>
-          Confirming an action by email (creating an account, changing a password, deleting an
-          account) briefly stores a one-time confirmation code, hashed the same way a password is,
-          which expires automatically after 15 minutes whether or not it&apos;s used.
-        </p>
-        <p>
-          If you&apos;re signed in, sheddex also stores your tool data on its servers instead of
-          only in your browser — tune lists, each tool&apos;s settings, imported chord charts, and
-          the trainers&apos; practice history/stats. Signing in doesn&apos;t merge what was already
-          in your browser with your account — it switches over to whatever&apos;s already saved to
-          the account, so anything only saved locally before you signed in stays only in that
-          browser&apos;s local storage unless you re-add it while signed in. Recorder&apos;s
-          recordings and Slow Downer&apos;s loaded audio files are the one exception — those stay
-          local-only regardless of sign-in state (see &quot;Data that stays on your device&quot;
-          above).
+          To see what&apos;s useful, sheddex counts, per day: visits, page views, which tools are started and how long they run, and whether a visit
+          was signed in. Only daily totals are kept (for example, &quot;the Metronome was started 40 times on Tuesday&quot;). They aren&apos;t tied to
+          you, your account or your device, and no IP address or advertising ID is stored. Nothing is counted if your browser sends Do Not Track or
+          Global Privacy Control. Account activity sheddex already has (like when an account was created) is also summed into charts for the
+          administrator.
         </p>
       </LegalSection>
 
-      <LegalSection title="Public profiles">
+      <LegalSection title="Feedback and reports">
         <p>
-          Separate from the account data above, sheddex lets you optionally set up a public
-          profile — a username (unrelated to how you sign in), a picture, and the instruments you
-          play — from the Public Profile tab of the account page. None of this is visible to
-          anyone else, and it doesn&apos;t appear in the Community search page, until you
-          explicitly turn &quot;Make profile public&quot; on there.
-        </p>
-        <p>
-          Once public, your username, picture, instruments, and <strong>every tune</strong> in
-          your Tunes and Tunes to Learn lists (name, tempos, keys, and time signature — never any
-          notes you&apos;ve written on a tune) can be viewed by anyone at its own page
-          (sheddex.com/u/your-username) and found via the Community search page — both reachable
-          without an account. There&apos;s no way to show only some of your tunes; making your
-          profile public shows all of them. It also shows your ear-training progress — how many
-          learning-path levels you&apos;ve passed in Guess the Interval, Guess the Chord and Guess
-          the Progression, and the stars earned (not individual scores) — and, unless you turn it off in
-          your profile settings, a summary of your Shed Log: your current and best streak, hours and
-          days practiced, the last 26 weeks as colored squares, and milestones reached (never your
-          routines, tasks or notes). A public profile also shows who you follow and who
-          follows you (see &quot;Follows&quot; below) to anyone who can view the profile at all,
-          under that same rule. Turning a profile back to private, or deleting it entirely, removes
-          this visibility immediately — the account page lets you do either any time.
-        </p>
-        <p>
-          <strong>Tunes to Learn.</strong> Separate from your own Jam Practice tune list, sheddex
-          also lets you keep a personal &quot;Tunes to Learn&quot; list — built by copying tunes
-          you see on other people&apos;s public profiles onto your own list, from the account
-          page&apos;s Tunes to Learn tab. This list is stored on sheddex&apos;s servers the same
-          way your other synced tool data is, and is shown on your own public profile under the
-          same public/private rule as everything else described here.
-        </p>
-        <p>
-          <strong>Follows.</strong> If you follow another public profile, that&apos;s stored as a
-          simple record of who follows whom. Your own Following and Followers lists are always
-          visible to you on the account page; on a public profile, both lists are visible to
-          anyone who can view that profile, the same as the rest of it. Following requires being
-          signed in; there&apos;s no notification sent to the account you follow.
-        </p>
-        <p>
-          Profile pictures are uploaded files, stored via Convex&apos;s file storage (see
-          &quot;Who else sees your data&quot; below) — resized in your own browser before
-          uploading, so only the resized version ever reaches sheddex&apos;s servers.
+          When you send feedback or report a post or profile, sheddex keeps your message, the page you were on, your browser and device type, any
+          screenshot you attach, and your account (or the email you typed if you&apos;re signed out), so it can be fixed and answered.
         </p>
       </LegalSection>
 
-      <LegalSection title="Lessons (teachers and students)">
+      <LegalSection title="Administration">
         <p>
-          A teacher can add students on the Lessons page and give them lesson notes, files (PDFs,
-          images, audio), chord charts, assignments and Shed Log routines. Files are stored on
-          sheddex&apos;s servers (Convex file storage) and can be opened by the teacher and that
-          student only. Each student gets a private invite link; anyone with the link can see the
-          teacher&apos;s name and the student&apos;s name on it, and the first signed-in person to
-          join with it becomes that student.
-        </p>
-        <p>
-          <strong>What your teacher sees once you join:</strong> a summary of your Shed Log (your
-          streak, hours and days practiced, days you hit your goal, the day you last practiced) and,
-          for each routine they gave you, every day of it in your Shed Log — whether you did it,
-          the tasks you checked off and the time logged on each, your notes on it, and recordings
-          you attached to it. They don&apos;t see your own routines, other notes, or other
-          recordings. Ticking an assignment done is shared with them too, and so is anything you
-          hand in for an assignment (text, links and files, stored on sheddex&apos;s servers and
-          visible to you and that teacher only — deleted when the assignment, the lesson or you as
-          their student is removed). Lessons a teacher makes for a booked time stay hidden from
-          you until the lesson starts. You can leave a
-          teacher at any time from their page in Lessons; they stop seeing your practice
-          immediately. A teacher can remove a student at any time, which deletes what they gave
-          that student. Deleting your account removes your students and everything you gave them,
-          and unlinks you from your teachers.
-        </p>
-        <p>
-          <strong>Scheduling lessons:</strong> a teacher can save their usual teaching hours and
-          time zone, and email a student some lesson times — a private link anyone with it can open
-          to pick one (it shows the teacher&apos;s and student&apos;s names and the times). A
-          student can ask for one of their teacher&apos;s open times. Booked, accepted, declined
-          and cancelled lessons are emailed (with a calendar file) to the teacher&apos;s and
-          student&apos;s email addresses — the student&apos;s account email, or the address the
-          teacher entered for them — and we keep the time zone a student booked from so their
-          emails show their own times. Removing a student deletes their lessons and offers.
+          The administrators can see each account&apos;s email, username, sign-in method and sign-up date, read feedback, and remove posts or accounts
+          that break the <LegalLink href="/terms">terms</LegalLink>. They don&apos;t browse your private stuff (your library, Shed Log, recordings or
+          notes).
         </p>
       </LegalSection>
 
       <LegalSection title="Cookies and browser storage">
-        <p>
-          sheddex doesn&apos;t use advertising or tracking cookies. Browser storage is used only
-          for the site to function: remembering your theme/display preferences, each tool&apos;s
-          own settings, and — if you&apos;re signed in — keeping you signed in between visits.
-        </p>
+        <p>Only what the site needs to work: keeping you signed in, your theme, tool settings and similar preferences. No ad or tracking cookies.</p>
       </LegalSection>
 
-      <LegalSection title="Who else sees your data">
-        <p>
-          sheddex doesn&apos;t sell data, and doesn&apos;t share it for advertising. A small
-          number of service providers handle the account/email infrastructure on sheddex&apos;s
-          behalf, only for the specific purpose named:
-        </p>
+      <LegalSection title="Services sheddex uses">
         <ul className="list-disc space-y-1 pl-5">
           <li>
-            <LegalLink href="https://www.convex.dev/legal/privacy">Convex</LegalLink> — stores
-            account data (email, hashed password, session tokens), synced tool data, and (if you
-            set one) your public profile — including uploaded profile pictures, via Convex&apos;s
-            file storage — and runs the server-side code that handles all of it.
+            <LegalLink href="https://www.convex.dev/legal/privacy">Convex</LegalLink> stores account data, synced data and uploaded files, and runs the
+            server code.
           </li>
           <li>
-            <LegalLink href="https://resend.com/legal/privacy-policy">Resend</LegalLink> — sends
-            the confirmation emails sheddex emails you (account creation, password changes,
-            account deletion). Your email address is shared with Resend only to deliver these.
+            <LegalLink href="https://resend.com/legal/privacy-policy">Resend</LegalLink> sends sheddex&apos;s emails (sign-in codes, password resets,
+            lesson emails).
           </li>
           <li>
-            <LegalLink href="https://policies.google.com/privacy">Google</LegalLink> — handles the
-            &quot;Sign in with Google&quot; option, if you choose to use it, per Google&apos;s own
-            privacy practices.
+            <LegalLink href="https://policies.google.com/privacy">Google</LegalLink> handles &quot;Sign in with Google&quot;, if you use it.
           </li>
           <li>
-            <LegalLink href="https://vercel.com/legal/privacy-policy">Vercel</LegalLink> — hosts
-            and serves the sheddex.com site itself, and so processes standard technical
-            information (like IP addresses) as part of serving web pages, the same as any web
-            host.
+            <LegalLink href="https://vercel.com/legal/privacy-policy">Vercel</LegalLink> hosts the website and, like any web host, sees standard
+            request details such as IP addresses.
           </li>
           <li>
-            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">
-              GitHub Pages
-            </LegalLink>{" "}
-            — the Piano and Rhodes tones (used across several tools — see{" "}
-            <LegalLink href="/credits">Credits</LegalLink>) are real recordings your browser
-            fetches directly from two GitHub Pages-hosted sample libraries the first time you pick
-            one of those tones, not through sheddex&apos;s own servers, so GitHub sees that
-            request the same way it would for any page it hosts.
+            <LegalLink href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub Pages</LegalLink> serves some of the
+            piano and Rhodes samples straight to your browser (see <LegalLink href="/credits">Credits</LegalLink>).
           </li>
         </ul>
-        <p>
-          These providers may process data on servers located outside your own country, including
-          in the United States.
-        </p>
+        <p>These may process data outside your country, including in the United States. sheddex doesn&apos;t sell or share data for advertising.</p>
       </LegalSection>
 
-      <LegalSection title="How long data is kept">
+      <LegalSection title="Keeping and deleting">
         <p>
-          Account data is kept for as long as your account exists. You can delete your account
-          yourself, at any time, from the account page — this permanently removes your email,
-          password, and sign-in history from sheddex&apos;s servers. Data stored in your own
-          browser is kept until you clear it yourself and isn&apos;t affected by deleting your
-          account.
+          Your data is kept while your account exists. Deleting your account (from the Account page) permanently removes it and everything tied to it:
+          profile, posts, library, Shed Log, recordings, files, lessons and feedback. Daily usage totals aren&apos;t tied to anyone, so there&apos;s
+          nothing of yours in them to delete.
         </p>
-      </LegalSection>
-
-      <LegalSection title="Your choices">
-        <ul className="list-disc space-y-1 pl-5">
-          <li>Use sheddex without ever creating an account.</li>
-          <li>
-            View, change, or delete your account yourself, any time, from the account page —
-            change or set a password, connect or disconnect Google sign-in, or permanently delete
-            the account and everything tied to it.
-          </li>
-          <li>
-            Turn a public profile back to private, or remove it entirely, any time from the Public
-            Profile tab — either immediately stops anyone from being able to view it.
-          </li>
-          <li>
-            Clear your browser&apos;s local storage for sheddex.com at any time to remove
-            everything stored on your device.
-          </li>
-        </ul>
       </LegalSection>
 
       <LegalSection title="Security">
-        <p>
-          Passwords are stored hashed, never in plain text. Traffic to sheddex.com is encrypted
-          (HTTPS). No online service can guarantee perfect security, but sheddex doesn&apos;t
-          collect more than it needs to in the first place, which limits what there is to protect.
-        </p>
+        <p>Passwords are stored hashed and traffic is encrypted (HTTPS). Nothing online is perfectly secure, so sheddex keeps only what it needs.</p>
       </LegalSection>
 
-      <LegalSection title="Children's privacy">
-        <p>
-          sheddex isn&apos;t directed at children under 13, and doesn&apos;t knowingly collect
-          personal information from anyone under 13. If you believe a child has created an
-          account, contact us using the method below and it will be removed.
-        </p>
+      <LegalSection title="Children">
+        <p>sheddex isn&apos;t aimed at children under 13. If you think a child has made an account, get in touch and it will be removed.</p>
       </LegalSection>
 
-      <LegalSection title="Changes to this policy">
+      <LegalSection title="Changes and contact">
         <p>
-          If this policy changes, this page will be updated and the date at the top will change.
-          There&apos;s no mailing list or other notification beyond that.
-        </p>
-      </LegalSection>
-
-      <LegalSection title="Contact">
-        <p>
-          Questions about this policy, or requests about your data (including deleting it, beyond
-          what the account page already lets you do yourself), can be sent via{" "}
-          <LegalLink href="https://github.com/JackMechem/sheddex.com/issues">
-            GitHub issues
-          </LegalLink>
-          .
+          If this policy changes, this page and its date will be updated. Questions or requests about your data: use the{" "}
+          <LegalLink href="/feedback">feedback page</LegalLink> (or a GitHub issue).
         </p>
       </LegalSection>
     </LegalPage>

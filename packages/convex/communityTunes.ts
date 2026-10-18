@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { communityHidden, siteFlags } from "./lib/site";
+import { isStaff } from "./lib/roles";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, QueryCtx } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
@@ -8,6 +10,8 @@ import { liveSetlist, type SetlistCache } from "./lib/setlists";
 import { liveRoutine } from "./lib/routines";
 import { cleanProgressCard, cleanPublicRoutine } from "@jam-practice/core/practiceLog";
 
+/** An automatic flood limit (admins are exempt). */
+const MAX_POSTS_PER_DAY = 10;
 const MAX_TUNES_PER_POST = 300;
 const MAX_LIST = 60;
 
@@ -120,6 +124,18 @@ export const create = mutation({
   handler: async (ctx, { title, description, tunes, unlisted, kind, setlistId, routineId, payload }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not signed in.");
+    const flags = await siteFlags(ctx);
+    if (flags.communityOff) throw new Error("Community is down for maintenance right now.");
+    if (flags.postingPaused) throw new Error("New posts are paused right now. Try again a bit later.");
+    const dayAgo = Date.now() - 86_400_000;
+    const recent = (
+      await ctx.db
+        .query("communityTunes")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).filter((p) => p.createdAt > dayAgo).length;
+    if (recent >= MAX_POSTS_PER_DAY && !(await isStaff(ctx)))
+      throw new Error(`You can post up to ${MAX_POSTS_PER_DAY} times a day. Try again tomorrow.`);
     const profile = await authorProfile(ctx, userId);
     if (!profile?.isPublic) {
       throw new Error(
@@ -195,6 +211,7 @@ export const toggleLike = mutation({
   handler: async (ctx, { id }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to like posts.");
+    if (await communityHidden(ctx)) throw new Error("Community is down for maintenance right now.");
     const post = await ctx.db.get(id);
     if (!post) throw new Error("Post not found.");
     const existing = await ctx.db
@@ -220,6 +237,7 @@ export const toggleLike = mutation({
 export const myLikes = query({
   args: {},
   handler: async (ctx) => {
+    if (await communityHidden(ctx)) return [];
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const rows = await ctx.db
@@ -238,6 +256,7 @@ export const myLikes = query({
 export const likedPosts = query({
   args: {},
   handler: async (ctx) => {
+    if (await communityHidden(ctx)) return [];
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const likeRows = await ctx.db
@@ -275,6 +294,7 @@ export const likedPosts = query({
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    if (await communityHidden(ctx)) return [];
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const rows = await ctx.db
@@ -312,6 +332,7 @@ export const list = query({
 export const mine = query({
   args: {},
   handler: async (ctx) => {
+    if (await communityHidden(ctx)) return [];
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const rows = await ctx.db
@@ -333,6 +354,7 @@ export const mine = query({
 export const listByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId: targetUserId }) => {
+    if (await communityHidden(ctx)) return [];
     const callerId = await getAuthUserId(ctx);
     if (!callerId) return [];
     const profile = await authorProfile(ctx, targetUserId);
@@ -357,6 +379,7 @@ export const listByUser = query({
 export const get = query({
   args: { id: v.id("communityTunes") },
   handler: async (ctx, { id }) => {
+    if (await communityHidden(ctx)) return null;
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const row = await ctx.db.get(id);
@@ -392,6 +415,7 @@ export const get = query({
 export const postForSetlist = query({
   args: { setlistId: v.string() },
   handler: async (ctx, { setlistId }) => {
+    if (await communityHidden(ctx)) return null;
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const rows = await ctx.db
@@ -408,6 +432,7 @@ export const postForSetlist = query({
 export const postForRoutine = query({
   args: { routineId: v.string() },
   handler: async (ctx, { routineId }) => {
+    if (await communityHidden(ctx)) return null;
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const rows = await ctx.db

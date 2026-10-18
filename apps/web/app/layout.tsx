@@ -13,9 +13,16 @@ import Sidebar from "@/components/Sidebar";
 import UsernamePrompt from "@/components/UsernamePrompt";
 import "./globals.css";
 
+const DESCRIPTION =
+  "Free practice tools for musicians: metronome, tuner, ear training, chord charts, jam practice, a practice log and more. No ads, no paywalls.";
+
 export const metadata: Metadata = {
-  title: "sheddex",
-  description: "Practice tools for musicians: a jam tune picker, a note trainer, and more.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sheddex.com"),
+  title: { default: "sheddex", template: "%s · sheddex" },
+  description: DESCRIPTION,
+  applicationName: "sheddex",
+  openGraph: { type: "website", siteName: "sheddex", title: "sheddex — practice tools for musicians", description: DESCRIPTION, url: "/" },
+  twitter: { card: "summary_large_image", title: "sheddex — practice tools for musicians", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {

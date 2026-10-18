@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertUploadsOpen, communityHidden } from "./lib/site";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -150,6 +151,7 @@ export const claimUsername = mutation({
 export const generateAvatarUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
+    await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not signed in");
     return await ctx.storage.generateUploadUrl();
@@ -258,6 +260,7 @@ export const getPublicByUsername = query({
   /** `today` is the viewer's date ("YYYY-MM-DD") so the streak is counted from their day. */
   args: { username: v.string(), today: v.optional(v.string()) },
   handler: async (ctx, { username, today }) => {
+    if (await communityHidden(ctx)) return null;
     const normalized = normalizeUsername(username);
     const row = await ctx.db
       .query("profiles")
@@ -346,6 +349,7 @@ export const getPublicByUsername = query({
 export const search = query({
   args: { query: v.string() },
   handler: async (ctx, { query: rawQuery }) => {
+    if (await communityHidden(ctx)) return [];
     const normalized = normalizeUsername(rawQuery);
     if (normalized.length === 0) return [];
     const all = await ctx.db

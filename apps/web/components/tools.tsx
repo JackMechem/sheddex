@@ -695,3 +695,28 @@ export function CloseIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function FeedbackIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z" />
+      <path d="M9 10h6M9 13.5h4" />
+    </svg>
+  );
+}
+
+export function BugIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M8 8a4 4 0 0 1 8 0v1H8V8zM6 9h12v4a6 6 0 0 1-12 0V9zM12 9v10M3 13h3M18 13h3M4 7l2.5 2M20 7l-2.5 2M4 19l2.5-2M20 19l-2.5-2" />
+    </svg>
+  );
+}
+
+export function SparkIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
+    </svg>
+  );
+}

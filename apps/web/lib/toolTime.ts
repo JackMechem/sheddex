@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { NAV_LINKS } from "@/components/tools";
 import { queueLogEntry } from "@/lib/practiceTimerEngine";
+import { trackToolStart, trackToolTime } from "@/lib/usage";
 
 /**
  * Counts the time a tool is actually running as practice in the Shed Log — the Metronome
@@ -52,8 +53,11 @@ export function useToolActivity(href: string, running: boolean, { visibleOnly = 
   useEffect(() => {
     if (!running) return;
     accumulate();
-    active.set(href, { label: labelOf(href), since: Date.now(), visibleOnly });
+    const started = Date.now();
+    trackToolStart(href);
+    active.set(href, { label: labelOf(href), since: started, visibleOnly });
     return () => {
+      trackToolTime(href, Date.now() - started);
       accumulate();
       active.delete(href);
       if (enabled) flush(href);

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { communityHidden } from "./lib/site";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation, query } from "./_generated/server";
 import { cleanPublicRoutine } from "@jam-practice/core/practiceLog";
@@ -59,6 +60,7 @@ export const shareFor = query({
 export const getShared = query({
   args: { id: v.string() },
   handler: async (ctx, { id }) => {
+    if (await communityHidden(ctx)) return null;
     const shareId = ctx.db.normalizeId("sharedRoutines", id);
     if (!shareId) return null;
     const row = await ctx.db.get(shareId);

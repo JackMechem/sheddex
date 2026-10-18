@@ -10,12 +10,16 @@ import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import { LogoMark } from "@/components/Logo";
+import { CHANNEL, VERSION_LABEL } from "@/lib/version";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import {
   CATEGORY_COLORS,
+  BugIcon,
+  FeedbackIcon,
   HelpIcon,
+  ShieldIcon,
   NAV_LINKS,
   SearchIcon,
   StarIcon,
@@ -24,6 +28,9 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
+import { openFeedback } from "@/components/feedback/FeedbackForm";
+import { showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 import { collectLeaves } from "@/lib/tilingLayout";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import { useFavorites } from "@/lib/useFavorites";
@@ -659,6 +666,8 @@ export default function Sidebar() {
   const [query, setQuery] = useState("");
   const [themeOpen, setThemeOpen] = useState(false);
   const router = useRouter();
+  const isAdmin = useIsAdmin();
+  const fabHidden = useFeedbackFabHidden();
   const onHelp = usePathname() === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
@@ -725,8 +734,21 @@ export default function Sidebar() {
               className="min-w-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <AnimatedLogo height={24} />
+              <VersionTag />
             </Link>
             <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  openFeedback();
+                }}
+                aria-label="Send feedback"
+                title="Send feedback"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+              >
+                <FeedbackIcon className="h-5 w-5" />
+              </button>
               <Link
               href="/help"
               onClick={() => setMobileOpen(false)}
@@ -738,14 +760,37 @@ export default function Sidebar() {
             </Link>
               <Flyout icon={DotsIcon} label="Menu options" align="end">
                 {(close) => (
-                  <FlyoutItem
-                    icon={PaletteIcon}
-                    label="Theme"
-                    onSelect={() => {
-                      setThemeOpen(true);
-                      close();
-                    }}
-                  />
+                  <>
+                    {fabHidden && (
+                      <FlyoutItem
+                        icon={BugIcon}
+                        label="Show bug report button"
+                        onSelect={() => {
+                          showFeedbackFab();
+                          close();
+                        }}
+                      />
+                    )}
+                    <FlyoutItem
+                      icon={PaletteIcon}
+                      label="Theme"
+                      onSelect={() => {
+                        setThemeOpen(true);
+                        close();
+                      }}
+                    />
+                    {isAdmin && (
+                      <FlyoutItem
+                        icon={ShieldIcon}
+                        label="Admin"
+                        onSelect={() => {
+                          setMobileOpen(false);
+                          router.push("/admin");
+                          close();
+                        }}
+                      />
+                    )}
+                  </>
                 )}
               </Flyout>
               <button
@@ -773,6 +818,7 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 p-1 bg-background rounded-2xl">
             <PracticeTimerWidget />
+            {isAdmin && <AdminButton onNavigate={() => setMobileOpen(false)} />}
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -790,11 +836,11 @@ export default function Sidebar() {
           className={
             collapsed
               ? "mb-4 flex h-10 items-center justify-center"
-              : "mb-4 flex h-10 items-center justify-between gap-1 pl-1"
+              : "mb-4 flex min-h-10 items-center justify-between gap-1 pl-1 pt-3"
           }
         >
           {collapsed ? (
-            <Link href={LANDING_PATH} aria-label="About sheddex" title="sheddex" className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
+            <Link href={LANDING_PATH} aria-label="About sheddex" title={`sheddex ${VERSION_LABEL}`} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
               <LogoMark size={30} />
             </Link>
           ) : (
@@ -804,6 +850,7 @@ export default function Sidebar() {
               className="min-w-0 flex-1 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <AnimatedLogo height={22} />
+              <VersionTag />
             </Link>
           )}
           {!collapsed && (
@@ -824,6 +871,24 @@ export default function Sidebar() {
             {(close) => (
               <>
                 <FlyoutItem
+                  icon={FeedbackIcon}
+                  label="Send feedback"
+                  onSelect={() => {
+                    openFeedback();
+                    close();
+                  }}
+                />
+                {fabHidden && (
+                  <FlyoutItem
+                    icon={BugIcon}
+                    label="Show bug report button"
+                    onSelect={() => {
+                      showFeedbackFab();
+                      close();
+                    }}
+                  />
+                )}
+                <FlyoutItem
                   icon={PaletteIcon}
                   label="Theme"
                   onSelect={() => {
@@ -831,6 +896,16 @@ export default function Sidebar() {
                     close();
                   }}
                 />
+                {isAdmin && (
+                  <FlyoutItem
+                    icon={ShieldIcon}
+                    label="Admin"
+                    onSelect={() => {
+                      router.push("/admin");
+                      close();
+                    }}
+                  />
+                )}
                 <FlyoutItem
                   icon={ChevronsIcon}
                   label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -888,6 +963,34 @@ export default function Sidebar() {
                         close();
                       }}
                     />
+                    <FlyoutItem
+                      icon={FeedbackIcon}
+                      label="Send feedback"
+                      onSelect={() => {
+                        openFeedback();
+                        close();
+                      }}
+                    />
+                    {fabHidden && (
+                      <FlyoutItem
+                        icon={BugIcon}
+                        label="Show bug report button"
+                        onSelect={() => {
+                          showFeedbackFab();
+                          close();
+                        }}
+                      />
+                    )}
+                    {isAdmin && (
+                      <FlyoutItem
+                        icon={ShieldIcon}
+                        label="Admin"
+                        onSelect={() => {
+                          router.push("/admin");
+                          close();
+                        }}
+                      />
+                    )}
                   </>
                 )}
               </Flyout>
@@ -902,6 +1005,7 @@ export default function Sidebar() {
               </button>
             </div>
           )}
+          {isAdmin && <AdminButton collapsed={collapsed} />}
           <AccountMenu collapsed={collapsed} />
         </div>
 
@@ -928,5 +1032,38 @@ export default function Sidebar() {
         </div>
       </aside>
     </>
+  );
+}
+
+/** The version under the logo: "v0.9.0" and a small Beta tag. */
+/** The site admin's way into /admin. Only rendered when `api.admin.amIAdmin` says so — and every
+    admin query and mutation checks again on the server, so this button isn't the lock. */
+function AdminButton({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const active = pathname === "/admin";
+  return (
+    <Link
+      href="/admin"
+      onClick={onNavigate}
+      title="Admin"
+      aria-label="Admin"
+      className={`flex items-center gap-2.5 rounded-xl text-sm font-semibold transition-colors ${
+        collapsed ? "h-10 w-10 justify-center self-center" : "px-3 py-2"
+      } ${active ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900" : "text-foreground hover:bg-surface-hover"}`}
+    >
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? "" : "bg-gradient-to-br from-zinc-900 to-indigo-950 text-white"}`}>
+        <ShieldIcon className="h-4 w-4" />
+      </span>
+      {!collapsed && <span>Admin</span>}
+    </Link>
+  );
+}
+
+function VersionTag() {
+  return (
+    <span className="mt-0.5 flex items-center gap-1 pl-0.5 text-[10px] font-semibold leading-none text-muted">
+      {VERSION_LABEL.replace(/ beta$/, "")}
+      {CHANNEL === "beta" && <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] font-bold text-accent">Beta</span>}
+    </span>
   );
 }

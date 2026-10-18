@@ -13,7 +13,8 @@ import { ProgressCardView } from "@/components/practicelog/ProgressCard";
 import { AddRoutineButton, RoutinePreview } from "@/components/practicelog/PublicRoutineView";
 import PublicTuneList from "@/components/PublicTuneList";
 import UserAvatar from "@/components/UserAvatar";
-import { CalendarIcon, CheckIcon, EyeOffIcon, HeartIcon, NoteIcon, SetlistIcon, ShareIcon, TrashIcon, UsersIcon } from "@/components/tools";
+import { CalendarIcon, CheckIcon, EyeOffIcon, FlagIcon, HeartIcon, NoteIcon, SetlistIcon, ShareIcon, TrashIcon, UsersIcon } from "@/components/tools";
+import { openFeedback } from "@/components/feedback/FeedbackForm";
 import FollowButton from "@/components/FollowButton";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useConvexAuth } from "@convex-dev/auth/react";
@@ -210,6 +211,17 @@ function PostPageContent({ id }: { id: string }) {
                   <AddRoutineButton routine={routine} />
                 ))}
               <span className="flex-1" />
+              {!post.isMine && (
+                <button
+                  type="button"
+                  onClick={() => openFeedback({ kind: "report", target: { type: "post", id: post.id, label: post.title } })}
+                  aria-label="Report this post"
+                  title="Report this post"
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
+                >
+                  <FlagIcon className="h-4 w-4" />
+                </button>
+              )}
               {post.isMine && (
                 <button type="button" onClick={() => setConfirmDelete(true)} aria-label="Delete post" title="Delete post" className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger">
                   <TrashIcon className="h-4 w-4" />

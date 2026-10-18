@@ -71,7 +71,7 @@ export default function ToolLayout({
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
 
         {credit && (
-          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 text-xs text-muted/70">
+          <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+4.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 text-xs text-muted/70">
             {credit}
           </p>
         )}

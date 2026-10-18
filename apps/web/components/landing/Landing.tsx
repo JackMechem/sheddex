@@ -673,6 +673,7 @@ function Footer() {
         <Logo height={18} />
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <a href="https://github.com/JackMechem/sheddex.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
+          <Link href="/feedback" className="hover:text-foreground">Feedback</Link>
           <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
           <Link href="/terms" className="hover:text-foreground">Terms</Link>
           <Link href="/credits" className="hover:text-foreground">Credits</Link>

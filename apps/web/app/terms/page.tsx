@@ -1,7 +1,7 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Terms of Service — sheddex",
+  title: "Terms of Service",
 };
 
 export default function TermsPage() {
@@ -60,12 +60,27 @@ export default function TermsPage() {
 
       <LegalSection title="Your content">
         <p>
-          Tools like Recorder and Slow Downer let you load or record your own audio. As described
-          in the Privacy Policy, that content stays in your own browser&apos;s local storage —
-          sheddex doesn&apos;t receive, view, or store it. You retain all rights to anything you
-          create or load into these tools, and you&apos;re solely responsible for having the
-          rights to use whatever audio you load (e.g. not loading copyrighted material you
-          don&apos;t have permission to use).
+          You keep all rights to what you make or upload — tunes, chord charts, recordings,
+          setlists, routines, lesson materials, posts and profile pictures. You&apos;re responsible
+          for having the right to use whatever you upload (for example, not uploading copyrighted
+          recordings or scans you don&apos;t have permission to share). By posting something
+          publicly (a public profile, a Community post, a shared link), you let sheddex show it to
+          the people it&apos;s shared with.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="Community and moderation">
+        <p>When you post publicly or share with other people, don&apos;t post anything that:</p>
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Harasses, threatens, or targets anyone.</li>
+          <li>Is hateful, sexually explicit, or otherwise not something you&apos;d show a room of musicians of all ages.</li>
+          <li>Is spam or advertising.</li>
+          <li>Isn&apos;t yours to share.</li>
+        </ul>
+        <p>
+          Anyone can report a post or profile with the Report button. sheddex may remove posts,
+          make profiles private, or delete accounts that break these rules, at its discretion and
+          without notice. This is a small, one-person project, so moderation is done by hand.
         </p>
       </LegalSection>
 
@@ -128,11 +143,8 @@ export default function TermsPage() {
 
       <LegalSection title="Contact">
         <p>
-          Questions about these terms can be sent via{" "}
-          <LegalLink href="https://github.com/JackMechem/sheddex.com/issues">
-            GitHub issues
-          </LegalLink>
-          .
+          Questions about these terms can be sent from the{" "}
+          <LegalLink href="/feedback">feedback page</LegalLink>.
         </p>
       </LegalSection>
     </LegalPage>

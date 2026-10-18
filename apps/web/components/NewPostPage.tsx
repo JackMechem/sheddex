@@ -16,6 +16,7 @@ import { toPublicTune } from "@/lib/profileTunes";
 import type { Tune } from "@/lib/types";
 import { useSetlists } from "@/lib/useSetlists";
 import { SIGN_IN_PATH } from "@/lib/landing";
+import { useSiteStatus } from "@/lib/useSiteStatus";
 
 /**
  * Posting to Community, as a full page (reached from Community's + or a setlist's "Post to
@@ -75,8 +76,10 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
     }
   }
 
+  const site = useSiteStatus();
+  const paused = !!site?.postingPaused;
   const loading = isLoading || (isAuthenticated && profile === undefined);
-  const blocked = !isAuthenticated || !profile?.isPublic;
+  const blocked = !isAuthenticated || !profile?.isPublic || paused;
 
   return (
     <PageShell fullWidth={false}>
@@ -85,6 +88,7 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
           <BackButton onClick={() => router.back()} className="mb-2" />
           <h1 className="text-3xl font-extrabold tracking-tight">{fromSetlist ? "Post a setlist" : "New post"}</h1>
         </div>
+        {paused && <p className="w-full rounded-2xl bg-amber-500/15 px-4 py-3 text-sm font-semibold text-amber-700 dark:text-amber-300">New posts are paused for a bit. Try again later.</p>}
         {!loading && !blocked && (
           <button type="button" onClick={() => void post()} disabled={posting} className="rounded-full bg-accent px-6 py-2.5 font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
             {posting ? "Posting…" : "Post"}

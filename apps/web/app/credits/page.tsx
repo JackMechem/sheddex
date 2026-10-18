@@ -1,7 +1,7 @@
 import { LegalLink, LegalPage, LegalSection } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Credits — sheddex",
+  title: "Credits",
 };
 
 export default function CreditsPage() {

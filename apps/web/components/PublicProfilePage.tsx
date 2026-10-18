@@ -14,7 +14,8 @@ import UserAvatar from "@/components/UserAvatar";
 import ProfileBanner from "@/components/ProfileBanner";
 import { SIGN_IN_PATH } from "@/lib/landing";
 import { shareLink } from "@/lib/shareLink";
-import { CalendarIcon, CheckIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
+import { CalendarIcon, CheckIcon, FlagIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
+import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { BackButton } from "@/components/library/shared";
 import { useRouter } from "next/navigation";
@@ -111,6 +112,17 @@ export default function PublicProfilePage({ username }: { username: string }) {
               <button type="button" onClick={() => void share()} aria-label="Share profile" className="flex h-9 items-center gap-1.5 rounded-full bg-background px-3 sm:px-3.5 text-sm font-semibold hover:bg-surface-hover">
                 {copied ? <CheckIcon className="h-4 w-4 text-accent" /> : <ShareIcon className="h-4 w-4" />} <span className="hidden sm:inline">{copied ? "Copied" : "Share"}</span>
               </button>
+              {!isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => openFeedback({ kind: "report", target: { type: "profile", id: profile.userId, label: `@${profile.username}` } })}
+                  aria-label="Report this profile"
+                  title="Report this profile"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-danger"
+                >
+                  <FlagIcon className="h-4 w-4" />
+                </button>
+              )}
               {isOwnProfile ? (
                 <Link href="/account?tab=profile" className="flex h-9 items-center rounded-full bg-background px-4 text-sm font-semibold hover:bg-surface-hover">
                   Edit profile

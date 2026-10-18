@@ -307,6 +307,22 @@ export const performDelete = internalMutation({
       await ctx.db.delete(like._id);
     }
 
+    // Feedback they sent (and its screenshots).
+    for (const f of await ctx.db
+      .query("feedback")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()) {
+      if (f.screenshotId) await ctx.storage.delete(f.screenshotId);
+      await ctx.db.delete(f._id);
+    }
+
+    // Admin role, if they had one.
+    for (const a of await ctx.db
+      .query("admins")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect())
+      await ctx.db.delete(a._id);
+
     await ctx.db.delete(userId);
   },
 });
