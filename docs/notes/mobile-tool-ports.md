@@ -1,0 +1,82 @@
+<!-- Moved word for word from the old single PROJECT.md (lines 1523–1602) on 2026-10-18. Older entries give paths relative to apps/web/ (or packages/convex/ for convex/...); see docs/notes/repo-structure.md. -->
+
+### Mobile: Guess the Interval, Guess the Chord and Slow Downer ported (2026-10-07)
+
+All three now have real screens in `apps/mobile` (`app/tool/guess-the-interval.tsx`,
+`guess-the-chord.tsx`, `slow-downer.tsx`), with every web feature, in the app's usual shape:
+essentials on the main screen, the rest in the tabbed `ToolOptionsSheet`. Settings use the same
+synced keys as web, so they (and the ear trainers' Struggles/History) follow you between the two.
+
+- **Same samples as the site:** `lib/sampledTones.ts` plays the exact piano (Salamander) and Rhodes
+  (FluidR3) mp3s web's `lib/sampledTones.ts` uses, from the same URLs, decoded by
+  `react-native-audio-api` (`decodeAudioData` downloads a URL itself), nearest sample pitch-shifted
+  — and `playNotesTogether` waits for every note's sample before starting any, same as web. Web
+  centres these stereo files with `gain.channelCount = 1`; that's read-only here, so each sample is
+  averaged to mono once on decode instead.
+- `packages/core/chords.ts` — moved from `apps/web/lib/chords.ts` (shim left there).
+- **Guess the Chord** answers on `components/ChordAnswerKeyboard.tsx`, a fixed bottom keyboard
+  (roots, accidentals, digits, quality glyphs, sus/add/alt, `/`, backspace, I don't know, Submit)
+  instead of a text field — the system keyboard would cover the round. The floating tab bar is
+  hidden on this screen. "I don't know" grades an empty answer (web grades whatever's typed).
+- Shared ear-training pieces: `components/EarTrainingParts.tsx` (countdown text, results card with
+  per-round chips, the Progress tab: History + Struggles + Shed weak).
+- **Slow Downer:** `lib/slowDownerEngine.ts` decodes the whole file and plays it through
+  `createBufferSource({ pitchCorrection })` (keep-pitch speed), native buffer looping for a gapless
+  A–B loop, playhead from the audio clock. `lib/slowDownerFiles.ts` copies a picked file
+  (`expo-document-picker`, newly installed with `expo-file-system`) into the app's documents folder
+  and keeps the list + per-file markers in AsyncStorage (device-only, like web's IndexedDB).
+  `components/SlowDownerWaveform.tsx` (react-native-svg + gesture handler): tap seek, drag pan,
+  pinch zoom, long-press = web's right-click menu; A/B buttons set the loop at the playhead in place
+  of shift-drag. Decoding a long song holds it all in memory (~100 MB for 5 minutes of stereo).
+- The Android release build now needs `-Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"`
+  (D8 ran out of heap at 2 GB); `scripts/build-android-prod.sh` passes it.
+
+Verified: `tsc`, `eslint`, a full release build, and the sample URLs/list against web's. **Not yet
+heard or touched on a device** — built and awaiting install.
+
+### Mobile: Polyrhythm Metric Modulation Metronome ported (2026-10-08)
+
+`apps/mobile/src/app/tool/random-metric-modulation.tsx` + `lib/metricModulationEngine.ts`. Every
+web feature, same synced key (`jam-practice-metric-modulation`). `metricModulation.ts` moved to
+`packages/core` (shim left at `apps/web/lib/metricModulation.ts`). The engine runs the main and
+"previous tempo" clicks as two tracks on one `metronomeClickEngine.startClickEngine` call, same as
+web. Main screen: tempo/time signature/beats/Start while idle; while running the tempo controls
+are replaced by the live (one-decimal) tempo, "Bar x of y", the next-modulation card, the last
+modulation and, if on, the previous-tempo click's own BPM + small beat strip. Options tabs:
+Modulation (locked while running), Meter, Previous tempo, Sound, Log. `Pill` is now exported from
+`MetronomeControls.tsx`. Verified: `tsc`/`eslint` (mobile, web, core) and a release build installed
+on the phone. **Not yet heard or touched on a device.**
+
+### Mobile: Random Sticking Warmup ported, with the website's actual VexFlow notation (2026-10-08)
+
+`app/tool/random-sticking-warmup.tsx` + `lib/stickControlEngine.ts` (the web engine, on
+`metronomeClickEngine.scheduleClick`, now exported). Same synced key (`jam-practice-stick-control`).
+`stickControl.ts` moved to `packages/core` (shim at `apps/web/lib/stickControl.ts`).
+
+**The notation is VexFlow itself, not a redraw.** `lib/notation/stickNotation.ts` is a line-for-line
+port of `StickControlStave.tsx`'s VexFlow code; `lib/notation/vexflowNative.ts` makes VexFlow run on
+React Native: a `SVGContext` subclass whose `create()` returns plain-object nodes (VexFlow only uses
+`createElementNS`/`appendChild`/`setAttribute`/`.style`), a stand-in text-measurement canvas
+(`Element.setTextMeasurementCanvas`), and `flattenTree` → `react-native-svg` (`StickNotation.tsx`).
+Text (noteheads, clef, flags, tuplet digits, R/L) is drawn as glyph outlines from
+`lib/notation/glyphData.ts`, generated by `scripts/extract-notation-glyphs.py` from the exact
+Bravura/Academico woff2 VexFlow embeds on the web — so no fonts load on device. Import `vexflow/core`
+(the default entry tries to load web fonts). VexFlow's ESM build exports `VexFlow` by name, its CJS
+build *is* the class — handled. VexFlow omits attributes equal to 0 (`x="0"`), and children inherit
+font/fill/stroke from groups.
+
+Verified against the website's real VexFlow in Chromium (same 36 patterns × 2 widths): all 4,536
+drawn elements match one-to-one; median coordinate difference 0.01px, 99th percentile ~1px (a
+`Math.ceil` bar-width step), and a side-by-side render is visually identical. Mobile-only layout:
+the current + "Next" staves share the space under the controls, and bars-per-row/scale are chosen to
+make the notes as big as possible without the page scrolling. Checked in Expo web at 412×915 (no
+scroll, highlight/repeat label/triplets fine, no errors) and a release build installed on the phone.
+**Not yet seen on the device** — Hermes-specific failures would show only there.
+
+Follow-up (same day): each staff now fills the card width. `drawRow` takes an optional mobile-only
+`justifyTo` (extra width shared out across bars by their note width — VexFlow's own justification)
+and reports its drawn content's top/bottom, so rows are cropped to the staff + captions instead of
+VexFlow's mostly-blank 130-unit row. Both staves are drawn at full width and shrunk only if they'd
+otherwise not fit. While running, tempo and the beat strip collapse into one compact row beside
+Options (stop to change the tempo), and the staves sit centered in the free space.
+
