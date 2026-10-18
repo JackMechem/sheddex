@@ -38,9 +38,12 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
   components. The real product. Live at sheddex.com.
-- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app, **mobile only**: it is
-  not going to replace the website (a decision reversed once; see
-  `docs/notes/mobile-tool-screens-and-sync.md`). Shares the backend and pure logic with web.
+- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. **Development is paused
+  as of 2026-10-18** — Jack may pick it up again later. Until he does, don't build or port features
+  to it, don't make builds for his phone, and don't say "mobile isn't done yet" as a to-do in your
+  replies. Do keep it from breaking: a change to `packages/core` or a Convex function it calls
+  should still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
+  `docs/notes/mobile-tool-screens-and-sync.md`) and shares the backend and pure logic with web.
 - **Backend** (`packages/convex`): Convex — accounts (email + password with emailed codes, and
   Google), synced settings, the chart library, Community, recordings, Lessons, admin, analytics.
 - **Shared logic** (`packages/core`): pure TypeScript used by web, mobile and Convex.
@@ -254,9 +257,10 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
   `/recordings*`, `/files`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
   shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, plus `/privacy`, `/terms`, `/credits`.
-- **Mobile:** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and native
-  screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]` placeholder.
-  Bass Genius, Drum Generator, Syncopation, the Shed Log and Lessons are **web only** so far.
+- **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
+  native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
+  placeholder. Web-only so far: Bass Genius, Drum Generator, Syncopation, the Shed Log, Lessons and
+  Files / tune share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

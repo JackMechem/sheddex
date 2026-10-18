@@ -54,6 +54,9 @@ await page.close();
 
 ## The mobile app
 
+Development of the mobile app is paused (2026-10-18). Only build it if Jack asks. If you change
+`packages/core` or a Convex function it uses, still run `tsc --noEmit` in `apps/mobile`.
+
 **Rules:** Jack tests the app himself. **Build and `adb install` only. Never launch, tap, navigate
 or screenshot his phone.** Read `adb logcat` only if he reports a crash. Then give him a short list
 of what to try.

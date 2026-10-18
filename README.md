@@ -24,7 +24,7 @@ You need Node and [pnpm](https://pnpm.io) (pnpm only — no npm or yarn).
 pnpm install
 pnpm convex:dev   # the Convex backend (needs a Convex account and packages/convex/.env.local)
 pnpm dev          # the website at http://localhost:3000
-pnpm mobile       # the Expo app (optional)
+pnpm mobile       # the Expo app (development is paused)
 ```
 
 The web app reads `NEXT_PUBLIC_CONVEX_URL` from `apps/web/.env.local`; the mobile app reads
@@ -35,7 +35,7 @@ The web app reads `NEXT_PUBLIC_CONVEX_URL` from `apps/web/.env.local`; the mobil
 | Folder | What's in it |
 | --- | --- |
 | `apps/web` | The website (Next.js + Tailwind) |
-| `apps/mobile` | The iOS/Android app (Expo) |
+| `apps/mobile` | The iOS/Android app (Expo). Development is paused for now; it may pick up again later. |
 | `packages/core` | Shared logic used by both apps and the backend |
 | `packages/convex` | The backend ([Convex](https://convex.dev)) |
 | `docs` | [How it fits together](docs/architecture.md), [style guide](docs/guides/style.md), [versioning](docs/guides/versioning.md), [testing](docs/guides/testing.md), [deploying](docs/guides/deploying.md), and [feature notes](docs/notes/) |
