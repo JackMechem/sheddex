@@ -57,6 +57,7 @@ import LearningPath from "@/components/learning/LearningPath";
 import LevelComplete from "@/components/learning/LevelComplete";
 import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
+import { useToolActivity } from "@/lib/toolTime";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -257,6 +258,8 @@ export default function GuessTheProgression() {
 
   const [round, setRound] = useState<ProgressionRound | null>(null);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/guess-the-progression", running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [marks, setMarks] = useState<boolean[] | null>(null);

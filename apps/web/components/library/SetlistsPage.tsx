@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import PromptDialog from "@/components/PromptDialog";
-import { PageHeader, PageShell, SearchBox } from "@/components/library/shared";
-import { SetlistRow, setlistHref } from "@/components/library/setlistParts";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, SetlistCard } from "@/components/library/ui";
+import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { PlusIcon } from "@/components/tools";
+import { PlusIcon, SetlistIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
 
@@ -34,42 +34,54 @@ export default function SetlistsPage() {
     return sort === "name" ? sortByText(filtered, (s) => s.name) : [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
   }, [setlists, lists.tunes.tunes, lists.learn.tunes, query, sort]);
 
+  const nameOf = new Map([...lists.tunes.tunes, ...lists.learn.tunes].map((t) => [t.id, t.name]));
+  const shared = setlists.filter((s) => s.shareId).length;
+
   return (
-    <PageShell>
-      <PageHeader
+    <LibraryPage>
+      <Hero
         title="Setlists"
-        back={() => router.push("/tunes")}
-        actions={
-          <button
-            type="button"
-            onClick={() => setNaming(true)}
-            aria-label="New setlist"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
-          >
-            <PlusIcon className="h-5 w-5" />
-          </button>
-        }
-      />
-      <SearchBox value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists…`} />
-      <div className="-mt-3 flex gap-2">
-        {(["recent", "name"] as Sort[]).map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setSort(key)}
-            className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ${sort === key ? "bg-accent text-accent-foreground" : "bg-surface hover:bg-surface-hover"}`}
-          >
-            {key === "recent" ? "Recent" : "A–Z"}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        {shown.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">{query ? `No setlists match “${query}”.` : "No setlists yet — press + to make one."}</p>
-        ) : (
-          shown.map((s) => <SetlistRow key={s.id} setlist={s} />)
-        )}
-      </div>
+        icon={SetlistIcon}
+        color="var(--key-9, var(--accent))"
+        tabs={<LibraryTabs active="setlists" />}
+        subtitle={`${setlists.length} setlist${setlists.length === 1 ? "" : "s"}${shared ? ` · ${shared} shared by link` : ""}`}
+        actions={<Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} iconOnlyOnPhone />}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists, or a tune in one…`} />
+          </div>
+          <div className="flex shrink-0 gap-1 self-start rounded-full bg-background p-1 sm:self-auto">
+            {(["recent", "name"] as Sort[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSort(key)}
+                aria-pressed={sort === key}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ${sort === key ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"}`}
+              >
+                {key === "recent" ? "Recent" : "A–Z"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Hero>
+      {shown.length === 0 ? (
+        <div className="rounded-2xl bg-surface">
+          <EmptyState
+            icon={SetlistIcon}
+            title={query ? `No setlists match “${query}”` : "No setlists yet"}
+            body={query ? undefined : "Put tunes in order for a gig or a session, give each its own key and tempo, and share it by link."}
+            action={query ? undefined : <Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} />}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1900px]:grid-cols-4">
+          {shown.map((s) => (
+            <SetlistCard key={s.id} setlist={s} href={setlistHref(s.id)} tuneNames={s.tuneIds.map((id) => nameOf.get(id)).filter((n): n is string => !!n)} />
+          ))}
+        </div>
+      )}
       {naming && (
         <PromptDialog
           title="New setlist"
@@ -82,6 +94,6 @@ export default function SetlistsPage() {
           onCancel={() => setNaming(false)}
         />
       )}
-    </PageShell>
+    </LibraryPage>
   );
 }

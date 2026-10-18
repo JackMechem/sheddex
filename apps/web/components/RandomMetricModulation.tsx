@@ -39,6 +39,7 @@ import {
 } from "@/lib/metricModulationEngine";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 const DEFAULT_BPM = 100;
 const MIN_BARS_PER_MODULATION = 1;
@@ -197,6 +198,8 @@ export default function RandomMetricModulation() {
   const stop = stopMetricMod;
 
   useSpaceToggle(running ? stop : start);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/random-metric-modulation", running);
   const tap = useTapTempo(setBpm);
 
   function changeBeats(n: number) {

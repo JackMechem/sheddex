@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
@@ -9,11 +10,23 @@ import FollowLists from "@/components/FollowLists";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MyPostsTab from "@/components/MyPostsTab";
 import PublicProfileEditor from "@/components/PublicProfileEditor";
-import SidebarNavButton from "@/components/SidebarNavButton";
+import GoalDialog from "@/components/practicelog/GoalDialog";
+import { SignInButtons } from "@/components/practicelog/ShedLogGate";
+import ThemeModal from "@/components/ThemeModal";
+import UserAvatar from "@/components/UserAvatar";
+import ProfileBanner from "@/components/ProfileBanner";
+import SwitchRow from "@/components/SwitchRow";
+import { getServerThemeState, getThemeState, setPreset, subscribeTheme } from "@/lib/theme";
+import { CUSTOM_THEME_ID, PRESETS, getPreset } from "@/lib/themes";
+import { WEEKDAY_LETTER, formatMinutesShort } from "@/lib/practiceLog";
+import { usePracticeLog } from "@/lib/usePracticeLog";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
 import {
   BookIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   GoogleIcon,
   ListIcon,
   LogOutIcon,
@@ -31,7 +44,7 @@ function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   return (
     <main
       className={`mx-auto flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 ${
-        wide ? "max-w-3xl" : "max-w-md"
+        wide ? "max-w-5xl lg:max-w-none lg:px-8" : "max-w-md"
       }`}
     >
       {children}
@@ -39,7 +52,7 @@ function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   );
 }
 
-type AccountView = "profile" | "tunes" | "tunesToLearn" | "posts" | "following" | "security" | "danger";
+type AccountView = "profile" | "tunes" | "tunesToLearn" | "posts" | "following" | "practice" | "appearance" | "security" | "danger";
 
 /** Turns a thrown Error into UI text — Convex actions surface a real message (e.g. our own
     "Enter your password to confirm."), but a wrong password comes back as a long, internal-
@@ -557,20 +570,76 @@ function DeleteAccountModal({
   );
 }
 
-/** The signed-in account page — reachable via the account button in Sidebar once signed in.
-    Password (change, or set one for the first time), sign-in methods (connect/disconnect
-    Google), and delete account. No "forgot password" flow here on purpose — that needs an
-    email-sending provider that isn't wired up yet. No route protection: like every other page in
-    this app, this one is reachable logged out too, and just shows a plain "not signed in" state
-    instead of hard-redirecting. */
-export default function AccountPage() {
+function PaletteIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M12 3a9 9 0 000 18c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4c0-4.4-4-7.8-9-7.8z" />
+      <circle cx="7.5" cy="11" r="1" />
+      <circle cx="10.5" cy="7" r="1" />
+      <circle cx="15.5" cy="7.5" r="1" />
+    </svg>
+  );
+}
+
+type NavItem = { id: AccountView; label: string; icon: React.ComponentType<{ className?: string }>; danger?: boolean };
+const NAV: { group: string; items: NavItem[] }[] = [
+  { group: "You", items: [{ id: "profile", label: "Profile", icon: UserIcon }] },
+  {
+    group: "Library",
+    items: [
+      { id: "tunes", label: "Tunes I Know", icon: ListIcon },
+      { id: "tunesToLearn", label: "Tunes to Learn", icon: BookIcon },
+    ],
+  },
+  {
+    group: "Community",
+    items: [
+      { id: "posts", label: "Posts", icon: NoteIcon },
+      { id: "following", label: "Following", icon: UsersIcon },
+    ],
+  },
+  {
+    group: "Preferences",
+    items: [
+      { id: "practice", label: "Shed Log", icon: CalendarIcon },
+      { id: "appearance", label: "Appearance", icon: PaletteIcon },
+    ],
+  },
+  {
+    group: "Account",
+    items: [
+      { id: "security", label: "Sign-in & security", icon: ShieldIcon },
+      { id: "danger", label: "Delete account", icon: TrashIcon, danger: true },
+    ],
+  },
+];
+const ALL_VIEWS = NAV.flatMap((g) => g.items.map((i) => i.id));
+const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_VIEWS as string[]).includes(v);
+
+/** The account settings page (`/account[?tab=…]`). A header card (picture, @username, email,
+    public/private, sign-in methods, View profile, Sign out), then settings grouped in a left nav —
+    You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Preferences
+    (the Shed Log's daily goal and sounds, the theme), Account (password and Google, delete). On a
+    phone the nav is a list you tap into, with a back button. The section is kept in the address
+    bar (`?tab=`), so other pages can link straight to one. Signed out it says so (no redirect). */
+export default function AccountPage({ initialTab }: { initialTab?: string }) {
   const { isLoading, isAuthenticated } = useConvexAuth();
   const user = useQuery(api.users.current);
+  const profile = useQuery(api.profiles.getMine, isAuthenticated ? {} : "skip");
   const providers = useQuery(api.account.linkedProviders);
   const { signOut } = useAuthActions();
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [view, setView] = useState<AccountView>("profile");
+  const [view, setView] = useState<AccountView>(isView(initialTab) ? initialTab : "profile");
+  // Phones: the list of sections first, then one section with a back button.
+  const [mobileOpen, setMobileOpen] = useState(isView(initialTab));
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.pathname !== "/account") return;
+    url.searchParams.set("tab", view);
+    window.history.replaceState(window.history.state, "", url);
+  }, [view]);
 
   if (isLoading) {
     return (
@@ -583,11 +652,12 @@ export default function AccountPage() {
   if (!isAuthenticated) {
     return (
       <PageShell>
-        <div className="flex flex-col gap-1 text-left">
-          <h1 className="text-2xl font-bold text-accent">Account</h1>
-          <p className="text-sm text-muted">
-            You&apos;re not signed in — use the account button in the sidebar to sign in first.
-          </p>
+        <div className="flex flex-col items-start gap-3 rounded-3xl bg-surface p-6 text-left">
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <UserIcon className="h-6 w-6 text-accent" /> Account
+          </h1>
+          <p className="text-sm text-muted">You&apos;re not signed in. Sign in to manage your profile, library and settings.</p>
+          <SignInButtons />
         </div>
       </PageShell>
     );
@@ -595,105 +665,102 @@ export default function AccountPage() {
 
   const hasPassword = providers?.includes("password") ?? false;
   const hasGoogle = providers?.includes("google") ?? false;
+  const username = profile?.username || null;
+  const current = NAV.flatMap((g) => g.items).find((i) => i.id === view)!;
 
   function handleSignOut() {
     void signOut();
     router.push("/");
   }
 
+  function pick(id: AccountView) {
+    setView(id);
+    setMobileOpen(true);
+    window.scrollTo({ top: 0 });
+  }
+
   return (
     <PageShell wide>
-      <div className="flex flex-col gap-1 text-left">
-        <h1 className="text-2xl font-bold text-accent">Account</h1>
-        <p className="text-sm text-muted">{user?.email ?? user?.name ?? "Signed in"}</p>
-      </div>
+      <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <UserIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> Account
+      </h1>
 
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-        <nav className="flex w-full flex-col gap-1 rounded-2xl bg-surface p-2 sm:w-48 sm:shrink-0">
-          <SidebarNavButton
-            active={view === "profile"}
-            icon={UserIcon}
-            label="Profile"
-            onClick={() => setView("profile")}
-          />
-          <SidebarNavButton
-            active={view === "tunes"}
-            icon={ListIcon}
-            label="Tunes I Know"
-            onClick={() => setView("tunes")}
-          />
-          <SidebarNavButton
-            active={view === "tunesToLearn"}
-            icon={BookIcon}
-            label="Tunes to Learn"
-            onClick={() => setView("tunesToLearn")}
-          />
-          <SidebarNavButton
-            active={view === "posts"}
-            icon={NoteIcon}
-            label="Posts"
-            onClick={() => setView("posts")}
-          />
-          <SidebarNavButton
-            active={view === "following"}
-            icon={UsersIcon}
-            label="Following"
-            onClick={() => setView("following")}
-          />
-          <SidebarNavButton
-            active={view === "security"}
-            icon={ShieldIcon}
-            label="Security"
-            onClick={() => setView("security")}
-          />
-          <SidebarNavButton
-            active={view === "danger"}
-            icon={TrashIcon}
-            label="Danger zone"
-            danger
-            onClick={() => setView("danger")}
-          />
-          <div className="my-1 border-t border-background" />
-          <SidebarNavButton icon={LogOutIcon} label="Sign out" onClick={handleSignOut} />
+      {/* Who you are. */}
+      <section className={`overflow-hidden rounded-3xl bg-surface ${mobileOpen ? "hidden sm:block" : ""}`}>
+        <ProfileBanner banner={profile?.banner} className="h-24 sm:h-32" />
+        <div className="-mt-12 flex flex-col gap-3 px-5 pb-5">
+          <div className="flex items-start gap-3">
+            <span className="relative z-10 rounded-full ring-[6px] ring-surface">
+              <UserAvatar url={profile?.avatarUrl ?? null} size="xl" />
+            </span>
+            <div className="ml-auto flex shrink-0 gap-2 pt-14">
+              {username && profile?.isPublic && (
+                <Link href={`/u/${username}`} className="rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                  View profile
+                </Link>
+              )}
+              <button type="button" onClick={handleSignOut} aria-label="Sign out" className="flex items-center gap-1.5 rounded-full bg-background px-3 py-2 text-sm font-semibold hover:bg-surface-hover sm:px-4">
+                <LogOutIcon className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+              </button>
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-2xl font-extrabold tracking-tight">{username ? `@${username}` : user?.name || "Your account"}</div>
+            <div className="truncate text-sm text-muted">{user?.email ?? ""}</div>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
+              <span className={`rounded-full px-2.5 py-0.5 ${profile?.isPublic ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-background text-muted"}`}>
+                {profile?.isPublic ? "Public profile" : "Private profile"}
+              </span>
+              {hasPassword && <span className="rounded-full bg-background px-2.5 py-0.5 text-muted">Password</span>}
+              {hasGoogle && (
+                <span className="flex items-center gap-1 rounded-full bg-background px-2.5 py-0.5 text-muted">
+                  <GoogleIcon className="h-3 w-3" /> Google
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <nav aria-label="Account sections" className={`flex w-full flex-col gap-4 sm:sticky sm:top-6 sm:w-56 sm:shrink-0 ${mobileOpen ? "hidden sm:flex" : ""}`}>
+          {NAV.map((g) => (
+            <div key={g.group}>
+              <h2 className="mb-1 px-3 text-xs font-semibold text-muted">{g.group}</h2>
+              <div className="flex flex-col overflow-hidden rounded-2xl bg-surface sm:gap-0.5 sm:bg-transparent">
+                {g.items.map((item, i) => {
+                  const on = view === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => pick(item.id)}
+                      aria-current={on ? "page" : undefined}
+                      className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-semibold transition-colors sm:rounded-xl sm:py-2 ${i ? "border-t border-background sm:border-0" : ""} ${
+                        on ? "sm:bg-accent/10 sm:text-accent" : item.danger ? "text-danger hover:bg-surface-hover" : "hover:bg-surface-hover sm:text-muted sm:hover:text-foreground"
+                      }`}
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-auto sm:w-auto sm:bg-transparent ${item.danger ? "bg-danger/10" : "bg-accent/10 text-accent sm:text-current"}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="flex-1">{item.label}</span>
+                      <ChevronRightIcon className="h-4 w-4 text-muted sm:hidden" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
-          {view === "profile" && (
-            <>
-              <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-                <h2 className="text-lg font-semibold">Profile</h2>
-                <div className="flex flex-col gap-3 text-sm">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted">Email</span>
-                    <span className="font-medium">{user?.email ?? "—"}</span>
-                  </div>
-                  {user?.name && (
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted">Name</span>
-                      <span className="font-medium">{user.name}</span>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-muted">Signed in with</span>
-                    <div className="flex flex-wrap gap-2">
-                      {hasPassword && (
-                        <span className="rounded-full bg-background px-3 py-1 text-xs font-medium">
-                          Password
-                        </span>
-                      )}
-                      {hasGoogle && (
-                        <span className="flex items-center gap-1.5 rounded-full bg-background px-3 py-1 text-xs font-medium">
-                          <GoogleIcon className="h-3.5 w-3.5" />
-                          Google
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-              <PublicProfileEditor />
-            </>
-          )}
+        <div className={`min-w-0 flex-1 flex-col gap-6 ${mobileOpen ? "flex" : "hidden sm:flex"}`}>
+          <button type="button" onClick={() => setMobileOpen(false)} className="-ml-1 flex items-center gap-1 self-start rounded-full px-2 py-1 text-sm font-semibold text-muted hover:bg-surface hover:text-foreground sm:hidden">
+            <ChevronLeftIcon className="h-4 w-4" /> Account
+          </button>
+          <h2 className="text-xl font-extrabold tracking-tight sm:hidden">{current.label}</h2>
+
+          {view === "profile" && <PublicProfileEditor />}
 
           {view === "tunes" && <TunesTab />}
 
@@ -703,30 +770,26 @@ export default function AccountPage() {
 
           {view === "following" && <FollowLists />}
 
+          {view === "practice" && <PracticeSettings />}
+
+          {view === "appearance" && <AppearanceSettings />}
+
           {view === "security" && (
             <>
               <PasswordSection hasPassword={hasPassword} email={user?.email ?? null} />
-              <SignInMethodsSection
-                hasPassword={hasPassword}
-                hasGoogle={hasGoogle}
-                userEmail={user === undefined ? undefined : (user?.email ?? null)}
-              />
+              <SignInMethodsSection hasPassword={hasPassword} hasGoogle={hasGoogle} userEmail={user === undefined ? undefined : (user?.email ?? null)} />
             </>
           )}
 
           {view === "danger" && (
             <section className="flex flex-col gap-3 rounded-2xl bg-surface p-5 text-left ring-1 ring-danger/30">
               <div>
-                <h2 className="text-lg font-semibold text-danger">Danger zone</h2>
+                <h2 className="text-lg font-semibold text-danger">Delete your account</h2>
                 <p className="text-sm text-muted">
-                  Permanently delete your account. This can&apos;t be undone.
+                  Permanently deletes your account, your profile and posts, your Shed Log, recordings and everything synced. This can&apos;t be undone.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(true)}
-                className="self-start rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
-              >
+              <button type="button" onClick={() => setDeleteOpen(true)} className="self-start rounded-full bg-danger px-4 py-2 text-sm font-semibold text-background hover:opacity-90">
                 Delete my account
               </button>
             </section>
@@ -734,13 +797,98 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {deleteOpen && (
-        <DeleteAccountModal
-          requiresPassword={hasPassword}
-          email={user?.email ?? null}
-          onClose={() => setDeleteOpen(false)}
-        />
-      )}
+      {deleteOpen && <DeleteAccountModal requiresPassword={hasPassword} email={user?.email ?? null} onClose={() => setDeleteOpen(false)} />}
     </PageShell>
+  );
+}
+
+function SettingsCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
+      <div>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {description && <p className="text-sm text-muted">{description}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** The Shed Log's preferences: the daily goal (the full goal window), sounds, counting tool time. */
+function PracticeSettings() {
+  const log = usePracticeLog();
+  const { data } = log;
+  const [goalOpen, setGoalOpen] = useState(false);
+  const by = data.prefs.goalByWeekday;
+  const perDay = Array.isArray(by) && by.length === 7;
+  return (
+    <>
+      <SettingsCard title="Daily goal" description="How much practice makes a full day. Hitting it fills the ring, stars the day and keeps the celebrations coming.">
+        <div className="flex flex-wrap items-center gap-3">
+          {perDay ? (
+            <div className="flex gap-1">
+              {by!.map((m, i) => (
+                <span key={i} className="flex w-10 flex-col items-center rounded-xl bg-background py-1.5">
+                  <span className="text-[11px] font-bold text-muted">{WEEKDAY_LETTER[i]}</span>
+                  <span className="text-xs font-extrabold tabular-nums">{m > 0 ? m : "–"}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-3xl font-extrabold tabular-nums">{formatMinutesShort(data.prefs.dailyGoal)}</span>
+          )}
+          <span className="text-sm text-muted">{perDay ? "minutes, by weekday" : "every day"}</span>
+          <button type="button" onClick={() => setGoalOpen(true)} className="ml-auto rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            Change
+          </button>
+        </div>
+      </SettingsCard>
+      <SettingsCard title="While you practice">
+        <SwitchRow label="Sounds when you check things off" checked={data.prefs.sounds} onChange={(sounds) => log.setPrefs({ sounds })} />
+        <SwitchRow label="Count time spent in tools as practice" checked={data.prefs.trackTools !== false} onChange={(trackTools) => log.setPrefs({ trackTools })} />
+        <Link href="/shed-log" className="self-start text-sm font-semibold text-accent hover:underline">
+          Open the Shed Log →
+        </Link>
+      </SettingsCard>
+      {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}
+    </>
+  );
+}
+
+/** The theme: the current one, a few swatches to switch in one tap, and the full picker. */
+function AppearanceSettings() {
+  const theme = useSyncExternalStore(subscribeTheme, getThemeState, getServerThemeState);
+  const [open, setOpen] = useState(false);
+  const name = theme.id === CUSTOM_THEME_ID ? "Custom" : (getPreset(theme.id)?.label ?? theme.id);
+  return (
+    <SettingsCard title="Theme" description="Colors for the whole site. Saved on this device.">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {PRESETS.slice(0, 10).map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setPreset(p.id)}
+            aria-pressed={theme.id === p.id}
+            className={`flex flex-col gap-1.5 rounded-xl p-2 text-left text-xs font-semibold ring-2 transition-colors ${theme.id === p.id ? "ring-accent" : "ring-transparent hover:ring-surface-hover"}`}
+            style={{ background: p.colors.background, color: p.colors.foreground }}
+          >
+            <span className="flex gap-1">
+              <span className="h-4 w-4 rounded-full" style={{ background: p.colors.accent }} />
+              <span className="h-4 w-4 rounded-full" style={{ background: p.colors.surface }} />
+            </span>
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted">
+          Current: <strong className="text-foreground">{name}</strong>
+        </span>
+        <button type="button" onClick={() => setOpen(true)} className="ml-auto rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          More themes & custom colors
+        </button>
+      </div>
+      {open && <ThemeModal onClose={() => setOpen(false)} />}
+    </SettingsCard>
   );
 }

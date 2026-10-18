@@ -91,6 +91,12 @@ export default defineSchema({
     instruments: v.array(v.string()),
     knownTuneIds: v.optional(v.array(v.string())),
     isPublic: v.boolean(),
+    /** Show Shed Log stats (streaks, hours, milestones) on the public profile. Missing = yes. */
+    showPracticeStats: v.optional(v.boolean()),
+    /** The profile banner: one of the built-in designs (an id from the web app's
+        `lib/banners.ts`), or an uploaded image (`bannerStorageId`, which wins when set). */
+    bannerPreset: v.optional(v.string()),
+    bannerStorageId: v.optional(v.id("_storage")),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -155,7 +161,13 @@ export default defineSchema({
     unlisted: v.optional(v.boolean()),
     /** "setlist" when posted as a setlist (an ordered list meant to be played in that order —
         shown numbered, savable as the viewer's own setlist); absent for a plain tune post. */
-    kind: v.optional(v.literal("setlist")),
+    kind: v.optional(v.union(v.literal("setlist"), v.literal("routine"), v.literal("milestone"))),
+    /** For a routine post: the poster's Shed Log routine id (shown live, `payload` the
+        fallback snapshot); for a milestone post nothing. */
+    routineId: v.optional(v.string()),
+    /** A routine post's `PublicRoutine`, or a milestone post's `ProgressCard`
+        (`packages/core/practiceLog.ts`). `tunes` is empty for both. */
+    payload: v.optional(v.any()),
     /** The poster's own setlist id (from their synced setlists) — set for a setlist post, which
         then always shows that setlist's *current* tunes (`lib/setlists.ts`'s `liveSetlist`);
         `tunes` is just the fallback snapshot if the setlist's later deleted. */
@@ -217,6 +229,19 @@ export default defineSchema({
       and privacy rule as a Community post — never a tune's private `notes`). Readable by anyone
       with the id, signed in or not (`setlists.ts`'s `getShared`): sending the link is the sharing.
       Re-sharing updates the same row, so a link someone already has keeps working. */
+  /** Shed Log routines shared by link (`routines.ts`): the link always shows the owner's
+      routine as it is now (read from their `jam-practice-practice-log` synced blob); `routine` is
+      the `PublicRoutine` snapshot, used if they've since deleted it. */
+  sharedRoutines: defineTable({
+    userId: v.id("users"),
+    routineId: v.string(),
+    routine: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_routine", ["userId", "routineId"]),
+
   sharedSetlists: defineTable({
     userId: v.id("users"),
     /** The owner's setlist id — the link always shows that setlist's current version; the stored
@@ -286,7 +311,7 @@ export default defineSchema({
     /** How it plays back over its tune's song (`tuneSongs`): each side's volume (0..1) and where
         in the song the take starts, in seconds (negative = the take starts before the song). */
     mix: v.optional(v.object({ songVolume: v.number(), takeVolume: v.number(), offsetSec: v.number() })),
-    /** The Practice Log day it belongs to (YYYY-MM-DD, the recorder's local day), and optionally
+    /** The Shed Log day it belongs to (YYYY-MM-DD, the recorder's local day), and optionally
         the routine on that day — routines live in the `jam-practice-practice-log` synced blob,
         so this is a plain string id like `tuneId`. */
     logDate: v.optional(v.string()),

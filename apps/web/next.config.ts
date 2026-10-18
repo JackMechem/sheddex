@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@jam-practice/convex", "@jam-practice/core"],
   // The landing page briefly lived at /welcome before moving to "/".
   async redirects() {
-    return [{ source: "/welcome", destination: "/", permanent: true }];
+    return [
+      { source: "/welcome", destination: "/", permanent: true },
+      // The Practice Log was renamed the Shed Log.
+      { source: "/practice-log", destination: "/shed-log", permanent: true },
+      { source: "/practice-log/:path*", destination: "/shed-log/:path*", permanent: true },
+    ];
   },
 };
 

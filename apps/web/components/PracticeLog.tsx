@@ -6,26 +6,28 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
-import Celebrations, { useCelebrations } from "@/components/practicelog/Celebrations";
-import Momentum from "@/components/practicelog/Momentum";
+import { FlameIcon, SHARE_PROGRESS_EVENT } from "@/components/practicelog/Celebrations";
+import { MomentumPills } from "@/components/practicelog/Momentum";
+import StatsDialog from "@/components/practicelog/StatsDialog";
+import GoalDialog from "@/components/practicelog/GoalDialog";
+import ShedLogTour, { tourSeen } from "@/components/practicelog/ShedLogTour";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, ListIcon, PlusIcon, SpeakerIcon } from "@/components/tools";
+import { CalendarIcon, HelpIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon, StopwatchIcon } from "@/components/tools";
+import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
   type DayTask,
-  type PracticeLogData,
+  type ProgressCardKind,
   MONTH_NAMES,
-  dayProgress,
   newDayTask,
   addDays,
   addMonths,
   formatShortDate,
   fromDateKey,
   isDateKey,
-  minutesOn,
   monthGrid,
   startOfWeek,
   streak,
@@ -36,25 +38,50 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const VIEW_KEY = "jam-practice-practice-log-view";
-const VIEW_DEFAULTS = { view: "month" as "month" | "week" };
+const VIEW_DEFAULTS = { view: "month" as "month" | "week", showStats: true, dayWidth: 448 };
+const DAY_MIN = 300;
+const DAY_DEFAULT = 448;
 const noopSubscribe = () => () => {};
 
+/** A small target, for "Daily goal". */
+function TargetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4 text-accent" aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 /**
- * The Practice Log — a calendar for planning and logging practice. Routines (lists of tasks, each
+ * The Shed Log — a calendar for planning and logging practice. Routines (lists of tasks, each
  * with minutes and optionally a time) repeat on a schedule; on each day you check tasks off — or
  * run the routine on the Practice Timer, which checks them off as each one finishes — write
  * notes, attach tunes / setlists / charts / tools, and record clips (on the day, or on one of its
  * routines). Plain Practice Timer sessions are logged on the day they ran, too.
  */
 export default function PracticeLog({ initialDate }: { initialDate?: string }) {
-  const log = usePracticeLog({ drainTimer: true });
+  const log = usePracticeLog();
   const { data, ready } = log;
   const router = useRouter();
   const [addMenu, setAddMenu] = useState<MenuState | null>(null);
   const [newTask, setNewTask] = useState<DayTask | null>(null);
-  useCelebrations(data, ready);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [goalOpen, setGoalOpen] = useState(false);
+  // The tour opens by itself the first time you visit (on this device).
+  const [tourOpen, setTourOpen] = useState(() => typeof window !== "undefined" && !tourSeen());
+  // "Share your progress" is the app-wide dialog (`PracticeLogGlobal`).
+  const setSharingKind = (kind: ProgressCardKind) => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: kind }));
   const { isAuthenticated } = useConvexAuth();
-  const [{ view }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  const [{ view, showStats, dayWidth }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  // The day panel's width on desktop: dragged with the handle between it and the calendar.
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const shownDayWidth = dragWidth ?? dayWidth;
+  const clampDay = (w: number, grid: HTMLElement | null) => {
+    const max = grid ? Math.max(DAY_MIN, grid.getBoundingClientRect().width * 0.6) : 760;
+    return Math.round(Math.max(DAY_MIN, Math.min(max, w)));
+  };
   // "Today" is the visitor's own day, which the server can't know — so nothing date-dependent is
   // rendered until the page is running in the browser.
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -101,28 +128,100 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
 
   return (
     <Shell>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-3xl font-extrabold tracking-tight">
-            <CalendarIcon className="h-7 w-7 text-accent" /> Practice Log
+      {/* Phones: title and buttons on one line, the stat pills a row you swipe below. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3">
+        <div className="order-1 min-w-0 flex-1 lg:flex-none">
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            <CalendarIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Shed Log</span>
+            <button
+              type="button"
+              onClick={() => setTourOpen(true)}
+              aria-label="How the Shed Log works"
+              title="How the Shed Log works"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+            >
+              <HelpIcon className="h-5 w-5" />
+            </button>
           </h1>
-          <p className="text-sm text-muted">{greeting(data, today)}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="order-3 w-full min-w-0 lg:order-2 lg:w-auto lg:flex-1 lg:pl-2">
+          {showStats ? (
+            <MomentumPills
+              data={data}
+              today={today}
+              onPrefs={log.setPrefs}
+              onShare={setSharingKind}
+              trailing={
+                <>
+                <button
+                  type="button"
+                  onClick={() => setStatsOpen(true)}
+                  className="flex h-11 shrink-0 snap-start items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover sm:h-12"
+                >
+                  <ChartIcon className="h-4 w-4 text-accent" /> Stats
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView({ showStats: false })}
+                  aria-label="Hide stats"
+                  title="Hide stats"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+                >
+                  <EyeOffIcon className="h-4 w-4" />
+                </button>
+                </>
+              }
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setView({ showStats: true })}
+              className="flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover"
+            >
+              <FlameIcon className="h-4 w-4 text-orange-500" /> {streak(data, today)}
+              <span className="flex items-center gap-1 text-muted">
+                <EyeIcon className="h-4 w-4" /> Show stats
+              </span>
+            </button>
+          )}
+        </div>
+        <div className="order-2 flex shrink-0 items-center gap-1.5 sm:gap-2 lg:order-3">
           <button
             type="button"
-            onClick={() => log.setPrefs({ sounds: !data.prefs.sounds })}
-            aria-pressed={data.prefs.sounds}
-            aria-label={data.prefs.sounds ? "Turn sounds off" : "Turn sounds on"}
-            title={data.prefs.sounds ? "Sounds on" : "Sounds off"}
-            className={`relative flex h-9 w-9 items-center justify-center rounded-full bg-surface hover:bg-surface-hover ${data.prefs.sounds ? "" : "text-muted"}`}
+            aria-label="Shed Log settings"
+            title="Settings"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setAddMenu({
+                x: Math.max(8, r.right - 208),
+                y: r.bottom + 6,
+                items: [
+                  { label: "Daily goal…", icon: <TargetIcon />, onSelect: () => setGoalOpen(true) },
+                  { label: data.prefs.sounds ? "Sounds: on" : "Sounds: off", icon: <SpeakerIcon className={`h-4 w-4 ${data.prefs.sounds ? "text-accent" : "text-muted"}`} />, onSelect: () => log.setPrefs({ sounds: !data.prefs.sounds }) },
+                  {
+                    label: data.prefs.trackTools !== false ? "Count time in tools: on" : "Count time in tools: off",
+                    icon: <StopwatchIcon className={`h-4 w-4 ${data.prefs.trackTools !== false ? "text-accent" : "text-muted"}`} />,
+                    onSelect: () => log.setPrefs({ trackTools: data.prefs.trackTools === false }),
+                  },
+                ],
+              });
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-surface hover:bg-surface-hover sm:h-9 sm:w-9"
           >
-            <SpeakerIcon className="h-4 w-4" />
-            {!data.prefs.sounds && <span className="absolute h-5 w-0.5 rotate-45 rounded bg-current" />}
+            <SlidersIcon className="h-4 w-4" />
           </button>
-          <Link href="/practice-log/routines" className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-            <ListIcon className="h-4 w-4" /> Routines
-            {data.routines.length > 0 && <span className="tabular-nums text-muted">{data.routines.length}</span>}
+          <button
+            type="button"
+            onClick={() => setSharingKind("year")}
+            title="Share progress"
+            aria-label="Share progress"
+            className="flex h-8 items-center gap-1.5 rounded-full bg-surface px-2 text-sm font-semibold hover:bg-surface-hover sm:h-9 sm:px-2.5 min-[1800px]:px-4"
+          >
+            <ShareIcon className="h-4 w-4" /> <span className="hidden min-[1800px]:inline">Share progress</span>
+          </button>
+          <Link href="/shed-log/routines" title="Routines" className="flex h-8 items-center gap-1.5 rounded-full bg-surface px-2 text-sm font-semibold hover:bg-surface-hover sm:h-9 sm:px-3 min-[1800px]:px-4">
+            <ListIcon className="h-4 w-4" /> <span className="hidden min-[1800px]:inline">Routines</span>
+            {data.routines.length > 0 && <span className="hidden tabular-nums text-muted sm:inline">{data.routines.length}</span>}
           </Link>
           <button
             type="button"
@@ -135,35 +234,38 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 y: r.bottom + 6,
                 items: [
                   { label: `Task on ${selected === today ? "today" : formatShortDate(selected)}`, onSelect: () => setNewTask(newDayTask()) },
-                  { label: "Routine", onSelect: () => router.push(`/practice-log/routine/edit?date=${selected}`) },
+                  { label: "Routine", onSelect: () => router.push(`/shed-log/routine/edit?date=${selected}`) },
                 ],
               });
             }}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 transition-transform hover:scale-105 hover:bg-accent-hover"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 transition-transform hover:scale-105 hover:bg-accent-hover sm:h-10 sm:w-10"
           >
             <PlusIcon className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      <Momentum data={data} today={today} onGoalChange={(dailyGoal) => log.setPrefs({ dailyGoal })} />
-
-      <div className="grid items-start gap-6 lg:flex-1 lg:items-stretch lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_32rem]">
-        <div className="flex min-w-0 flex-col gap-3 lg:min-h-[34rem]">
-          <div className="flex flex-wrap items-center gap-2">
+      {/* Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
+          (right) fills the rest; the page itself only scrolls if the window's too short for it. */}
+      <div
+        className="grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0"
+        style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
+      >
+        <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button type="button" onClick={() => step(-1)} aria-label={view === "month" ? "Previous month" : "Previous week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
             <button type="button" onClick={() => step(1)} aria-label={view === "month" ? "Next month" : "Next week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
               <ChevronRightIcon className="h-5 w-5" />
             </button>
-            <h2 className="order-first min-w-0 basis-full truncate text-xl font-bold sm:order-none sm:flex-1 sm:basis-auto">{title}</h2>
+            <h2 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{title}</h2>
             {selected !== today && (
               <button type="button" onClick={() => setPicked(today)} className="rounded-full bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-surface-hover">
                 Today
               </button>
             )}
-            <div className="ml-auto w-40">
+            <div className="w-[7.5rem] shrink-0 sm:w-40">
               <Segmented
                 label="Calendar view"
                 onPage
@@ -183,10 +285,59 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           )}
           {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
         </div>
-        <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
+        <div className="min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+          <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
+        </div>
+        {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize the day panel"
+          aria-valuenow={shownDayWidth}
+          tabIndex={0}
+          title="Drag to resize · double-click to reset"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            setDragWidth(dayWidth);
+          }}
+          onPointerMove={(e) => {
+            if (dragWidth === null) return;
+            const grid = e.currentTarget.parentElement;
+            const left = grid?.getBoundingClientRect().left ?? 0;
+            setDragWidth(clampDay(e.clientX - left - 12, grid));
+          }}
+          onPointerUp={() => {
+            if (dragWidth !== null) setView({ dayWidth: dragWidth });
+            setDragWidth(null);
+          }}
+          onPointerCancel={() => setDragWidth(null)}
+          onDoubleClick={() => setView({ dayWidth: DAY_DEFAULT })}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
+          }}
+          className="group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
+        >
+          <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
+        </div>
       </div>
-      <Celebrations />
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
+      {tourOpen && <ShedLogTour onClose={() => setTourOpen(false)} />}
+      {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}
+      {statsOpen && (
+        <StatsDialog
+          data={data}
+          today={today}
+          onPrefs={log.setPrefs}
+          onShare={(kind) => {
+            setStatsOpen(false);
+            setSharingKind(kind);
+          }}
+          onClose={() => setStatsOpen(false)}
+        />
+      )}
       {newTask && (
         <TaskDialog
           initial={newTask}
@@ -205,22 +356,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:min-h-full lg:px-8 lg:pb-8 lg:pt-8">{children}</main>
+    <main className="flex w-full flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:px-8 lg:pb-6 lg:pt-8">{children}</main>
   );
 }
 
-/** A line under the title that changes with the day: what's on, how it's going. */
-function greeting(data: PracticeLogData, today: string): string {
-  const h = new Date().getHours();
-  const hello = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  const p = dayProgress(data, today);
-  const minutes = minutesOn(data, today);
-  const goal = data.prefs.dailyGoal;
-  if (p.total > 0 && p.done === p.total) return `${hello} — everything's done today. Great work.`;
-  if (goal > 0 && minutes >= goal) return `${hello} — today's goal is in the bag.`;
-  if (p.total > 0 && p.done > 0) return `${hello} — ${p.total - p.done} task${p.total - p.done === 1 ? "" : "s"} left today. Keep going.`;
-  if (p.total > 0) return `${hello} — ${p.total} task${p.total === 1 ? "" : "s"} lined up for today.`;
-  const s = streak(data, today);
-  if (s > 0 && minutes === 0) return `${hello} — keep your ${s}-day streak going today.`;
-  return `${hello} — plan your practice and watch the days fill up.`;
-}

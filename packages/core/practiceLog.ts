@@ -1,5 +1,5 @@
 /**
- * The Practice Log's data and calendar math — pure, shared by the web app (and the mobile app
+ * The Shed Log's data and calendar math — pure, shared by the web app (and the mobile app
  * later). One synced object holds everything: your routines and a log entry per day.
  *
  * - A **routine** is a named list of tasks (each with minutes and, optionally, its own time of
@@ -31,7 +31,13 @@ export type RoutineTask = {
   time: string | null;
   notes: string;
   attachments: Attachment[];
+  /** A checklist inside the task (no time of their own). */
+  subtasks?: Subtask[];
 };
+
+/** A checklist item inside a task. `done` is only used on a day's own tasks; a routine's
+    subtasks are ticked per day in `Occurrence.subDone`. */
+export type Subtask = { id: string; title: string; done?: boolean };
 
 export type RepeatFreq = "once" | "daily" | "weekly" | "monthly";
 
@@ -53,6 +59,9 @@ export type Routine = {
   description: string;
   /** Index into `ROUTINE_COLORS`. */
   color: number;
+  /** The routine's icon (an id from the web app's `ROUTINE_ICONS`), shown wherever it appears.
+      Missing on routines made before icons — those show the default. */
+  icon?: string;
   /** "HH:MM", or null for "any time". */
   startTime: string | null;
   repeat: Repeat;
@@ -73,6 +82,13 @@ export type Occurrence = {
   skipped?: boolean;
   /** A start time just for this day ("HH:MM"), instead of the routine's. */
   startTime?: string | null;
+  /** Ids of the subtasks ticked off this day. */
+  subDone?: string[];
+  /** Tasks added to the routine for just this day (after its own). */
+  extraTasks?: RoutineTask[];
+  /** Time logged by checking a task off (its planned minutes), per task — taken back off
+      `spentMs` if it's unchecked. */
+  autoMs?: Record<string, number>;
 };
 
 /** A one-off task on a day, not part of any routine. */
@@ -86,13 +102,26 @@ export type DayTask = {
   notes?: string;
   spentMs?: number;
   attachments?: Attachment[];
+  subtasks?: Subtask[];
+  /** Time logged by checking it off (its planned minutes) — taken back off if unchecked. */
+  autoMs?: number;
 };
+
+/** The pending-entry `segmentId` for time from the day timer (`link.date` = the day). */
+export const DAY_STOPWATCH_ID = "day-stopwatch";
 
 /** The timer `link.routineId` used when running a day's own tasks. */
 export const DAY_TASKS_ID = "day";
 
 /** Practice Timer time that wasn't part of a routine. */
-export type TimerEntry = { session: string; title: string; ms: number; at: number };
+export type TimerEntry = {
+  session: string;
+  title: string;
+  ms: number;
+  at: number;
+  /** Set for time spent in a tool (its href) rather than on the Practice Timer. */
+  tool?: string;
+};
 
 export type DayLog = {
   notes?: string;
@@ -105,16 +134,30 @@ export type DayLog = {
   sessions?: TimerEntry[];
   /** Practice logged by hand, in minutes. */
   extraMinutes?: number;
+  /** The day timer — a stopwatch for the whole day's practice, in ms. */
+  stopwatchMs?: number;
 };
 
 export type PracticeLogPrefs = {
   /** Minutes a day to aim for. */
   dailyGoal: number;
+  /** A goal per weekday (Sunday first; 0 = a rest day), used instead of `dailyGoal` when set. */
+  goalByWeekday?: number[] | null;
   /** The little sounds when you check things off. */
   sounds: boolean;
+  /** Count the time you spend using tools (Metronome, ear trainers, …) as practice. */
+  trackTools: boolean;
 };
 
-export const DEFAULT_PREFS: PracticeLogPrefs = { dailyGoal: 30, sounds: true };
+export const DEFAULT_PREFS: PracticeLogPrefs = { dailyGoal: 30, sounds: true, trackTools: true };
+
+/** The goal (minutes) for one day: that weekday's when goals are set per weekday, else the daily
+    goal. 0 means no goal (a rest day). */
+export function goalOn(data: PracticeLogData, key: string): number {
+  const by = data.prefs?.goalByWeekday;
+  if (Array.isArray(by) && by.length === 7) return Math.max(0, by[weekdayOf(key)] ?? 0);
+  return data.prefs?.dailyGoal ?? 30;
+}
 
 export type PracticeLogData = {
   routines: Routine[];
@@ -342,6 +385,11 @@ export function nextOccurrences(repeat: Repeat, from: string, count: number): st
 
 // ---------------------------------------------------------------- a day
 
+/** A routine's tasks on one day: its own, then any added for just that day. */
+export function tasksOf(routine: Routine, occ: Occurrence = {}): RoutineTask[] {
+  return occ.extraTasks?.length ? [...routine.tasks, ...occ.extraTasks] : routine.tasks;
+}
+
 /** A routine on one day: scheduled by its repeat rule, or added just for the day. */
 export type DayRoutine = { routine: Routine; occurrence: Occurrence; added: boolean };
 
@@ -367,7 +415,7 @@ export function routinesOn(data: PracticeLogData, key: string): DayRoutine[] {
 
 function startOf(routine: Routine, occ: Occurrence): number | null {
   const own = occ.startTime !== undefined ? parseTime(occ.startTime) : parseTime(routine.startTime);
-  return own ?? parseTime(routine.tasks.find((t) => t.time)?.time);
+  return own ?? parseTime(tasksOf(routine, occ).find((t) => t.time)?.time);
 }
 
 /** Where each task sits in the day: its own time, or straight after the task before it (from the
@@ -376,7 +424,7 @@ export type ScheduledTask = { task: RoutineTask; start: number | null; end: numb
 
 export function scheduleTasks(routine: Routine, occ: Occurrence = {}): ScheduledTask[] {
   let cursor: number | null = occ.startTime !== undefined ? parseTime(occ.startTime) : parseTime(routine.startTime);
-  return routine.tasks.map((task) => {
+  return tasksOf(routine, occ).map((task) => {
     const own = parseTime(task.time);
     const start = own ?? cursor;
     const end = start === null ? null : start + task.minutes;
@@ -402,32 +450,26 @@ export function totalMinutes(routine: Routine): number {
 /** Tasks checked off, of the tasks that still exist. */
 export function progressOf(routine: Routine, occ: Occurrence): { done: number; total: number } {
   const done = new Set(occ.done ?? []);
-  return { done: routine.tasks.filter((t) => done.has(t.id)).length, total: routine.tasks.length };
+  const tasks = tasksOf(routine, occ);
+  return { done: tasks.filter((t) => done.has(t.id)).length, total: tasks.length };
 }
 
-/** Minutes practiced on a day: timer time on routine tasks (or a checked task's planned minutes
-    when it was checked without the timer), Practice Timer sessions, and minutes logged by hand. */
-export function minutesOn(data: PracticeLogData, key: string): number {
+/** Minutes practiced on a day — time that was actually logged: the day timer, or (whichever is
+    more, since they run side by side) the time on tasks — from the timer or logged by hand on a
+    task —, Practice Timer sessions and time in tools; plus minutes logged by hand for the day.
+    Checking a task off without logging time doesn't add any. `liveStopwatchMs` is the day timer's
+    running part not handed over yet. */
+export function minutesOn(data: PracticeLogData, key: string, liveStopwatchMs = 0): number {
   const day = data.days[key];
-  if (!day) return 0;
-  let ms = 0;
-  for (const [routineId, occ] of Object.entries(day.routines ?? {})) {
-    const routine = data.routines.find((r) => r.id === routineId);
-    const spent = occ.spentMs ?? {};
-    const tasksWithTime = new Set(Object.keys(spent));
-    for (const v of Object.values(spent)) ms += v;
-    if (routine) {
-      for (const id of occ.done ?? []) {
-        if (tasksWithTime.has(id)) continue;
-        const task = routine.tasks.find((t) => t.id === id);
-        if (task) ms += task.minutes * 60000;
-      }
-    }
-  }
-  for (const t of day.tasks ?? []) ms += t.spentMs ?? (t.done ? t.minutes * 60000 : 0);
-  for (const s of day.sessions ?? []) ms += s.ms;
-  ms += (day.extraMinutes ?? 0) * 60000;
-  return ms / 60000;
+  if (!day && !liveStopwatchMs) return 0;
+  let timed = 0;
+  for (const occ of Object.values(day?.routines ?? {})) for (const v of Object.values(occ.spentMs ?? {})) timed += v;
+  for (const t of day?.tasks ?? []) timed += t.spentMs ?? 0;
+  for (const s of day?.sessions ?? []) timed += s.ms;
+  // The day timer is the day's total (everything not timed by it is added onto it); the larger of
+  // the two only matters for days logged before that was so.
+  const watch = (day?.stopwatchMs ?? 0) + liveStopwatchMs;
+  return (Math.max(timed, watch) + (day?.extraMinutes ?? 0) * 60000) / 60000;
 }
 
 /** Tasks done / planned on a day — routine tasks (not on skipped routines) and the day's own. */
@@ -500,6 +542,9 @@ export type PendingTimerEntry = {
   title: string;
   segmentId: string;
   link?: { routineId: string; date: string };
+  /** The day timer was running for that day when this happened (so it's already counted there);
+      otherwise the time is added to the day timer. */
+  covered?: boolean;
 };
 
 /** Folds the Practice Timer's recorded steps into the log: a routine's steps check off (and time)
@@ -508,9 +553,17 @@ export function applyTimerEntries(data: PracticeLogData, entries: PendingTimerEn
   if (!entries.length) return data;
   const days = { ...data.days };
   for (const e of entries) {
+    if (e.segmentId === DAY_STOPWATCH_ID) {
+      const key = e.link?.date ?? toDateKey(new Date(e.at));
+      days[key] = { ...(days[key] ?? {}), stopwatchMs: (days[key]?.stopwatchMs ?? 0) + e.ms };
+      continue;
+    }
     if (e.ms < 5000 && !e.done) continue; // a stray tap of Skip
+    if (e.segmentId.startsWith("tool:") && e.ms < 1000) continue;
     const key = e.link?.date ?? toDateKey(new Date(e.at));
     const day: DayLog = { ...(days[key] ?? {}) };
+    // Practice the day timer wasn't running for goes on it too: it's the day's total.
+    if (!e.covered) day.stopwatchMs = (day.stopwatchMs ?? 0) + e.ms;
     if (e.link?.routineId === DAY_TASKS_ID && day.tasks?.some((t) => t.id === e.segmentId)) {
       day.tasks = day.tasks.map((t) => (t.id === e.segmentId ? { ...t, spentMs: (t.spentMs ?? 0) + e.ms, done: t.done || e.done } : t));
     } else if (e.link && data.routines.some((r) => r.id === e.link!.routineId)) {
@@ -519,6 +572,14 @@ export function applyTimerEntries(data: PracticeLogData, entries: PendingTimerEn
       occ.spentMs = { ...(occ.spentMs ?? {}), [e.segmentId]: (occ.spentMs?.[e.segmentId] ?? 0) + e.ms };
       if (e.done && !(occ.done ?? []).includes(e.segmentId)) occ.done = [...(occ.done ?? []), e.segmentId];
       day.routines = { ...(day.routines ?? {}), [rid]: occ };
+    } else if (e.segmentId.startsWith("tool:")) {
+      // Time in a tool: added to that tool's entry for the same sitting (within half an hour).
+      const tool = e.segmentId.slice(5);
+      const sessions = [...(day.sessions ?? [])];
+      const i = sessions.findIndex((x) => x.tool === tool && e.at - x.at < 30 * 60000 && e.at >= x.at);
+      if (i >= 0) sessions[i] = { ...sessions[i], ms: sessions[i].ms + e.ms, at: e.at };
+      else sessions.push({ session: e.session, title: e.title, ms: e.ms, at: e.at, tool });
+      day.sessions = sessions;
     } else {
       day.sessions = [...(day.sessions ?? []), { session: e.session, title: e.title, ms: e.ms, at: e.at }];
     }
@@ -538,6 +599,10 @@ export function newTask(title = ""): RoutineTask {
   return { id: randomId(), title, minutes: 10, time: null, notes: "", attachments: [] };
 }
 
+export function newSubtask(title = ""): Subtask {
+  return { id: randomId(), title };
+}
+
 export function newDayTask(title = ""): DayTask {
   return { id: randomId(), title, minutes: 15, time: null, done: false };
 }
@@ -549,6 +614,7 @@ export function newRoutine(start: string, color = 0): Routine {
     name: "",
     description: "",
     color,
+    icon: "note",
     startTime: null,
     repeat: { freq: "weekly", interval: 1, weekdays: [weekdayOf(start)], start, end: null },
     tasks: [newTask()],
@@ -565,7 +631,14 @@ export function attachmentKey(a: Attachment): string {
 /** Drops days that hold nothing at all, so the stored object doesn't fill with empty entries. */
 export function pruneDay(day: DayLog): DayLog | null {
   const occs = Object.entries(day.routines ?? {}).filter(
-    ([, o]) => (o.done?.length ?? 0) > 0 || Object.keys(o.spentMs ?? {}).length > 0 || !!o.notes || o.skipped || o.startTime !== undefined,
+    ([, o]) =>
+      (o.done?.length ?? 0) > 0 ||
+      Object.keys(o.spentMs ?? {}).length > 0 ||
+      !!o.notes ||
+      o.skipped ||
+      o.startTime !== undefined ||
+      (o.subDone?.length ?? 0) > 0 ||
+      (o.extraTasks?.length ?? 0) > 0,
   );
   const next: DayLog = {
     ...(day.notes ? { notes: day.notes } : {}),
@@ -575,6 +648,525 @@ export function pruneDay(day: DayLog): DayLog | null {
     ...(day.tasks?.length ? { tasks: day.tasks } : {}),
     ...(day.sessions?.length ? { sessions: day.sessions } : {}),
     ...(day.extraMinutes ? { extraMinutes: day.extraMinutes } : {}),
+    ...(day.stopwatchMs ? { stopwatchMs: day.stopwatchMs } : {}),
   };
   return Object.keys(next).length ? next : null;
+}
+
+// ---------------------------------------------------------------- sharing
+
+/** A routine as others see it (a share link, a Community post): no ids, no dates, attachments as
+    names only (a tune or chart of yours means nothing in someone else's library), tools kept. */
+export type PublicRoutine = {
+  name: string;
+  description: string;
+  color: number;
+  icon?: string;
+  startTime: string | null;
+  repeat: { freq: RepeatFreq; interval: number; weekdays: Weekday[] };
+  tasks: { title: string; minutes: number; time: string | null; notes: string; attachments: PublicAttachment[]; subtasks?: string[] }[];
+  attachments: PublicAttachment[];
+};
+
+export type PublicAttachment = { kind: Attachment["kind"]; label: string; href?: string };
+
+function publicAttachments(list: Attachment[] | undefined): PublicAttachment[] {
+  return (list ?? []).map((a) => (a.kind === "tool" ? { kind: a.kind, label: a.label, href: a.href } : { kind: a.kind, label: a.label }));
+}
+
+export function toPublicRoutine(r: Routine): PublicRoutine {
+  return {
+    name: r.name,
+    description: r.description,
+    color: r.color,
+    ...(r.icon ? { icon: r.icon } : {}),
+    startTime: r.startTime,
+    repeat: {
+      freq: r.repeat.freq,
+      interval: r.repeat.interval,
+      // "No days picked" means the start date's weekday — the start date isn't shared, so say which.
+      weekdays: r.repeat.freq === "weekly" && !r.repeat.weekdays.length ? [weekdayOf(r.repeat.start)] : r.repeat.weekdays,
+    },
+    tasks: r.tasks.map((t) => ({
+      title: t.title,
+      minutes: t.minutes,
+      time: t.time,
+      notes: t.notes,
+      attachments: publicAttachments(t.attachments),
+      ...(t.subtasks?.length ? { subtasks: t.subtasks.map((x) => x.title) } : {}),
+    })),
+    attachments: publicAttachments(r.attachments),
+  };
+}
+
+/** Reads a `PublicRoutine` out of untrusted JSON (a shared link, a post), or null. */
+export function cleanPublicRoutine(raw: unknown): PublicRoutine | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const str = (x: unknown, max = 500) => (typeof x === "string" ? x.slice(0, max) : "");
+  const time = (x: unknown) => (typeof x === "string" && parseTime(x) !== null ? x : null);
+  const atts = (x: unknown): PublicAttachment[] =>
+    Array.isArray(x)
+      ? x
+          .filter((a) => a && typeof a === "object" && ["tune", "setlist", "chart", "tool"].includes((a as PublicAttachment).kind))
+          .slice(0, 30)
+          .map((a) => {
+            const p = a as PublicAttachment;
+            return { kind: p.kind, label: str(p.label, 200), ...(p.kind === "tool" && typeof p.href === "string" && p.href.startsWith("/") ? { href: p.href.slice(0, 100) } : {}) };
+          })
+      : [];
+  const rep = (r.repeat ?? {}) as Record<string, unknown>;
+  const freq: RepeatFreq = ["once", "daily", "weekly", "monthly"].includes(rep.freq as string) ? (rep.freq as RepeatFreq) : "weekly";
+  const tasks = Array.isArray(r.tasks) ? r.tasks.slice(0, 100) : [];
+  return {
+    name: str(r.name, 120) || "Routine",
+    description: str(r.description, 2000),
+    color: typeof r.color === "number" && r.color >= 0 ? Math.floor(r.color) % ROUTINE_COLORS.length : 0,
+    ...(typeof r.icon === "string" && /^[a-z0-9-]{1,30}$/.test(r.icon) ? { icon: r.icon } : {}),
+    startTime: time(r.startTime),
+    repeat: {
+      freq,
+      interval: typeof rep.interval === "number" ? Math.min(52, Math.max(1, Math.round(rep.interval))) : 1,
+      weekdays: Array.isArray(rep.weekdays) ? (rep.weekdays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6) as Weekday[]) : [],
+    },
+    tasks: tasks.map((t) => {
+      const o = (t ?? {}) as Record<string, unknown>;
+      return {
+        title: str(o.title, 200),
+        minutes: typeof o.minutes === "number" && o.minutes >= 0 ? Math.min(600, o.minutes) : 0,
+        time: time(o.time),
+        notes: str(o.notes, 2000),
+        attachments: atts(o.attachments),
+        ...(Array.isArray(o.subtasks) ? { subtasks: o.subtasks.slice(0, 50).map((x) => str(x, 200)).filter(Boolean) } : {}),
+      };
+    }),
+    attachments: atts(r.attachments),
+  };
+}
+
+/** A shared routine made yours: new ids, starting `start`. Tunes, setlists and charts attached to
+    it were someone else's, so they become a line in the task's notes; tools stay attached. */
+export function routineFromPublic(p: PublicRoutine, start: string): Routine {
+  const now = Date.now();
+  const keep = (list: PublicAttachment[]): Attachment[] =>
+    list.filter((a) => a.kind === "tool" && a.href).map((a) => ({ kind: "tool", href: a.href!, label: a.label }));
+  const mention = (list: PublicAttachment[]) => {
+    const names = list.filter((a) => a.kind !== "tool").map((a) => a.label);
+    return names.length ? `With: ${names.join(", ")}` : "";
+  };
+  return {
+    id: randomId(),
+    name: p.name,
+    description: [p.description, mention(p.attachments)].filter(Boolean).join("\n"),
+    color: p.color,
+    ...(p.icon ? { icon: p.icon } : {}),
+    startTime: p.startTime,
+    repeat: { ...p.repeat, start, end: null },
+    tasks: p.tasks.map((t) => ({
+      id: randomId(),
+      title: t.title,
+      minutes: t.minutes,
+      time: t.time,
+      notes: [t.notes, mention(t.attachments)].filter(Boolean).join("\n"),
+      attachments: keep(t.attachments),
+      ...(t.subtasks?.length ? { subtasks: t.subtasks.map((title) => ({ id: randomId(), title })) } : {}),
+    })),
+    attachments: keep(p.attachments),
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/** "Every Monday and Wednesday" for a routine without dates. */
+export function describePublicRepeat(p: PublicRoutine["repeat"]): string {
+  if (p.freq === "once") return "One session";
+  return describeRepeat({ ...p, start: "2026-01-04", end: null }).replace(/ on the \d+\w\w$/, "");
+}
+
+// ---------------------------------------------------------------- progress cards
+
+export type ProgressCardKind = "streak" | "hours" | "year" | "day";
+/** How much time the card's grid (and its Hours / Days numbers) covers. */
+export type ProgressCardRange = "week" | "month" | "year";
+
+/** What a shareable progress card shows — small enough to post: the headline numbers and the
+    range's days as practice levels (`"0"`–`"4"`, oldest first, from `start`). Week and month
+    cards also carry each day's minutes (`mins`). `kind: "year"` is the "Days" card. */
+export type ProgressCard = {
+  kind: ProgressCardKind;
+  range: ProgressCardRange;
+  streak: number;
+  best: number;
+  /** Lifetime hours. */
+  hours: number;
+  /** Days with any practice in the last 365. */
+  days: number;
+  /** Hours and days practiced in the range (for a year: the last 365 days). */
+  rangeHours: number;
+  rangeDays: number;
+  /** The first day of the grid and the last day shown (YYYY-MM-DD). */
+  start: string;
+  end: string;
+  levels: string;
+  mins?: number[];
+  /** `kind: "day"` only: one day's report. */
+  report?: DayReport;
+};
+
+/** A day's report card: everything checked off (with its time), time in tools and on the Practice
+    Timer, and what that day earned. */
+export type DayReportItem = { title: string; detail: string; minutes: number; color: number | null };
+export type DayAchievement = { kind: "goal" | "streak" | "hours" | "routine" | "all" | "best" | "first"; text: string };
+export type DayReport = {
+  date: string;
+  minutes: number;
+  goal: number;
+  items: DayReportItem[];
+  /** Items left off the card. */
+  more: number;
+  achievements: DayAchievement[];
+};
+
+export const REPORT_ITEMS = 12;
+
+/** The report for one day (`key`). */
+export function dayReport(data: PracticeLogData, key: string): DayReport {
+  const goal = goalOn(data, key);
+  const minutes = minutesOn(data, key);
+  const day = data.days[key];
+  const items: DayReportItem[] = [];
+  const achievements: DayAchievement[] = [];
+  const mins = (ms: number | undefined, planned: number) => Math.round(ms ? ms / 60000 : planned);
+  const its = routinesOn(data, key);
+  for (const it of its) {
+    const done = new Set(it.occurrence.done ?? []);
+    for (const t of tasksOf(it.routine, it.occurrence)) {
+      if (done.has(t.id)) items.push({ title: t.title || "Untitled task", detail: it.routine.name || "Routine", minutes: mins(it.occurrence.spentMs?.[t.id], t.minutes), color: it.routine.color });
+    }
+    const p = progressOf(it.routine, it.occurrence);
+    if (p.total > 0 && p.done === p.total && !it.occurrence.skipped) achievements.push({ kind: "routine", text: `Finished ${it.routine.name || "a routine"}` });
+  }
+  for (const t of day?.tasks ?? []) if (t.done) items.push({ title: t.title || "Untitled task", detail: "Task", minutes: mins(t.spentMs, t.minutes), color: null });
+  for (const e of day?.sessions ?? []) {
+    const m = Math.round(e.ms / 60000);
+    if (m > 0) items.push({ title: e.title || e.session, detail: e.tool ? "Time in the tool" : "Practice Timer", minutes: m, color: null });
+  }
+  const prog = dayProgress(data, key);
+  if (prog.total > 1 && prog.done === prog.total) achievements.unshift({ kind: "all", text: "Everything done" });
+  if (goal > 0 && minutes >= goal) achievements.unshift({ kind: "goal", text: minutes >= goal * 2 ? "Daily goal, twice over" : "Hit the daily goal" });
+  if (minutes > 0) {
+    const s = streak(data, key);
+    if (STREAK_MILESTONES.includes(s)) achievements.push({ kind: "streak", text: `${s}-day streak` });
+    let before = 0;
+    let bestBefore = 0;
+    let anyBefore = false;
+    for (const k of Object.keys(data.days)) {
+      if (k >= key) continue;
+      const m = minutesOn(data, k);
+      before += m;
+      bestBefore = Math.max(bestBefore, m);
+      if (m > 0) anyBefore = true;
+    }
+    const passed = HOUR_MILESTONES.filter((h) => before < h * 60 && before + minutes >= h * 60).pop();
+    if (passed) achievements.push({ kind: "hours", text: `Passed ${passed} ${passed === 1 ? "hour" : "hours"} in total` });
+    if (!anyBefore) achievements.push({ kind: "first", text: "First day in the Shed Log" });
+    else if (minutes > bestBefore) achievements.push({ kind: "best", text: "Longest practice day yet" });
+  }
+  return { date: key, minutes: Math.round(minutes), goal, items: items.slice(0, REPORT_ITEMS), more: Math.max(0, items.length - REPORT_ITEMS), achievements: achievements.slice(0, 6) };
+}
+
+/** A day-report card for `key`. */
+export function dayReportCard(data: PracticeLogData, key: string): ProgressCard {
+  const report = dayReport(data, key);
+  const s = streak(data, key);
+  let hours = 0;
+  for (const k of Object.keys(data.days)) if (k <= key) hours += minutesOn(data, k);
+  return {
+    kind: "day",
+    range: "week",
+    streak: report.minutes > 0 ? s : 0,
+    best: Math.max(s, bestStreak(data)),
+    hours: hours / 60,
+    days: 0,
+    rangeHours: report.minutes / 60,
+    rangeDays: report.minutes > 0 ? 1 : 0,
+    start: key,
+    end: key,
+    levels: "",
+    report,
+  };
+}
+
+function cleanReport(raw: unknown, end: string): DayReport | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? Math.min(100000, Math.round(x)) : 0);
+  const str = (x: unknown, n = 80) => (typeof x === "string" ? x.slice(0, n) : "");
+  const KINDS = ["goal", "streak", "hours", "routine", "all", "best", "first"];
+  const items = Array.isArray(r.items)
+    ? r.items.slice(0, REPORT_ITEMS).filter((i): i is Record<string, unknown> => !!i && typeof i === "object").map((i) => ({
+        title: str(i.title),
+        detail: str(i.detail, 40),
+        minutes: num(i.minutes),
+        color: typeof i.color === "number" ? Math.floor(Math.min(20, Math.max(0, i.color))) : null,
+      }))
+    : [];
+  const achievements = Array.isArray(r.achievements)
+    ? r.achievements.slice(0, 6).filter((a): a is Record<string, unknown> => !!a && typeof a === "object" && KINDS.includes(a.kind as string)).map((a) => ({ kind: a.kind as DayAchievement["kind"], text: str(a.text, 60) }))
+    : [];
+  return { date: end, minutes: num(r.minutes), goal: num(r.goal), items, more: num(r.more), achievements };
+}
+
+/** How busy a day was, 0–4 (against the daily goal, or 15/30/60 min without one). */
+export function dayLevel(minutes: number, goal: number): number {
+  if (minutes <= 0) return 0;
+  const g = goal > 0 ? goal : 30;
+  if (minutes >= g * 1.5) return 4;
+  if (minutes >= g) return 3;
+  if (minutes >= g * 0.5) return 2;
+  return 1;
+}
+
+export const CARD_WEEKS = 53;
+
+/** The first day a card's grid shows: 53 weeks back (from a week start) for a year, the 1st of
+    the month, or the start of the week. */
+export function cardStart(range: ProgressCardRange, today: string): string {
+  if (range === "week") return startOfWeek(today);
+  if (range === "month") return `${today.slice(0, 8)}01`;
+  return addDays(startOfWeek(today), -(CARD_WEEKS - 1) * 7);
+}
+
+export function progressCard(data: PracticeLogData, today: string, kind: ProgressCardKind, range: ProgressCardRange = "year"): ProgressCard {
+  const first = cardStart(range, today);
+  const n = daysBetween(first, today) + 1;
+  let levels = "";
+  const mins: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const k = addDays(first, i);
+    const m = minutesOn(data, k);
+    levels += String(dayLevel(m, goalOn(data, k)));
+    if (range !== "year") mins.push(Math.round(m));
+  }
+  let days = 0;
+  let yearMinutes = 0;
+  for (let i = 0; i < 365; i++) {
+    const m = minutesOn(data, addDays(today, -i));
+    if (m > 0) days++;
+    yearMinutes += m;
+  }
+  const rangeMinutes = range === "year" ? yearMinutes : mins.reduce((a, b) => a + b, 0);
+  const rangeDays = range === "year" ? days : mins.filter((m) => m > 0).length;
+  const s = streak(data, today);
+  return {
+    kind,
+    range,
+    streak: s,
+    best: Math.max(s, bestStreak(data)),
+    hours: lifetimeMinutes(data) / 60,
+    days,
+    rangeHours: rangeMinutes / 60,
+    rangeDays,
+    start: first,
+    end: today,
+    levels,
+    ...(range !== "year" ? { mins } : {}),
+  };
+}
+
+/** Reads a `ProgressCard` out of untrusted JSON (a post), or null. */
+export function cleanProgressCard(raw: unknown): ProgressCard | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? Math.min(1e6, x) : 0);
+  if (!["streak", "hours", "year", "day"].includes(r.kind as string) || !isDateKey(r.end) || typeof r.levels !== "string") return null;
+  const report = r.kind === "day" ? cleanReport(r.report, r.end) : undefined;
+  if (r.kind === "day" && !report) return null;
+  const range: ProgressCardRange = r.range === "week" || r.range === "month" ? r.range : "year";
+  const days = Math.floor(Math.min(366, num(r.days)));
+  return {
+    kind: r.kind as ProgressCardKind,
+    range,
+    streak: Math.floor(num(r.streak)),
+    best: Math.floor(num(r.best)),
+    hours: num(r.hours),
+    days,
+    // Cards posted before ranges existed are year cards: lifetime hours, the last year's days.
+    rangeHours: r.rangeHours === undefined ? num(r.hours) : num(r.rangeHours),
+    rangeDays: r.rangeDays === undefined ? days : Math.floor(Math.min(366, num(r.rangeDays))),
+    start: isDateKey(r.start) ? r.start : cardStart(range, r.end),
+    end: r.end,
+    levels: r.levels.replace(/[^0-4]/g, "").slice(0, CARD_WEEKS * 7),
+    ...(Array.isArray(r.mins) ? { mins: r.mins.slice(0, 31).map((m) => Math.round(num(m))) } : {}),
+    ...(report ? { report } : {}),
+  };
+}
+
+/** A routine on a past day that wasn't finished (not skipped, and not before the routine existed). */
+/** How a past day went, for a routine or the whole day: everything done, some of it, or nothing.
+    Skipping counts as not doing it. `null` for today and the future (a routine's own start date
+    already keeps it off earlier days). */
+export type DayStatus = "done" | "partial" | "missed";
+
+export function routineStatus(item: DayRoutine, key: string, today: string): DayStatus | null {
+  if (key >= today) return null;
+  const p = progressOf(item.routine, item.occurrence);
+  if (p.total === 0) return null;
+  if (!item.occurrence.skipped && p.done === p.total) return "done";
+  return p.done > 0 ? "partial" : "missed";
+}
+
+/** A past routine left with nothing checked off (or skipped). */
+export function isMissed(item: DayRoutine, key: string, today: string): boolean {
+  return routineStatus(item, key, today) === "missed";
+}
+
+/** A past day: green when everything planned was done, yellow when some of it was (one routine
+    finished and another not started counts), red when nothing was checked off — time logged
+    without checking anything off doesn't change that. `null` when nothing was planned. */
+export function dayStatus(data: PracticeLogData, key: string, today: string): DayStatus | null {
+  if (key >= today) return null;
+  const parts: DayStatus[] = [];
+  for (const it of routinesOn(data, key)) {
+    const s = routineStatus(it, key, today);
+    if (s) parts.push(s);
+  }
+  for (const t of data.days[key]?.tasks ?? []) parts.push(t.done ? "done" : "missed");
+  if (!parts.length) return null;
+  if (parts.every((s) => s === "done")) return "done";
+  if (parts.some((s) => s !== "missed")) return "partial";
+  return "missed";
+}
+
+/** Checks a routine task off or on for a day. Checking off logs the task's planned minutes — on the
+    task and on the day timer — when nothing's logged for it yet and the day timer isn't running
+    (`addTime`; while it runs, that time is already being counted). `autoMs` remembers how much, so
+    unchecking takes exactly that back off; time from the timer or logged by hand stays.
+    `watch` is how much to change the day timer by. */
+export function setTaskDone(occ: Occurrence, task: RoutineTask, done: boolean, addTime = true): { occ: Occurrence; watch: number } {
+  const list = occ.done ?? [];
+  const spent = { ...(occ.spentMs ?? {}) };
+  const auto = { ...(occ.autoMs ?? {}) };
+  if (done) {
+    if (list.includes(task.id)) return { occ, watch: 0 };
+    let watch = 0;
+    if (addTime && !spent[task.id] && task.minutes > 0) {
+      spent[task.id] = task.minutes * 60000;
+      auto[task.id] = task.minutes * 60000;
+      watch = task.minutes * 60000;
+    }
+    return { occ: { ...occ, done: [...list, task.id], spentMs: spent, autoMs: auto }, watch };
+  }
+  let watch = 0;
+  if (auto[task.id]) {
+    const left = (spent[task.id] ?? 0) - auto[task.id];
+    if (left > 0) spent[task.id] = left;
+    else delete spent[task.id];
+    watch = -auto[task.id];
+    delete auto[task.id];
+  }
+  return { occ: { ...occ, done: list.filter((id) => id !== task.id), spentMs: spent, autoMs: auto }, watch };
+}
+
+/** The same for a day's own task. */
+export function setDayTaskDone(task: DayTask, done: boolean, addTime = true): { task: DayTask; watch: number } {
+  if (done === task.done) return { task, watch: 0 };
+  if (done) {
+    if (addTime && !task.spentMs && task.minutes > 0) return { task: { ...task, done, spentMs: task.minutes * 60000, autoMs: task.minutes * 60000 }, watch: task.minutes * 60000 };
+    return { task: { ...task, done }, watch: 0 };
+  }
+  if (task.autoMs) {
+    const left = (task.spentMs ?? 0) - task.autoMs;
+    const next: DayTask = { ...task, done };
+    delete next.autoMs;
+    if (left > 0) next.spentMs = left;
+    else delete next.spentMs;
+    return { task: next, watch: -task.autoMs };
+  }
+  return { task: { ...task, done }, watch: 0 };
+}
+
+/** A day with all its logged time removed — the day timer, minutes logged by hand, time on tasks,
+    Practice Timer sessions and time in tools. What was checked off stays checked. */
+export function clearDayTime(day: DayLog): DayLog {
+  const routines: Record<string, Occurrence> = {};
+  for (const [id, occ] of Object.entries(day.routines ?? {})) {
+    const next = { ...occ };
+    delete next.spentMs;
+    delete next.autoMs;
+    routines[id] = next;
+  }
+  const next: DayLog = {
+    ...day,
+    routines,
+    tasks: (day.tasks ?? []).map((t) => {
+      const c = { ...t };
+      delete c.spentMs;
+      delete c.autoMs;
+      return c;
+    }),
+  };
+  delete next.stopwatchMs;
+  delete next.extraMinutes;
+  delete next.sessions;
+  return next;
+}
+
+// ---------------------------------------------------------------- public profile stats
+
+/** What a public profile shows from someone's Shed Log: streaks, hours, days, the last 26 weeks as
+    levels (like the cards), and the milestones reached. Nothing about routines or tasks. */
+export type PublicPracticeStats = {
+  streak: number;
+  best: number;
+  hours: number;
+  weekHours: number;
+  /** Days with practice in the last 365. */
+  days: number;
+  /** Days in the last 30 that hit that day's goal. */
+  goalDays: number;
+  /** The first day of `levels` (a Sunday) and one digit 0–4 per day up to `today`. */
+  start: string;
+  levels: string;
+  /** Hour and streak milestones reached, biggest first. */
+  achievements: { kind: "hours" | "streak"; value: number }[];
+};
+
+export const PROFILE_WEEKS = 26;
+
+/** Reads a stored Shed Log blob defensively (it's untrusted JSON) into `PracticeLogData`. */
+export function practiceLogFrom(raw: unknown): PracticeLogData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const days = r.days && typeof r.days === "object" ? (r.days as Record<string, DayLog>) : {};
+  const routines = Array.isArray(r.routines) ? (r.routines as Routine[]) : [];
+  const prefs = { ...DEFAULT_PREFS, ...(r.prefs && typeof r.prefs === "object" ? (r.prefs as Partial<PracticeLogPrefs>) : {}) };
+  return { routines, days, prefs };
+}
+
+export function publicPracticeStats(data: PracticeLogData, today: string): PublicPracticeStats | null {
+  const lifetime = lifetimeMinutes(data);
+  if (lifetime <= 0) return null;
+  const hours = lifetime / 60;
+  const s = streak(data, today);
+  const best = Math.max(s, bestStreak(data));
+  let days = 0;
+  for (let i = 0; i < 365; i++) if (minutesOn(data, addDays(today, -i)) > 0) days++;
+  let goalDays = 0;
+  for (let i = 0; i < 30; i++) {
+    const k = addDays(today, -i);
+    const g = goalOn(data, k);
+    if (g > 0 && minutesOn(data, k) >= g) goalDays++;
+  }
+  const weekStart = startOfWeek(today);
+  let week = 0;
+  for (let k = weekStart; k <= today; k = addDays(k, 1)) week += minutesOn(data, k);
+  const start = addDays(weekStart, -(PROFILE_WEEKS - 1) * 7);
+  let levels = "";
+  for (let k = start; k <= today; k = addDays(k, 1)) levels += String(dayLevel(minutesOn(data, k), goalOn(data, k)));
+  const achievements: PublicPracticeStats["achievements"] = [
+    ...HOUR_MILESTONES.filter((h) => hours >= h).map((value) => ({ kind: "hours" as const, value })),
+    ...STREAK_MILESTONES.filter((n) => best >= n).map((value) => ({ kind: "streak" as const, value })),
+  ].sort((a, b) => (a.kind === b.kind ? b.value - a.value : a.kind === "streak" ? -1 : 1));
+  return { streak: s, best, hours: Math.round(hours * 10) / 10, weekHours: Math.round((week / 60) * 10) / 10, days, goalDays, start, levels, achievements };
 }

@@ -114,7 +114,7 @@ export const listForTune = query({
   },
 });
 
-/** The caller's Practice Log recordings from `from` to `to` (YYYY-MM-DD, inclusive), oldest day first. */
+/** The caller's Shed Log recordings from `from` to `to` (YYYY-MM-DD, inclusive), oldest day first. */
 export const listForLogRange = query({
   args: { from: v.string(), to: v.string() },
   handler: async (ctx, { from, to }) => {
@@ -128,7 +128,7 @@ export const listForLogRange = query({
   },
 });
 
-/** Every recording of one Practice Log routine, newest first. */
+/** Every recording of one Shed Log routine, newest first. */
 export const listForRoutine = query({
   args: { routineId: v.string() },
   handler: async (ctx, { routineId }) => {

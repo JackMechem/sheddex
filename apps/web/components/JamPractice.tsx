@@ -18,6 +18,7 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { Key, Tempo, Tune } from "@/lib/types";
+import { useToolActivity } from "@/lib/toolTime";
 
 type PickResult = {
   tune: Tune;
@@ -41,6 +42,8 @@ export default function JamPractice() {
   const [pickError, setPickError] = useState<string | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<number | null>(null);
+  // Counts as practice in the Shed Log while a tune's up (and the tab's in view).
+  useToolActivity("/jam-practice", isCounting || pick !== null, { visibleOnly: true });
   const [settings, updateSettings] = usePersistedSettings(SETTINGS_KEY, DEFAULT_SETTINGS);
   const { countOffBars, accentFirstBeat, keepGoingIndefinitely, pickFromStandards } = settings;
   const setCountOffBars = (countOffBars: number) => updateSettings({ countOffBars });

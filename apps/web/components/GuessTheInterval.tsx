@@ -61,6 +61,7 @@ import LevelComplete from "@/components/learning/LevelComplete";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, intervalLevelOptions, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
+import { useToolActivity } from "@/lib/toolTime";
 
 const MIN_ROUND_SECONDS = 2;
 const MAX_ROUND_SECONDS = 20;
@@ -226,6 +227,8 @@ export default function GuessTheInterval() {
 
   const [round, setRound] = useState<IntervalRound | null>(null);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/guess-the-interval", running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [guessedId, setGuessedId] = useState<string | null>(null);

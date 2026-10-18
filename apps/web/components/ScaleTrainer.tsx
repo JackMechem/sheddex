@@ -69,6 +69,7 @@ import AdvancedSlider from "@/components/AdvancedSlider";
 import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
+import { useToolActivity } from "@/lib/toolTime";
 
 const MIN_INTERVAL_SECONDS = 1;
 const MAX_INTERVAL_SECONDS = 20;
@@ -261,6 +262,8 @@ export default function ScaleTrainer() {
   const [round, setRound] = useState<ScaleRound | null>(null);
   const [nextRound, setNextRound] = useState<ScaleRound | null>(null);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/scale-trainer", running);
   const [error, setError] = useState<string | null>(null);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);

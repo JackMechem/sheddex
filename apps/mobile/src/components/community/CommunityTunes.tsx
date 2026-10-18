@@ -35,7 +35,9 @@ export type TunePostSummary = {
   likeCount: number;
   unlisted: boolean;
   /** "setlist" for a setlist post (shown numbered, savable, kept in sync with the poster's setlist). */
-  kind?: 'setlist' | null;
+  /** 'routine' / 'milestone' posts come from the website's Shed Log — shown here as plain posts for now. */
+  kind?: 'setlist' | 'routine' | 'milestone' | null;
+  payload?: unknown;
   createdAt: number;
   authorUsername?: string | null;
   authorAvatarUrl?: string | null;

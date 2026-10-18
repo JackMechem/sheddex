@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { AuthForm } from "@/components/AccountMenu";
 import Logo from "@/components/Logo";
 import {
+  CalendarIcon,
   ChordChartIcon,
   CloseIcon,
   DrumIcon,
@@ -20,6 +21,8 @@ import {
 import { DASHBOARD_PATH } from "@/lib/landing";
 import { PRESETS } from "@jam-practice/core/themes";
 import { ChartPreview, ChordRun, IntervalQuiz, LiveBeats, StickingPreview, TunerPreview } from "./previews";
+import { DemoProgressCard, RoutineDemo } from "./PracticeLogPreview";
+import { FlameIcon } from "@/components/practicelog/Celebrations";
 
 type AuthMode = "signIn" | "signUp" | null;
 
@@ -46,6 +49,7 @@ export default function Landing({ initialSignedIn, initialAuth = null }: { initi
       <Nav signedIn={signedIn} onLogIn={logIn} onSignUp={signUp} />
       <Hero signedIn={signedIn} onSignUp={signUp} onOpenApp={openApp} onDashboard={goDashboard} />
       <Showcase />
+      <PracticeLogSection />
       <ToolMarquee />
       <Features />
       <Bento />
@@ -143,6 +147,7 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
           <Logo height={22} />
         </Link>
         <div className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium text-muted md:flex">
+          <a href="#practice-log" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Shed Log</a>
           <a href="#tools" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Tools</a>
           <a href="#features" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Features</a>
           <a href="#free" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Why it&apos;s free</a>
@@ -240,21 +245,22 @@ function Hero({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
 
       <FloatCard className="bottom-16 right-[6%] w-60 -rotate-2" style={{ animationDelay: "-1s" }}>
         <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-muted">
-          <SetlistIcon className="h-4 w-4 text-accent" /> Friday gig
+          <CalendarIcon className="h-4 w-4 text-accent" /> Shed Log
         </div>
-        <ol className="flex flex-col gap-1.5 text-sm">
-          {[
-            ["Autumn Leaves", "Gm"],
-            ["Blue Bossa", "Cm"],
-            ["Stella by Starlight", "Bb"],
-          ].map(([name, key], i) => (
-            <li key={name} className="flex items-center gap-2 rounded-xl bg-background px-2.5 py-1.5">
-              <span className="w-4 text-xs tabular-nums text-muted">{i + 1}</span>
-              <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-              <span className="rounded-md bg-accent/15 px-1.5 text-xs font-semibold text-accent">{key}</span>
-            </li>
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white" style={{ background: "linear-gradient(160deg, #fb923c, #ef4444)" }}>
+            <FlameIcon className="log-flame h-7 w-7" />
+          </span>
+          <div>
+            <div className="text-3xl font-bold tabular-nums tracking-tight">42</div>
+            <div className="text-xs font-semibold text-muted">day streak</div>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-1">
+          {"3424342 4334243".replace(" ", "").split("").map((l, i) => (
+            <span key={i} className="aspect-square rounded-[3px]" style={{ background: ["#0e4429", "#006d32", "#26a641", "#39d353"][Number(l) - 1] }} />
           ))}
-        </ol>
+        </div>
       </FloatCard>
 
       <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
@@ -262,16 +268,54 @@ function Hero({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
           <Image src="/icon.svg" alt="" width={40} height={40} />
         </div>
         <h1 className="landing-rise text-[2.6rem] font-semibold leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-7xl" style={{ animationDelay: "60ms" }}>
-          Every practice tool,
+          Practice every day.
           <br />
-          <span className="text-muted">in one shed.</span>
+          <span className="text-muted">Watch it add up.</span>
         </h1>
         <p className="landing-rise mt-6 max-w-xl text-lg leading-relaxed text-muted" style={{ animationDelay: "120ms" }}>
-          Metronomes, ear training, chord charts and your tune library. Free for every musician, with no ads and no paywalls.
+          Every practice tool in one shed — metronomes, ear training, chord charts, your tunes — and the Shed Log, which turns each session into streaks, goals and a year of green squares. Free, with no ads and no paywalls.
         </p>
         <div className="landing-rise mt-9 flex flex-col items-center gap-3 sm:flex-row" style={{ animationDelay: "180ms" }}>
           <Ctas signedIn={signedIn} onSignUp={onSignUp} onOpenApp={onOpenApp} onDashboard={onDashboard} />
         </div>
+      </div>
+    </section>
+  );
+}
+
+/** The Shed Log: why it keeps you coming back, with a routine to tick off right here. */
+function PracticeLogSection() {
+  const points: [string, string][] = [
+    ["Routines that repeat", "Lists of tasks with minutes and times — every weekday, every other Tuesday, whatever you need."],
+    ["Run them on the timer", "Start a routine and each task counts down and checks itself off. Time in any tool counts too."],
+    ["Streaks and a daily goal", "A flame by your name, a ring that fills up, confetti when you hit it. Miss a day and you'll see it."],
+    ["Share the wins", "Post a routine, or a progress card with your year of practice, to Community — or anywhere."],
+  ];
+  return (
+    <section id="practice-log" className="scroll-mt-24 px-4 pb-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
+        <Reveal>
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-accent">
+            <CalendarIcon className="h-4 w-4" /> Shed Log
+          </p>
+          <h2 className="max-w-xl text-4xl font-semibold leading-[1.02] tracking-[-0.035em] sm:text-5xl">The hardest part is showing up. This makes it fun.</h2>
+          <p className="mt-5 max-w-lg text-lg leading-relaxed text-muted">
+            Plan what to practice, tick it off, and watch the days fill in. Every task gets a little burst and a rising note — finish the lot and the confetti comes out.
+          </p>
+          <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+            {points.map(([t, d]) => (
+              <li key={t} className="flex flex-col gap-1">
+                <span className="font-semibold">{t}</span>
+                <span className="text-sm leading-relaxed text-muted">{d}</span>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        <Reveal delay={120} className="flex flex-col gap-4">
+          <RoutineDemo />
+          <DemoProgressCard />
+          <p className="text-center text-xs text-muted">Go on — tick them off.</p>
+        </Reveal>
       </div>
     </section>
   );
@@ -612,7 +656,7 @@ function FinalCta({ signedIn, onSignUp, onOpenApp, onDashboard }: CtaProps) {
             <LiveBeats bpm={100} />
           </div>
           <h2 className="text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Go shed.</h2>
-          <p className="mx-auto mt-4 max-w-md text-muted">Open a tool and start playing. It takes about two seconds.</p>
+          <p className="mx-auto mt-4 max-w-md text-muted">Open a tool and start playing — today could be day one of your streak.</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Ctas signedIn={signedIn} onSignUp={onSignUp} onOpenApp={onOpenApp} onDashboard={onDashboard} />
           </div>

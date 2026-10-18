@@ -102,7 +102,10 @@ export default function PrivacyPage() {
           without an account. There&apos;s no way to show only some of your tunes; making your
           profile public shows all of them. It also shows your ear-training progress — how many
           learning-path levels you&apos;ve passed in Guess the Interval, Guess the Chord and Guess
-          the Progression, and the stars earned (not individual scores). A public profile also shows who you follow and who
+          the Progression, and the stars earned (not individual scores) — and, unless you turn it off in
+          your profile settings, a summary of your Shed Log: your current and best streak, hours and
+          days practiced, the last 26 weeks as colored squares, and milestones reached (never your
+          routines, tasks or notes). A public profile also shows who you follow and who
           follows you (see &quot;Follows&quot; below) to anyone who can view the profile at all,
           under that same rule. Turning a profile back to private, or deleting it entirely, removes
           this visibility immediately — the account page lets you do either any time.

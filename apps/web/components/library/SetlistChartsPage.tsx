@@ -1,6 +1,6 @@
 "use client";
 
-import { BackButton } from "@/components/library/shared";
+import { ChartMeta, ChartPaper, ReaderBar, RoundButton } from "@/components/library/chartView";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,15 +8,15 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import ChordChart from "@/components/ChordChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { ChevronLeftIcon, ChevronRightIcon, ChordChartIcon } from "@/components/tools";
-import { formatComposer, transposeSong, type IRealSong } from "@/lib/iRealPro";
+import { ChevronLeftIcon, ChevronRightIcon, ChordChartIcon, ListIcon } from "@/components/tools";
+import { transposeSong, type IRealSong } from "@/lib/iRealPro";
 import type { PublicTune } from "@/lib/profileTunes";
 import type { Tune } from "@/lib/types";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useSetlists } from "@/lib/useSetlists";
 import { useSyncedTunes } from "@/lib/useSyncedTunes";
 import { useTunesToLearn } from "@/lib/useTunesToLearn";
-import { semitonesTo } from "@jam-practice/core/setlistKeys";
+import { displayKey, semitonesTo } from "@jam-practice/core/setlistKeys";
 
 /** One page: a tune, with either its chart's library id (your own charts, loaded on demand), the
     chart itself (someone else's setlist), or neither. */
@@ -88,9 +88,45 @@ export default function SetlistChartsPage({ mine, post, shared, start }: { mine?
   );
 }
 
+/** The setlist in order — numbered, with each tune's key and tempo for the set; the one on screen
+    highlighted, the ones already played dimmed. */
+function RunningOrder({ pages, index, onPick }: { pages: ChartPage[]; index: number; onPick: (i: number) => void }) {
+  return (
+    <ol className="flex flex-col gap-0.5">
+      {pages.map((p, i) => (
+        <li key={p.key}>
+          <button
+            type="button"
+            onClick={() => onPick(i)}
+            aria-current={i === index ? "true" : undefined}
+            className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors ${i === index ? "bg-accent/15" : "hover:bg-surface-hover"}`}
+          >
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-extrabold tabular-nums ${
+                i === index ? "bg-accent text-accent-foreground" : i < index ? "bg-background text-muted/60" : "bg-background text-muted"
+              }`}
+            >
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block truncate text-sm ${i === index ? "font-bold text-foreground" : i < index ? "text-muted" : "font-medium"}`}>{p.name}</span>
+              {(p.toKey || p.tempo) && (
+                <span className="block truncate text-[11px] text-muted">{[p.toKey ? displayKey(p.toKey) : null, p.tempo ? `${p.tempo} BPM` : null].filter(Boolean).join(" · ")}</span>
+              )}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: string; start: number; onBack: () => void }) {
   const stripRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(start);
+  // The running order beside the chart (desktop), or as a sheet (phones).
+  const [railOpen, setRailOpen] = useState(true);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const goTo = useCallback((i: number, smooth = true) => {
     const strip = stripRef.current;
@@ -109,62 +145,116 @@ function Pager({ pages, title, start, onBack }: { pages: ChartPage[]; title: str
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "ArrowRight" || e.key === "PageDown") goTo(index + 1);
       else if (e.key === "ArrowLeft" || e.key === "PageUp") goTo(index - 1);
+      else if (e.key === "Escape") setSheetOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [goTo, index]);
 
   const current = pages[index];
+  const next = pages[index + 1];
+  const many = pages.length > 1;
 
   return (
     <>
-      <header className="flex items-center gap-3 px-4 py-2 sm:px-6">
-        <BackButton onClick={onBack} />
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-accent">{current?.name ?? title}</h1>
-          <p className="truncate text-xs text-muted">{pages.length ? `${index + 1} of ${pages.length} · ${title}` : title}</p>
-        </div>
-        {pages.length > 1 && (
-          <div className="flex gap-1">
-            <button type="button" onClick={() => goTo(index - 1)} disabled={index === 0} aria-label="Previous chart" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-surface-hover disabled:opacity-30">
+      <ReaderBar
+        onBack={onBack}
+        title={current?.name ?? title}
+        subtitle={pages.length ? (
+          <>
+            <span className="font-semibold text-foreground/70">{title}</span> · Tune {index + 1} of {pages.length}
+          </>
+        ) : title}
+      >
+        {many && (
+          <>
+            <span className="hidden lg:block">
+              <RoundButton label={railOpen ? "Hide the running order" : "Show the running order"} onClick={() => setRailOpen((o) => !o)} active={railOpen}>
+                <ListIcon className="h-4 w-4" />
+              </RoundButton>
+            </span>
+            <span className="lg:hidden">
+              <RoundButton label="Running order" onClick={() => setSheetOpen(true)}>
+                <ListIcon className="h-4 w-4" />
+              </RoundButton>
+            </span>
+            <RoundButton label="Previous tune" onClick={() => goTo(index - 1)} disabled={index === 0}>
               <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <button type="button" onClick={() => goTo(index + 1)} disabled={index === pages.length - 1} aria-label="Next chart" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface hover:bg-surface-hover disabled:opacity-30">
+            </RoundButton>
+            <RoundButton label="Next tune" onClick={() => goTo(index + 1)} disabled={index === pages.length - 1}>
               <ChevronRightIcon className="h-5 w-5" />
-            </button>
-          </div>
+            </RoundButton>
+          </>
         )}
-      </header>
+      </ReaderBar>
+
       {pages.length === 0 ? (
         <p className="flex flex-1 items-center justify-center text-sm text-muted">No tunes yet.</p>
       ) : (
-        <div
-          ref={stripRef}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-            if (i !== index) setIndex(i);
-          }}
-          className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
-        >
-          {pages.map((p, i) => (
-            <div key={p.key} className="flex h-full w-full shrink-0 snap-center flex-col px-2 pb-2 sm:px-6">
-              {Math.abs(i - index) <= 1 ? <Page page={p} /> : null}
-            </div>
-          ))}
+        <div className="flex min-h-0 flex-1 gap-3 px-2 pb-2 sm:px-5 sm:pb-3">
+          {many && railOpen && (
+            <aside className="hidden w-60 shrink-0 flex-col gap-2 overflow-y-auto rounded-3xl bg-surface p-2 ring-1 ring-foreground/5 lg:flex">
+              <p className="px-2 pt-1 text-xs font-bold text-muted">Running order</p>
+              <RunningOrder pages={pages} index={index} onPick={goTo} />
+            </aside>
+          )}
+          <div
+            ref={stripRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+              if (i !== index) setIndex(i);
+            }}
+            className="flex min-h-0 min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
+          >
+            {pages.map((p, i) => (
+              <div key={p.key} className="flex h-full w-full shrink-0 snap-center flex-col">
+                {Math.abs(i - index) <= 1 ? <Page page={p} /> : null}
+              </div>
+            ))}
+          </div>
         </div>
       )}
-      {pages.length > 1 && (
-        <div className="flex flex-wrap items-center justify-center gap-1.5 px-4 pb-3 pt-1">
-          {pages.map((p, i) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => goTo(i)}
-              aria-label={`Go to ${p.name}`}
-              className={`h-1.5 rounded-full ${i === index ? "w-4 bg-accent" : "w-1.5 bg-surface-hover"}`}
+
+      {many && (
+        <footer className="flex items-center gap-3 px-3 pb-3 sm:px-5">
+          <div className="flex min-w-0 flex-1 gap-1">
+            {pages.map((p, i) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => goTo(i)}
+                aria-label={`Go to ${p.name}`}
+                title={p.name}
+                className={`h-1.5 min-w-0 flex-1 rounded-full transition-colors ${i === index ? "bg-accent" : i < index ? "bg-accent/35" : "bg-surface-hover"}`}
+              />
+            ))}
+          </div>
+          <span className="hidden shrink-0 text-xs text-muted sm:block">
+            {next ? (
+              <>
+                Up next: <span className="font-semibold text-foreground/80">{next.name}</span>
+              </>
+            ) : (
+              "Last tune"
+            )}
+          </span>
+        </footer>
+      )}
+
+      {sheetOpen && (
+        <div className="fixed inset-0 z-[70] flex flex-col justify-end bg-overlay lg:hidden" onClick={() => setSheetOpen(false)}>
+          <div role="dialog" aria-label="Running order" className="max-h-[75dvh] overflow-y-auto rounded-t-3xl bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" onClick={(e) => e.stopPropagation()}>
+            <p className="px-2 pb-2 pt-1 text-sm font-bold">Running order · {title}</p>
+            <RunningOrder
+              pages={pages}
+              index={index}
+              onPick={(i) => {
+                setSheetOpen(false);
+                goTo(i);
+              }}
             />
-          ))}
+          </div>
         </div>
       )}
     </>
@@ -182,9 +272,11 @@ function LibraryChart({ name, chartId, toKey, tempo }: { name: string; chartId: 
   if (selectedSong) return <ChartBody song={selectedSong} toKey={toKey} tempo={tempo} />;
   if (selectedSongLoading || loading) {
     return (
-      <div className="flex flex-1 items-center justify-center">
-        <LoadingSpinner label="Loading chart…" showLabel />
-      </div>
+      <ChartPaper fill>
+        <div className="flex h-full items-center justify-center">
+          <LoadingSpinner label="Loading chart…" showLabel />
+        </div>
+      </ChartPaper>
     );
   }
   return <NoChart name={name} missing />;
@@ -192,31 +284,23 @@ function LibraryChart({ name, chartId, toKey, tempo }: { name: string; chartId: 
 
 function NoChart({ name, missing }: { name: string; missing?: boolean }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-10 text-center">
-      <ChordChartIcon className="h-8 w-8 text-muted" />
-      <p className="text-xl font-bold">{name}</p>
-      <p className="text-sm text-muted">{missing ? "Couldn't find this tune's chart." : "No chord chart for this tune."}</p>
-    </div>
+    <ChartPaper fill>
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-10 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+          <ChordChartIcon className="h-7 w-7" />
+        </span>
+        <p className="text-2xl font-extrabold">{name}</p>
+        <p className="text-sm text-muted">{missing ? "Couldn't find this tune's chart." : "No chord chart for this tune — play it from memory."}</p>
+      </div>
+    </ChartPaper>
   );
 }
 
 function ChartBody({ song: original, toKey, tempo }: { song: IRealSong; toKey?: string | null; tempo?: number | null }) {
   const song = useMemo(() => (toKey ? transposeSong(original, semitonesTo(original.key, toKey)) : original), [original, toKey]);
-  const info = [
-    song.composer ? formatComposer(song.composer) : null,
-    song.style || null,
-    song.key || null,
-    `${song.timeSignature.top}/${song.timeSignature.bottom}`,
-    tempo ? `${tempo} BPM` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1 rounded-2xl bg-surface p-2 sm:p-4">
-      {info && <p className="truncate px-1 text-xs text-muted">{info}</p>}
-      <div className="min-h-0 flex-1">
-        <ChordChart song={song} fullscreen hideHeader />
-      </div>
-    </div>
+    <ChartPaper fill top={<ChartMeta song={song} originalKey={original.key} tempo={tempo} />}>
+      <ChordChart song={song} fullscreen hideHeader />
+    </ChartPaper>
   );
 }

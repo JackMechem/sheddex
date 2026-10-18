@@ -27,6 +27,7 @@ import { Marker, fileKeyOf, loadMarkers, saveMarkers } from "@/lib/markers";
 import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 const ADD_FILE_VALUE = "__add-new-file__";
 const SETTINGS_KEY = "jam-practice-slow-downer";
@@ -100,6 +101,8 @@ export default function SlowDowner() {
   const [duration, setDuration] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/slow-downer", playing);
   const [error, setError] = useState<string | null>(null);
   const [loop, setLoop] = useState<LoopRegion | null>(null);
   const [loopOn, setLoopOn] = useState(false);

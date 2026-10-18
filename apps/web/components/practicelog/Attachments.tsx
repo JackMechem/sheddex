@@ -15,7 +15,7 @@ import { useSetlists } from "@/lib/useSetlists";
 type IconType = (props: { className?: string }) => React.JSX.Element;
 
 /** Tools you can attach (everything in the sidebar but the library pages and Community). */
-const TOOL_LINKS = NAV_LINKS.filter((l) => !["/community", "/tunes", "/chord-charts", "/practice-log"].includes(l.href));
+const TOOL_LINKS = NAV_LINKS.filter((l) => !["/community", "/tunes", "/chord-charts", "/shed-log"].includes(l.href));
 
 /** What an attachment links to, its current name (falling back to the name saved with it, when
     the thing itself has been deleted), and its icon. */

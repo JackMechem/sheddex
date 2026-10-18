@@ -4,12 +4,14 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
-import { CheckIcon, PencilIcon, PlayIcon } from "@/components/tools";
+import { RoutineShareDialog } from "@/components/practicelog/Sharing";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import { CheckIcon, PencilIcon, PlayIcon, ShareIcon } from "@/components/tools";
 import {
   type Occurrence,
   type Routine,
@@ -45,7 +47,7 @@ function minutesFor(routine: Routine, occ: Occurrence): number {
   return ms / 60000;
 }
 
-/** `/practice-log/routine?id=…` — one routine: when it happens, its tasks, what's attached, every
+/** `/shed-log/routine?id=…` — one routine: when it happens, its tasks, what's attached, every
     day it was practiced, and every clip recorded for it. */
 export default function RoutinePage({ id }: { id: string }) {
   const router = useRouter();
@@ -55,6 +57,7 @@ export default function RoutinePage({ id }: { id: string }) {
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const recordings = useQuery(recordingsApi.listForRoutine, isAuthenticated ? { routineId: id } : "skip");
   const routine = log.data.routines.find((r) => r.id === id);
+  const [sharing, setSharing] = useState(false);
 
   const history = useMemo(() => {
     if (!routine) return [];
@@ -84,7 +87,7 @@ export default function RoutinePage({ id }: { id: string }) {
   if (!routine) {
     return (
       <PageShell>
-        <BackButton href="/practice-log" label="Practice Log" />
+        <BackButton href="/shed-log" label="Shed Log" />
         <EmptyCard>That routine doesn&apos;t exist anymore.</EmptyCard>
       </PageShell>
     );
@@ -105,17 +108,17 @@ export default function RoutinePage({ id }: { id: string }) {
   function startToday() {
     if (!routine) return;
     if (!occursOn(routine.repeat, today) && !(log.data.days[today]?.added ?? []).includes(routine.id)) log.addToDay(today, routine.id);
-    startRoutine(routine, today);
-    router.push(`/practice-log?date=${today}`);
+    startRoutine(routine, today, undefined, false, log.data.days[today]?.routines?.[routine.id]);
+    router.push(`/shed-log?date=${today}`);
   }
 
   return (
     <PageShell>
-      <BackButton href="/practice-log" label="Practice Log" />
+      <BackButton href="/shed-log" label="Shed Log" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2.5 text-3xl font-extrabold tracking-tight">
-            <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: color }} />
+            <RoutineIcon icon={routine.icon} color={routine.color} size="lg" />
             <span className="truncate">{routine.name || "Untitled routine"}</span>
           </h1>
           <p className="text-sm text-muted">
@@ -124,7 +127,10 @@ export default function RoutinePage({ id }: { id: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/practice-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={() => setSharing(true)} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            <ShareIcon className="h-4 w-4" /> Share
+          </button>
+          <Link href={`/shed-log/routine/edit?id=${encodeURIComponent(routine.id)}`} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
             <PencilIcon className="h-4 w-4" /> Edit
           </Link>
           {!running && routine.tasks.some((t) => t.minutes > 0) && (
@@ -184,7 +190,7 @@ export default function RoutinePage({ id }: { id: string }) {
         ) : (
           <div className="flex flex-wrap gap-2">
             {upcoming.map((date) => (
-              <Link key={date} href={`/practice-log?date=${date}`} className="rounded-full bg-surface px-3 py-1.5 text-sm font-medium hover:bg-surface-hover">
+              <Link key={date} href={`/shed-log?date=${date}`} className="rounded-full bg-surface px-3 py-1.5 text-sm font-medium hover:bg-surface-hover">
                 {date === today ? "Today" : formatShortDate(date)}
               </Link>
             ))}
@@ -203,7 +209,7 @@ export default function RoutinePage({ id }: { id: string }) {
         ) : (
           byDate.map(([date, list]) => (
             <div key={date || "none"} className="flex flex-col gap-2">
-              <Link href={date ? `/practice-log?date=${date}` : "/practice-log"} className="px-1 text-sm font-semibold text-muted hover:text-foreground">
+              <Link href={date ? `/shed-log?date=${date}` : "/shed-log"} className="px-1 text-sm font-semibold text-muted hover:text-foreground">
                 {date ? formatLongDate(date) : "No day"}
               </Link>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -228,7 +234,7 @@ export default function RoutinePage({ id }: { id: string }) {
               const m = minutesFor(routine, occ);
               return (
                 <li key={date}>
-                  <Link href={`/practice-log?date=${date}`} className="flex items-start gap-3 p-3 hover:bg-surface-hover/50">
+                  <Link href={`/shed-log?date=${date}`} className="flex items-start gap-3 p-3 hover:bg-surface-hover/50">
                     <span
                       className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${complete ? "text-white" : "border-2 border-surface-hover"}`}
                       style={complete ? { background: color } : undefined}
@@ -249,6 +255,7 @@ export default function RoutinePage({ id }: { id: string }) {
           </ul>
         )}
       </section>
+      {sharing && <RoutineShareDialog routine={routine} onClose={() => setSharing(false)} />}
     </PageShell>
   );
 }

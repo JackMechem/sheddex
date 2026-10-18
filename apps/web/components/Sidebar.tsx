@@ -9,11 +9,14 @@ import Flyout, { FlyoutItem } from "@/components/Flyout";
 import PracticeTimerWidget from "@/components/PracticeTimerWidget";
 import ThemeModal from "@/components/ThemeModal";
 import AnimatedLogo from "@/components/AnimatedLogo";
+import { LogoMark } from "@/components/Logo";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
+import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
+import DashboardNavCard from "@/components/DashboardNavCard";
 import {
-  CATEGORY_ICONS,
+  CATEGORY_COLORS,
+  HelpIcon,
   NAV_LINKS,
-  HomeIcon,
   SearchIcon,
   StarIcon,
   filterLinks,
@@ -21,17 +24,19 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
-import { collectLeaves, createLeaf } from "@/lib/tilingLayout";
-import { TILEABLE_LINKS, TOOL_COMPONENTS } from "@/lib/toolRegistry";
+import { collectLeaves } from "@/lib/tilingLayout";
+import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import { useFavorites } from "@/lib/useFavorites";
+import { useRecentTools } from "@/lib/toolRecents";
 import { useIsDesktop } from "@/lib/useIsDesktop";
-import { updateTilingState, useTilingState } from "@/lib/useTilingLayout";
+import { openInSplit, useTilingState } from "@/lib/useTilingLayout";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 
 const STORAGE_KEY = "jam-practice-sidebar";
 const DEFAULT_WIDTH = 220;
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 420;
-const COLLAPSED_WIDTH = 60;
+const COLLAPSED_WIDTH = 68;
 
 function PaletteIcon({ className }: { className?: string }) {
   return (
@@ -76,14 +81,16 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
-function TilingIcon({ className }: { className?: string }) {
+/** A pane split side by side ("row") or top and bottom ("col"). */
+function SplitIcon({ direction }: { direction: "row" | "col" }) {
   return (
-    <svg {...svgProps(className)}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M12 3v18M3 12h9" />
+    <svg {...svgProps("h-4 w-4 text-muted")}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d={direction === "row" ? "M12 4v16" : "M3 12h18"} />
     </svg>
   );
 }
+
 
 /** The sidebar's own "more options" trigger — three vertical dots, filled rather than stroked
     (every other icon in this file is an outlined `svgProps` icon, but a stroked dot at this size
@@ -214,6 +221,11 @@ function SearchBox({
 
 type NavLink = (typeof NAV_LINKS)[number];
 
+/** The chord charts pages (and the setlist chart reader), which the sidebar files under Tunes. */
+function isChartsPath(path: string) {
+  return path === "/chord-charts" || path.startsWith("/chord-charts/") || path === "/setlist-charts";
+}
+
 /** Shared by Favorites and every real category in `NavItems` below — a collapsible section with
     its own header (icon + title + chevron) and, while expanded, a subtle rounded background
     behind the whole block. `accent` is the one visual difference Favorites gets: a translucent
@@ -224,74 +236,65 @@ type NavLink = (typeof NAV_LINKS)[number];
     from `NavItems` is passed in explicitly instead of closed over. */
 function CategoryBlock({
   title,
-  icon: Icon,
   items,
-  collapsed,
   large,
   searching,
   isCollapsed,
   onToggleCollapse,
   renderLink,
-  accent,
+  renderCard,
+  star = false,
 }: {
   title: string;
-  icon: (props: { className?: string }) => React.JSX.Element;
   items: NavLink[];
-  collapsed?: boolean;
   large?: boolean;
   searching: boolean;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   renderLink: (link: NavLink) => React.ReactNode;
-  accent?: boolean;
+  /** Shows the items as a two-column grid of cards instead of rows (Favorites). */
+  renderCard?: (link: NavLink) => React.ReactNode;
+  star?: boolean;
 }) {
-  // A genuinely *expanded* section (not the icon-only sidebar, where everything always shows flat
-  // with no header at all) gets its rounded backing — otherwise it'd blend into the plain sidebar
-  // background the way a collapsed section does.
-  const expanded = !collapsed && !isCollapsed;
+  // A light section: a small heading (click to fold it away), then the tools.
   return (
-    <div
-      className={`flex flex-col gap-1 rounded-xl pb-2 pt-1.5 transition-colors ${
-        expanded ? (accent ? "bg-accent/20" : "bg-surface-hover/60") : ""
-      }`}
-    >
-      {!collapsed &&
-        (searching ? (
-          <p
-            className={`flex items-center gap-2 px-4 pb-1.5 pt-2 font-semibold text-muted/70 ${
-              large ? "text-base" : "text-sm"
-            }`}
-          >
-            <Icon className={large ? "h-6 w-6 shrink-0" : "h-5 w-5 shrink-0"} />
-            {title}
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-expanded={!isCollapsed}
-            className="flex w-full items-center justify-between gap-2 rounded-lg px-4 pb-1.5 pt-2 font-semibold text-muted/70 transition-colors hover:text-foreground"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <Icon className={large ? "h-6 w-6 shrink-0" : "h-5 w-5 shrink-0"} />
-              <span className={large ? "text-base" : "text-sm"}>{title}</span>
-            </span>
-            <ChevronDownIcon
-              className={`h-3 w-3 shrink-0 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
-            />
-          </button>
-        ))}
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        disabled={searching}
+        aria-expanded={!isCollapsed}
+        className={`group flex w-full items-center gap-1.5 rounded-lg px-3 py-1 text-left font-semibold text-muted transition-colors hover:text-foreground disabled:hover:text-muted ${large ? "text-sm" : "text-xs"}`}
+      >
+        {star && <StarIcon className="h-3.5 w-3.5 text-accent" filled />}
+        <span className="flex-1">{title}</span>
+        {isCollapsed && <span className="font-medium tabular-nums opacity-70">{items.length}</span>}
+        {!searching && (
+          <ChevronDownIcon className={`h-3 w-3 shrink-0 transition-all ${isCollapsed ? "-rotate-90" : "opacity-0 group-hover:opacity-100"}`} />
+        )}
+      </button>
       {!isCollapsed &&
-        (collapsed ? (
-          items.map(renderLink)
+        (renderCard ? (
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">{items.map(renderCard)}</div>
         ) : (
-          // Indented, with a vertical rule down the left, so a section's own sub-options read as
-          // nested under its title rather than sitting flush with it.
-          <div className="ml-4 mr-2 flex flex-col gap-1 border-l border-surface-hover pl-2">
-            {items.map(renderLink)}
-          </div>
+          <div className="flex flex-col gap-0.5">{items.map(renderLink)}</div>
         ))}
     </div>
+  );
+}
+
+/** A tool's icon in a small tile tinted with its category's color (solid while it's the page
+    you're on). */
+function ToolTile({ link, active, large }: { link: NavLink; active: boolean; large?: boolean }) {
+  const color = CATEGORY_COLORS[link.category];
+  const Icon = link.icon;
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-lg transition-colors ${large ? "h-9 w-9" : "h-7 w-7"}`}
+      style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
+    >
+      <Icon className={large ? "h-5 w-5" : "h-4 w-4"} />
+    </span>
   );
 }
 
@@ -323,20 +326,55 @@ function NavItems({
       : undefined;
   const effectivePathname = activePaneHref ?? pathname;
   const filtered = filterLinks(query);
+  const searching = query.trim().length > 0;
+  const router = useRouter();
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  // Right-click any page in the sidebar (desktop): open it, or open it in split screen next to
+  // what's showing — side by side or one above the other.
+  function onNavContextMenu(e: React.MouseEvent) {
+    const a = (e.target as HTMLElement).closest("a[href]");
+    const href = a?.getAttribute("href");
+    if (!isDesktop || !href || !TOOL_COMPONENTS[href]) return;
+    e.preventDefault();
+    const current = TOOL_COMPONENTS[effectivePathname] ? effectivePathname : DASHBOARD_PATH;
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: "Open", onSelect: () => router.push(href) },
+        { label: "Open in split screen, side by side", icon: <SplitIcon direction="row" />, onSelect: () => openInSplit(href, "right", current) },
+        { label: "Open in split screen, top and bottom", icon: <SplitIcon direction="col" />, onSelect: () => openInSplit(href, "down", current) },
+      ],
+    });
+  }
+  const contextMenu = menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />;
   // Community, Tunes and Chord Charts aren't a collapsible category like the others — they're the
   // app's main destinations (each its own tab in the mobile app), shown as always-visible items
   // right under the search box.
   const communityItems = filtered.filter((link) => link.category === "Community");
-  const groups = groupByCategory(filtered.filter((link) => link.category !== "Community"));
+  // Tunes and Chord Charts share one entry: the Tunes button covers the chord charts pages too
+  // (Chord Charts still turns up as a search result).
+  const libraryItems = communityItems.filter((link) => link.href !== "/chord-charts");
+  // The Shed Log isn't one tool among the others: it's its own card under Dashboard (and
+  // only joins the list while searching, as a normal result).
+  const groups = groupByCategory(filtered.filter((link) => link.category !== "Community" && (searching || link.href !== "/shed-log")));
   // A subset of `filtered`, in NAV_LINKS' own order (stable regardless of favoriting order) —
   // shown as a section of its own above the normal categories, where each item also still stays
   // in its own category below (a quick-access shortcut, not a "moved out of" relocation).
+  // The last few tools you opened (device-local), as a row of tiles — not while searching.
+  const recentHrefs = useRecentTools();
+  const recentItems = searching
+    ? []
+    : recentHrefs
+        .map((h) => NAV_LINKS.find((l) => l.href === h))
+        .filter((l): l is NavLink => !!l && l.category !== "Community" && l.href !== "/shed-log" && l.href !== effectivePathname)
+        .slice(0, 3);
   const favoriteItems = isAuthenticated
     ? filtered.filter((link) => favorites.includes(link.href))
     : [];
-  const searching = query.trim().length > 0;
 
-  function renderLink({ href, label, icon: Icon, desktopOnly }: NavLink, options?: { noStar?: boolean }) {
+  function renderLink(linkInfo: NavLink, options?: { noStar?: boolean }) {
+    const { href, label, short, icon: Icon, desktopOnly } = linkInfo;
     const active = effectivePathname === href;
     // On phones, tools that need a bigger screen are shown greyed out and can't be opened.
     if (large && desktopOnly) {
@@ -360,21 +398,19 @@ function NavItems({
     // `options` is an object, not a bare boolean, because `items.map(renderLink)` passes the index
     // as the second argument.
     const showsStar = isAuthenticated && !collapsed && !options?.noStar;
+    const name = searching ? label : (short ?? label);
     const link = (
       <Link
         href={href}
         onClick={onNavigate}
-        title={collapsed ? label : undefined}
-        className={`flex min-w-0 items-center gap-3 ${large ? "rounded-xl" : "rounded-lg"} px-3 font-medium transition-colors ${
-          large ? "py-3 text-base" : "py-2 text-sm"
-        } ${collapsed ? "justify-center" : "w-full"} ${showsStar ? (large ? "pr-14" : "pr-11") : ""} ${
-          active
-            ? "bg-accent/10 text-accent"
-            : "text-muted hover:bg-surface-hover hover:text-foreground"
+        title={name !== label ? label : undefined}
+        aria-label={label}
+        className={`flex min-w-0 items-center gap-2.5 ${large ? "rounded-xl py-1.5 text-base" : "rounded-lg py-1 text-sm"} w-full px-2 transition-colors ${showsStar ? (large ? "pr-14" : "pr-10") : ""} ${
+          active ? "bg-surface-hover font-semibold text-foreground" : "font-medium text-foreground/80 hover:bg-surface-hover/70 hover:text-foreground"
         }`}
       >
-        <Icon className={large ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0"} />
-        {!collapsed && <span className="truncate">{label}</span>}
+        <ToolTile link={linkInfo} active={active} large={large} />
+        <span className="truncate">{name}</span>
       </Link>
     );
 
@@ -397,7 +433,7 @@ function NavItems({
           aria-pressed={isFavorite}
           title={isFavorite ? "Remove from favorites" : "Add to favorites"}
           className={`absolute right-1 top-1/2 z-10 flex -translate-y-1/2 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-hover ${
-            large ? "h-11 w-11" : "h-9 w-9"
+            large ? "h-10 w-10" : "h-8 w-8"
           } ${isFavorite ? "text-accent" : "text-muted hover:text-foreground"} ${
             // An already-favorited star always stays visible (so you can see what's starred at a
             // glance); an unfavorited one only shows on hover on desktop (no hover on mobile, so
@@ -414,6 +450,41 @@ function NavItems({
     );
   }
 
+  // A favorite as a small card: its tile and name on a tint of its category's color, with the
+  // star (always shown, to unstar it) in the corner.
+  function renderFavoriteCard(linkInfo: NavLink) {
+    const { href, label, short } = linkInfo;
+    const active = effectivePathname === href;
+    const color = CATEGORY_COLORS[linkInfo.category];
+    return (
+      <div key={href} className="relative min-w-0">
+        <Link
+          href={href}
+          onClick={onNavigate}
+          aria-label={label}
+          title={short ? label : undefined}
+          className={`flex min-w-0 flex-col items-start gap-2 rounded-xl p-2.5 transition-colors ${large ? "min-h-[5.5rem]" : "min-h-[4.75rem]"}`}
+          style={{
+            background: `color-mix(in srgb, ${color} ${active ? 20 : 9}%, var(--surface))`,
+          }}
+        >
+          <ToolTile link={linkInfo} active={active} large={large} />
+          <span className={`line-clamp-2 w-full pr-1 font-semibold leading-tight text-foreground ${large ? "text-sm" : "text-xs"}`}>{short ?? label}</span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => toggleFavorite(href)}
+          aria-label={`Remove ${label} from favorites`}
+          aria-pressed
+          title="Remove from favorites"
+          className="absolute right-1 top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full text-accent transition-colors hover:bg-surface-hover"
+        >
+          <StarIcon className="h-3.5 w-3.5" filled />
+        </button>
+      </div>
+    );
+  }
+
   // Collapsing is a `!collapsed`-only (not icon-mode) concept, and a search in progress always
   // forces every section open — a collapsed one hiding its own search matches would just look
   // like the search was broken.
@@ -421,41 +492,140 @@ function NavItems({
     return !collapsed && !searching && (collapsedCategories[key] ?? false);
   }
 
+  if (collapsed) {
+    // Icon-only: rounded groups of same-size buttons — the two places to start, your library,
+    // favorites, then a group per tool category (its name on hover).
+    const iconLink = (link: NavLink) => {
+      const { href, label, icon: Icon } = link;
+      const active = effectivePathname === href || (href !== "/" && effectivePathname.startsWith(`${href}/`)) || (href === "/tunes" && isChartsPath(effectivePathname));
+      const color = CATEGORY_COLORS[link.category];
+      return (
+        <Link
+          key={href}
+          href={href}
+          onClick={onNavigate}
+          title={label}
+          aria-label={label}
+          className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform hover:scale-105"
+          style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
+        >
+          <Icon className="h-[18px] w-[18px]" />
+        </Link>
+      );
+    };
+    const group = (key: string, title: string, children: React.ReactNode, tint = false) => (
+      <div key={key} title={title} className={`flex flex-col items-center gap-1 rounded-2xl p-1 ${tint ? "bg-accent/10" : "bg-surface-hover/50"}`}>
+        {children}
+      </div>
+    );
+    return (
+      <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {group(
+          "start",
+          "Start",
+          <>
+            <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />
+            <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed onNavigate={onNavigate} />
+          </>,
+        )}
+        {group("library", "Your library", libraryItems.map(iconLink))}
+        {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink), true)}
+        {groups.map(({ category, items }) => group(category, category, items.map(iconLink)))}
+        {contextMenu}
+      </nav>
+    );
+  }
+
   return (
-    <nav className="flex overflow-y-auto h-full flex-col gap-3">
+    <nav onContextMenu={onNavContextMenu} className="flex overflow-y-auto h-full flex-col gap-3">
       {groups.length === 0 && communityItems.length === 0 && (
         <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>No tools found</p>
       )}
       {(!searching || communityItems.length > 0) && (
         <div className="flex flex-col gap-1 pb-2">
           {/* The dashboard (the app's home); the logo above goes to the landing page. */}
-          {!searching && renderLink({ href: DASHBOARD_PATH, label: "Dashboard", icon: HomeIcon } as NavLink, { noStar: true })}
-          {communityItems.map((l) => renderLink(l))}
+          {/* The two places to start: the dashboard and the Shed Log, as cards. */}
+          {!searching && (
+            <div className="flex flex-col gap-1.5 pb-1">
+              <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed={collapsed} large={large} onNavigate={onNavigate} />
+              <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />
+            </div>
+          )}
+          {searching || collapsed ? (
+            (searching ? communityItems : libraryItems).map((l) => renderLink(l))
+          ) : (
+            // Your library — Community and Tunes (which takes in the chord charts) — as two cards,
+            // under the Dashboard / Shed Log cards and a step quieter than them.
+            <div className="grid grid-cols-2 gap-1">
+              {libraryItems.map((link) => {
+                const { href, label, icon: Icon } = link;
+                const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isChartsPath(effectivePathname));
+                const color = CATEGORY_COLORS[link.category];
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={onNavigate}
+                    className={`@container flex min-w-0 rounded-xl border px-1.5 py-1.5 transition-colors ${
+                      active ? "border-foreground/15 bg-surface-hover" : "border-transparent bg-surface-hover/60 hover:bg-surface-hover"
+                    }`}
+                  >
+                    <span className="flex w-full min-w-0 flex-col items-center gap-1 text-center @[7.5rem]:flex-row @[7.5rem]:gap-1.5 @[7.5rem]:text-left">
+                      <span
+                        className={`flex shrink-0 items-center justify-center rounded-lg ${large ? "h-8 w-8" : "h-6 w-6"}`}
+                        style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 16%, transparent)`, color }}
+                      >
+                        <Icon className={large ? "h-4 w-4" : "h-3.5 w-3.5"} />
+                      </span>
+                      <span className={`min-w-0 max-w-full truncate font-semibold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {recentItems.length >= 2 && (
+        <div className="flex flex-col gap-1">
+          <h3 className={`px-3 font-semibold text-muted ${large ? "text-sm" : "text-xs"}`}>Recent</h3>
+          <div className="grid grid-cols-3 gap-1">
+            {recentItems.map((l) => {
+              const active = effectivePathname === l.href;
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  onClick={onNavigate}
+                  title={l.label}
+                  className={`flex min-w-0 flex-col items-center gap-1 rounded-xl px-0.5 py-1.5 transition-colors ${active ? "bg-surface-hover" : "hover:bg-surface-hover/70"}`}
+                >
+                  <ToolTile link={l} active={active} large={large} />
+                  <span className={`w-full truncate text-center font-medium leading-tight text-muted ${large ? "text-xs" : "text-[10px]"}`}>{l.short ?? l.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
       {favoriteItems.length > 0 && (
         <CategoryBlock
           title="Favorites"
-          icon={(props) => <StarIcon {...props} filled />}
+          star
           items={favoriteItems}
-          collapsed={collapsed}
           large={large}
           searching={searching}
           isCollapsed={isSectionCollapsed("Favorites")}
-          onToggleCollapse={() =>
-            setCategoryCollapsed("Favorites", !isSectionCollapsed("Favorites"))
-          }
+          onToggleCollapse={() => setCategoryCollapsed("Favorites", !isSectionCollapsed("Favorites"))}
           renderLink={renderLink}
-          accent
+          renderCard={searching ? undefined : renderFavoriteCard}
         />
       )}
       {groups.map(({ category, items }) => (
         <CategoryBlock
           key={category}
           title={category}
-          icon={CATEGORY_ICONS[category]}
           items={items}
-          collapsed={collapsed}
           large={large}
           searching={searching}
           isCollapsed={isSectionCollapsed(category)}
@@ -463,6 +633,7 @@ function NavItems({
           renderLink={renderLink}
         />
       ))}
+      {contextMenu}
     </nav>
   );
 }
@@ -481,24 +652,14 @@ function NavItems({
     on after having used (and left) it earlier silently resumed whatever stale tree was last saved.
     Falls back to the first tileable tool (`TILEABLE_LINKS[0]`) if you happen to enable it from a
     page that isn't a tool at all (e.g. the home page). */
-function toggleAdvancedLayouts(enabled: boolean, pathname: string) {
-  if (enabled) {
-    updateTilingState({ enabled: false });
-    return;
-  }
-  const seedHref = TOOL_COMPONENTS[pathname] ? pathname : TILEABLE_LINKS[0].href;
-  const root = createLeaf(seedHref);
-  updateTilingState({ enabled: true, tree: root, activePaneId: root.id });
-}
-
 export default function Sidebar() {
   const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
   const [dragging, setDragging] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [themeOpen, setThemeOpen] = useState(false);
-  const { enabled: tilingEnabled } = useTilingState();
-  const pathname = usePathname();
+  const router = useRouter();
+  const onHelp = usePathname() === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
   const setCollapsed = (c: boolean) => updateLayout({ collapsed: c });
@@ -566,6 +727,15 @@ export default function Sidebar() {
               <AnimatedLogo height={24} />
             </Link>
             <div className="flex shrink-0 items-center gap-1">
+              <Link
+              href="/help"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Help"
+              title="Help"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface-hover hover:text-foreground"
+            >
+              <HelpIcon className="h-5 w-5" />
+            </Link>
               <Flyout icon={DotsIcon} label="Menu options" align="end">
                 {(close) => (
                   <FlyoutItem
@@ -623,7 +793,11 @@ export default function Sidebar() {
               : "mb-4 flex h-10 items-center justify-between gap-1 pl-1"
           }
         >
-          {!collapsed && (
+          {collapsed ? (
+            <Link href={LANDING_PATH} aria-label="About sheddex" title="sheddex" className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
+              <LogoMark size={30} />
+            </Link>
+          ) : (
             <Link
               href={LANDING_PATH}
               aria-label="About sheddex"
@@ -632,22 +806,23 @@ export default function Sidebar() {
               <AnimatedLogo height={22} />
             </Link>
           )}
+          {!collapsed && (
+          <div className="flex shrink-0 items-center">
+          <Link
+            href="/help"
+            aria-label="Help"
+            title="Help"
+            className={`flex h-9 w-9 items-center justify-center rounded-full hover:bg-surface-hover hover:text-foreground ${onHelp ? "text-accent" : "text-muted"}`}
+          >
+            <HelpIcon className="h-5 w-5" />
+          </Link>
           <Flyout
             icon={DotsIcon}
             label="Sidebar options"
-            align={collapsed ? "start" : "end"}
+            align="end"
           >
             {(close) => (
               <>
-                <FlyoutItem
-                  icon={TilingIcon}
-                  label="Advanced layouts"
-                  checked={tilingEnabled}
-                  onSelect={() => {
-                    toggleAdvancedLayouts(tilingEnabled, pathname);
-                    close();
-                  }}
-                />
                 <FlyoutItem
                   icon={PaletteIcon}
                   label="Theme"
@@ -667,6 +842,8 @@ export default function Sidebar() {
               </>
             )}
           </Flyout>
+          </div>
+          )}
         </div>
         {collapsed ? (
           <button
@@ -674,9 +851,9 @@ export default function Sidebar() {
             onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
             aria-label="Search tools"
             title="Search tools"
-            className="mb-3 flex items-center justify-center rounded-full px-3 py-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-surface-hover/50 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
           >
-            <SearchIcon className="h-4 w-4" />
+            <SearchIcon className="h-[18px] w-[18px]" />
           </button>
         ) : (
           <SearchBox query={query} onChange={setQuery} />
@@ -690,6 +867,41 @@ export default function Sidebar() {
           className={`mt-1 flex flex-col gap-1 ${collapsed ? "" : "bg-background rounded-2xl p-1"}`}
         >
           <PracticeTimerWidget collapsed={collapsed} />
+          {collapsed && (
+            <div className="flex flex-col items-center gap-1 pb-1">
+              <Flyout icon={DotsIcon} label="Sidebar options" align="start">
+                {(close) => (
+                  <>
+                    <FlyoutItem
+                      icon={PaletteIcon}
+                      label="Theme"
+                      onSelect={() => {
+                        setThemeOpen(true);
+                        close();
+                      }}
+                    />
+                    <FlyoutItem
+                      icon={HelpIcon}
+                      label="Help"
+                      onSelect={() => {
+                        router.push("/help");
+                        close();
+                      }}
+                    />
+                  </>
+                )}
+              </Flyout>
+              <button
+                type="button"
+                onClick={() => setCollapsed(false)}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:bg-surface-hover hover:text-foreground"
+              >
+                <ChevronsIcon className="h-4 w-4" flip />
+              </button>
+            </div>
+          )}
           <AccountMenu collapsed={collapsed} />
         </div>
 

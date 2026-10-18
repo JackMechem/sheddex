@@ -96,7 +96,8 @@ export function LevelRow({
         value={value ?? 0}
         disabled={value === null}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="accent-[var(--accent)] disabled:opacity-40"
+        style={{ "--progress": `${(value ?? 0) * 100}%` } as React.CSSProperties}
+        className="slider h-6 w-full cursor-pointer disabled:cursor-default disabled:opacity-40"
         aria-label={`${label} level`}
       />
     </div>

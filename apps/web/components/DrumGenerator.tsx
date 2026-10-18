@@ -31,6 +31,7 @@ import type { DrumVoice } from "@/lib/drums";
 import { useTapTempo } from "@/lib/meterControls";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
+import { useToolActivity } from "@/lib/toolTime";
 
 type Settings = {
   style: string;
@@ -120,7 +121,8 @@ function PartFader({ label, value, onChange }: { label: string; value: number; o
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         onDoubleClick={() => onChange(PART_DEFAULT)}
-        className="accent-[var(--accent)]"
+        style={{ "--progress": `${value * 100}%` } as React.CSSProperties}
+        className="slider h-6 w-full cursor-pointer"
         aria-label={`${label} level`}
         title="Double-click to reset"
       />
@@ -148,6 +150,8 @@ export default function DrumGenerator() {
   );
 
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/drum-generator", running);
   const [starting, setStarting] = useState(false);
   const [download, setDownload] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);

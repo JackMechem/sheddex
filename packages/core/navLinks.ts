@@ -10,11 +10,12 @@
 
 export const CATEGORIES = [
   "Community",
-  "Timing & Tuning",
-  "Ear Training",
-  "Practice",
-  "Drummers",
-  "Audio",
+  "Play along",
+  "Time & rhythm",
+  "Ear training",
+  "On your instrument",
+  "Drums",
+  "Practice tools",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
@@ -23,6 +24,9 @@ export interface NavLinkInfo {
   label: string;
   description: string;
   category: Category;
+  /** A shorter name for the sidebar's tool list, where the section heading gives the context
+      (e.g. "Intervals" under Ear training). Search, titles and everything else use `label`. */
+  short?: string;
   /** Needs a desktop-sized screen on web (Recorder); not meaningful on mobile, kept for parity
       with the web list so both sides describe the exact same tools the exact same way. */
   desktopOnly?: boolean;
@@ -33,125 +37,130 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     href: "/jam-practice",
     label: "Jam Practice",
     description: "Build a tune list, pick one at random and get counted in at the right tempo.",
-    category: "Practice",
+    category: "Play along",
   },
   {
     href: "/bass-genius",
     label: "Bass Genius",
     description: "Pick one of your chord charts and a jazz upright bass walks the changes with you.",
-    category: "Practice",
+    category: "Play along",
   },
   {
     href: "/note-trainer",
     label: "Note Trainer",
     description: "Random notes in your instrument's range, with a listen mode that grades you.",
-    category: "Practice",
+    category: "On your instrument",
   },
   {
     href: "/scale-trainer",
     label: "Scale Trainer",
     description:
       "Random scales in your instrument's range, with a listen mode that grades you note by note.",
-    category: "Practice",
+    category: "On your instrument",
   },
   {
     href: "/interval-trainer",
     label: "Interval Trainer",
     description: "Random intervals in your instrument's range, with a listen mode that grades you.",
-    category: "Practice",
+    category: "On your instrument",
   },
   {
     href: "/guess-the-interval",
     label: "Guess the Interval",
+    short: "Intervals",
     description:
       "Hear an interval and pick which one it is, against the same countdown-timed rounds as Interval Trainer.",
-    category: "Ear Training",
+    category: "Ear training",
   },
   {
     href: "/guess-the-chord",
     label: "Guess the Chord",
+    short: "Chords",
     description:
       "Hear a chord — including weird slash chords — and type its symbol, iReal-Pro style (F#^7, Ab-7/D, ...).",
-    category: "Ear Training",
+    category: "Ear training",
   },
   {
     href: "/guess-the-progression",
     label: "Guess the Progression",
+    short: "Progressions",
     description:
       "Hear a chord progression and type it in Roman numerals (ii7 V7 I^7) or as chord names, from a pool of common jazz, pop and minor progressions.",
-    category: "Ear Training",
+    category: "Ear training",
   },
   {
-    href: "/practice-log",
-    label: "Practice Log",
+    href: "/shed-log",
+    label: "Shed Log",
     description:
       "A practice calendar: repeating routines with tasks to check off and times for each, run on the Practice Timer, with notes, recordings and tunes, setlists and charts attached to each day.",
-    category: "Practice",
+    category: "Practice tools",
   },
   {
     href: "/practice-timer",
     label: "Practice Timer",
     description:
       "Chain named timers back to back — scales, a break, a tune — or run a configurable Pomodoro. Save sessions to replay later.",
-    category: "Practice",
+    category: "Practice tools",
   },
   {
     href: "/metronome",
     label: "Metronome",
     description: "Any time signature, custom accents, subdivisions and tap tempo.",
-    category: "Timing & Tuning",
+    category: "Time & rhythm",
   },
   {
     href: "/random-metric-modulation",
     label: "Polyrhythm Metric Modulation Metronome",
+    short: "Metric Modulation",
     description: "A metronome that jumps to a new, mathematically related tempo every few bars.",
-    category: "Timing & Tuning",
+    category: "Time & rhythm",
   },
   {
     href: "/tempo-trainer",
     label: "Tempo Trainer",
     description:
       "A metronome that cuts out for a few bars at a time, so you can practice holding the tempo on your own.",
-    category: "Timing & Tuning",
+    category: "Time & rhythm",
   },
   {
     href: "/tuner",
     label: "Tuner",
     description: "Tune by ear or by mic with a tone generator, for strings, brass and reeds.",
-    category: "Timing & Tuning",
+    category: "On your instrument",
   },
   {
     href: "/slow-downer",
     label: "Slow Downer",
     description: "Load a song, slow it down without changing pitch and loop the tricky parts.",
-    category: "Audio",
+    category: "Play along",
   },
   {
     href: "/recorder",
     label: "Recorder",
     description: "Record a take with an optional metronome, save it to your account and link it to a tune.",
-    category: "Audio",
+    category: "Practice tools",
   },
   {
     href: "/random-sticking-warmup",
     label: "Random Sticking Warmup",
+    short: "Sticking Warmup",
     description:
       "A drummer's warmup: a random sticking pattern paired with a roll, written out and counted in by a metronome.",
-    category: "Drummers",
+    category: "Drums",
   },
   {
     href: "/drum-generator",
     label: "Drum Generator",
     description:
       "A drummer to play along with — jazz and Latin American grooves from Brazil, Cuba, the Caribbean and Argentina on a real kit, written out as it plays.",
-    category: "Drummers",
+    category: "Play along",
   },
   {
     href: "/syncopation",
     label: "Syncopation",
     description:
       "Random 16-bar snare reading exercises — quarters, eighths, sixteenths and triplets — over a steady bass drum or hi-hat, written out and played.",
-    category: "Drummers",
+    category: "Drums",
   },
   {
     href: "/community",

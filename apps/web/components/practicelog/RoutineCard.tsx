@@ -6,19 +6,27 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import PracticeTimerRing from "@/components/PracticeTimerRing";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import { burstAt } from "@/components/practicelog/Celebrations";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import RecordClip from "@/components/practicelog/RecordClip";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
-import { CheckIcon, DotsVerticalIcon, PauseIcon, PlayIcon, RepeatIcon, StopIcon } from "@/components/tools";
+import Subtasks from "@/components/practicelog/Subtasks";
+import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon } from "@/components/tools";
 import {
   type DayRoutine,
+  type RoutineTask,
+  newSubtask,
+  newTask,
+  tasksOf,
   ROUTINE_COLORS,
   describeRepeat,
   formatMinutesShort,
   formatTime,
+  routineStatus,
   progressOf,
   routineSpan,
   scheduleTasks,
   timeString,
+  todayKey,
 } from "@/lib/practiceLog";
 import { pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
 import type { Recording } from "@/lib/recordings";
@@ -53,7 +61,12 @@ export default function RoutineCard({
   const span = routineSpan(routine, occurrence);
   const running = runningTask(routine.id, date);
   const doneSet = new Set(occurrence.done ?? []);
-  const firstOpen = routine.tasks.find((t) => !doneSet.has(t.id) && t.minutes > 0);
+  const allTasks = tasksOf(routine, occurrence);
+  const extraIds = new Set((occurrence.extraTasks ?? []).map((t) => t.id));
+  const subDone = new Set(occurrence.subDone ?? []);
+  const firstOpen = allTasks.find((t) => !doneSet.has(t.id) && t.minutes > 0);
+  const [newTitle, setNewTitle] = useState("");
+  const setExtra = (fn: (list: RoutineTask[]) => RoutineTask[]) => log.updateOccurrence(date, routine.id, (o) => ({ ...o, extraTasks: fn(o.extraTasks ?? []) }));
   const skipped = !!occurrence.skipped;
   const mine = recordings?.filter((r) => r.routineId === routine.id) ?? [];
   const timeOverride = occurrence.startTime !== undefined;
@@ -70,8 +83,8 @@ export default function RoutineCard({
           : []),
         { label: showNotes ? "Hide notes" : "Notes for this day", onSelect: () => setShowNotes((v) => !v) },
         complete
-          ? { label: "Uncheck every task", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, done: [] })) }
-          : { label: "Check every task", onSelect: () => log.updateOccurrence(date, routine.id, (o) => ({ ...o, done: routine.tasks.map((t) => t.id) })) },
+          ? { label: "Uncheck every task", onSelect: () => log.setAllTasks(date, routine.id, false) }
+          : { label: "Check every task", onSelect: () => log.setAllTasks(date, routine.id, true) },
         added
           ? { label: "Remove from this day", danger: true, onSelect: () => log.removeFromDay(date, routine.id) }
           : skipped
@@ -85,8 +98,9 @@ export default function RoutineCard({
     <article className={`relative flex flex-col gap-3 rounded-2xl bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}>
       <span aria-hidden className="absolute bottom-7 left-2 top-7 w-1 rounded-full" style={{ background: color }} />
       <header className="flex items-start gap-3 pl-1">
+        <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
         <div className="min-w-0 flex-1">
-          <Link href={`/practice-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-lg font-bold hover:underline ${skipped ? "line-through" : ""}`}>
+          <Link href={`/shed-log/routine?id=${encodeURIComponent(routine.id)}`} className={`block truncate text-lg font-bold hover:underline ${skipped ? "line-through" : ""}`}>
             {routine.name || "Untitled routine"}
           </Link>
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
@@ -94,7 +108,7 @@ export default function RoutineCard({
               {span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : "Any time"}
             </span>
             <span>·</span>
-            <span>{formatMinutesShort(routine.tasks.reduce((s, t) => s + t.minutes, 0))}</span>
+            <span>{formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0))}</span>
             <span className="flex basis-full items-center gap-1">
               {added ? "Added to this day" : (
                 <>
@@ -103,6 +117,8 @@ export default function RoutineCard({
               )}
             </span>
             {skipped && <span className="font-semibold text-foreground">· Skipped</span>}
+            {!skipped && routineStatus(item, date, todayKey()) === "missed" && <span className="font-semibold text-red-500">· Missed</span>}
+            {routineStatus(item, date, todayKey()) === "partial" && <span className="font-semibold text-amber-600 dark:text-amber-400">· Partly done</span>}
           </div>
         </div>
         <span
@@ -180,7 +196,7 @@ export default function RoutineCard({
         firstOpen && (
           <button
             type="button"
-            onClick={() => startRoutine(routine, date, done > 0 ? firstOpen.id : undefined)}
+            onClick={() => startRoutine(routine, date, done > 0 ? firstOpen.id : undefined, false, occurrence)}
             className="flex items-center justify-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
           >
             <PlayIcon className="h-4 w-4" />
@@ -189,7 +205,7 @@ export default function RoutineCard({
         )
       )}
 
-      {routine.tasks.length > 0 && (
+      {allTasks.length > 0 && (
         <ul className="flex flex-col">
           {schedule.map(({ task, start }) => {
             const checked = doneSet.has(task.id);
@@ -212,12 +228,42 @@ export default function RoutineCard({
                   {checked && <CheckIcon className="h-3.5 w-3.5" />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <div className={`font-medium ${checked ? "text-muted line-through" : ""}`}>{task.title || "Untitled task"}</div>
-                  <div className="flex flex-wrap gap-x-2 text-xs text-muted">
+                  <div className={`font-medium ${checked ? "text-muted line-through" : ""}`}>
+                    {task.title || "Untitled task"}
+                    {extraIds.has(task.id) && <span className="ml-1.5 rounded-full bg-background px-1.5 py-0.5 align-middle text-[10px] font-bold text-muted">Today only</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
                     {start !== null && <span className={task.time ? "font-semibold" : ""}>{formatTime(start)}</span>}
                     <span>{formatMinutesShort(task.minutes)}</span>
-                    {spent ? <span>· {formatMinutesShort(spent / 60000)} on the timer</span> : null}
+                    {spent ? <span>· {formatMinutesShort(spent / 60000)} logged</span> : null}
+                    {checked && !spent && task.minutes > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => log.updateOccurrence(date, routine.id, (o) => ({ ...o, spentMs: { ...(o.spentMs ?? {}), [task.id]: task.minutes * 60000 } }))}
+                        className="rounded-full bg-accent/15 px-2 py-0.5 font-semibold text-accent hover:bg-accent/25"
+                        title="Checked off without the timer — log its time"
+                      >
+                        + Log {formatMinutesShort(task.minutes)}
+                      </button>
+                    )}
                   </div>
+                  <Subtasks
+                    items={task.subtasks ?? []}
+                    color={color}
+                    isDone={(id) => subDone.has(id)}
+                    onToggle={(id) =>
+                      log.updateOccurrence(date, routine.id, (o) => {
+                        const list = o.subDone ?? [];
+                        return { ...o, subDone: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] };
+                      })
+                    }
+                    {...(extraIds.has(task.id)
+                      ? {
+                          onAdd: (title: string) => setExtra((list) => list.map((t) => (t.id === task.id ? { ...t, subtasks: [...(t.subtasks ?? []), newSubtask(title)] } : t))),
+                          onRemove: (id: string) => setExtra((list) => list.map((t) => (t.id === task.id ? { ...t, subtasks: (t.subtasks ?? []).filter((x) => x.id !== id) } : t))),
+                        }
+                      : {})}
+                  />
                   {task.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{task.notes}</p>}
                   {task.attachments.length > 0 && (
                     <div className="mt-1.5">
@@ -228,7 +274,7 @@ export default function RoutineCard({
                 {!skipped && task.minutes > 0 && !isNow && (
                   <button
                     type="button"
-                    onClick={() => startRoutine(routine, date, task.id, true)}
+                    onClick={() => startRoutine(routine, date, task.id, true, occurrence)}
                     aria-label={`Time just ${task.title || "this task"}`}
                     title="Time just this task"
                     className="shrink-0 rounded-full p-1.5 text-muted opacity-100 hover:bg-background hover:text-foreground lg:opacity-0 lg:group-hover:opacity-100"
@@ -236,10 +282,38 @@ export default function RoutineCard({
                     <PlayIcon className="h-3.5 w-3.5" />
                   </button>
                 )}
+                {extraIds.has(task.id) && (
+                  <button
+                    type="button"
+                    onClick={() => setExtra((list) => list.filter((t) => t.id !== task.id))}
+                    aria-label={`Remove ${task.title || "this task"} from today`}
+                    title="Remove from today"
+                    className="shrink-0 rounded-full p-1.5 text-muted hover:bg-background hover:text-danger"
+                  >
+                    <CloseIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </li>
             );
           })}
         </ul>
+      )}
+      {!skipped && (
+        <div className="flex items-center gap-2 rounded-xl bg-background px-3 py-1.5">
+          <PlusIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newTitle.trim()) {
+                setExtra((list) => [...list, newTask(newTitle.trim())]);
+                setNewTitle("");
+              }
+            }}
+            placeholder="Add a task to this routine, just for today"
+            className="min-w-0 flex-1 bg-transparent py-0.5 text-sm outline-none"
+          />
+        </div>
       )}
 
       {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}

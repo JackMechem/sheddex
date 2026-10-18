@@ -4,9 +4,10 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
-import { EmptyCard, PageHeader, PageShell, RecentCards, SearchBox, SectionHeader, StatCard, TuneRow, menuPosition, tuneSummary } from "@/components/library/shared";
+import { menuPosition, tuneSummary } from "@/components/library/shared";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, RecentStrip, Rows, SetlistCard, ShelfCard, TuneItem } from "@/components/library/ui";
 import { tuneHref, TUNE_LIST_LABEL, useTuneActions, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
-import { SetlistRow, setlistHref } from "@/components/library/setlistParts";
+import { setlistHref } from "@/components/library/setlistParts";
 import PromptDialog from "@/components/PromptDialog";
 import StandardsPicker from "@/components/StandardsPicker";
 import { NoteIcon, PlusIcon, SetlistIcon, StarIcon } from "@/components/tools";
@@ -64,7 +65,7 @@ export default function TunesDashboard() {
             title: tune.name,
             detail: `${list === "learn" ? "To learn" : "I know"} · ${tune.keys.length} of 12 keys`,
             href: tuneHref(list, tune.id),
-            icon: NoteIcon,
+            keyLabel: tune.keys.find((k) => k.enabled)?.value ?? null,
           };
       }
       return null;
@@ -84,105 +85,158 @@ export default function TunesDashboard() {
 
   function row(list: TuneListId) {
     return function renderTune(tune: Tune) {
-      return <TuneRow key={tune.id} tune={tune} href={tuneHref(list, tune.id)} onMenu={(e) => openTuneMenu(e, list, tune)} />;
+      return <TuneItem key={tune.id} tune={tune} href={tuneHref(list, tune.id)} onMenu={(e) => openTuneMenu(e, list, tune)} />;
     };
   }
 
+  const tuneNameById = new Map([...tunes, ...learn].map((t) => [t.id, t.name]));
+  const sortedSetlists = [...setlists].sort((a, b) => b.updatedAt - a.updatedAt);
+  const recentlyAdded = [...tunes].reverse().slice(0, PREVIEW + 1);
+
   return (
-    <PageShell>
-      <PageHeader
+    <LibraryPage>
+      <Hero
         title="Tunes"
+        helpTopic="tunes"
+        icon={NoteIcon}
+        tabs={<LibraryTabs active="tunes" />}
+        subtitle={
+          <>
+            {tunes.length} tune{tunes.length === 1 ? "" : "s"} you know
+            {isAuthenticated ? ` · ${learn.length} to learn` : ""} · {setlists.length} setlist{setlists.length === 1 ? "" : "s"}
+          </>
+        }
         actions={
-          <button
-            type="button"
+          <Pill
+            primary
+            icon={PlusIcon}
+            label="Add"
             onClick={(e) =>
               setAddMenu({
                 ...menuPosition(e),
                 items: [
-                  { label: "New setlist", onSelect: () => setNamingSetlist(true) },
                   { label: "Add a jazz standard", onSelect: () => setAddingStandard("tunes") },
                   { label: "New tune", onSelect: () => setCreating({ list: "tunes", tune: blankTune() }) },
-                  ...(isAuthenticated ? [{ label: "New tune to learn", onSelect: () => setCreating({ list: "learn", tune: blankTune() }) }] : []),
+                  ...(isAuthenticated ? [{ label: "New tune to learn", onSelect: () => setCreating({ list: "learn" as TuneListId, tune: blankTune() }) }] : []),
+                  { label: "New setlist", onSelect: () => setNamingSetlist(true) },
                 ],
               })
             }
-            aria-label="Add a tune"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
-          >
-            <PlusIcon className="h-5 w-5" />
-          </button>
+          />
         }
-      />
-      <SearchBox value={query} onChange={setQuery} placeholder="Search your tunes…" />
+      >
+        <HeroSearch value={query} onChange={setQuery} placeholder="Search your tunes…" />
+      </Hero>
 
       {results ? (
-        <>
+        <div className="grid gap-4 lg:grid-cols-2">
           {results.tunes.length > 0 && (
-            <section className="flex flex-col gap-1">
-              <SectionHeader title={TUNE_LIST_LABEL.tunes} detail={String(results.tunes.length)} />
-              {results.tunes.slice(0, 50).map(row("tunes"))}
-            </section>
+            <Panel title={TUNE_LIST_LABEL.tunes} detail={results.tunes.length} flush>
+              <Rows>{results.tunes.slice(0, 50).map(row("tunes"))}</Rows>
+            </Panel>
           )}
           {results.learn.length > 0 && (
-            <section className="flex flex-col gap-1">
-              <SectionHeader title={TUNE_LIST_LABEL.learn} detail={String(results.learn.length)} />
-              {results.learn.slice(0, 50).map(row("learn"))}
-            </section>
+            <Panel title={TUNE_LIST_LABEL.learn} detail={results.learn.length} flush>
+              <Rows>{results.learn.slice(0, 50).map(row("learn"))}</Rows>
+            </Panel>
           )}
-          {results.tunes.length + results.learn.length === 0 && <p className="py-6 text-center text-sm text-muted">Nothing matches “{query}”.</p>}
-        </>
+          {results.tunes.length + results.learn.length === 0 && (
+            <div className="rounded-2xl bg-surface lg:col-span-2">
+              <EmptyState icon={NoteIcon} title={`Nothing matches “${query}”`} body="Try a different name, key or tempo." />
+            </div>
+          )}
+        </div>
       ) : (
         <>
-          <div className="flex gap-3">
-            <StatCard icon={NoteIcon} count={tunes.length} label="I Know" href="/tunes/list?list=tunes" />
-            <StatCard icon={StarIcon} count={learn.length} label="To Learn" href="/tunes/list?list=learn" />
-            <StatCard icon={SetlistIcon} count={setlists.length} label="Setlists" href="/tunes/setlists" />
+          <div className={`grid gap-3 ${isAuthenticated ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
+            <ShelfCard
+              href="/tunes/list?list=tunes"
+              icon={NoteIcon}
+              count={tunes.length}
+              label={TUNE_LIST_LABEL.tunes}
+              preview={[...tunes].reverse().map((t) => t.name)}
+              empty="Add the tunes you can play"
+            />
+            {isAuthenticated && (
+              <ShelfCard
+                href="/tunes/list?list=learn"
+                icon={StarIcon}
+                count={learn.length}
+                label={TUNE_LIST_LABEL.learn}
+                preview={[...learn].reverse().map((t) => t.name)}
+                empty="Tunes you're working towards"
+                color="var(--key-4, var(--accent))"
+              />
+            )}
+            <ShelfCard
+              href="/tunes/setlists"
+              icon={SetlistIcon}
+              count={setlists.length}
+              label="Setlists"
+              preview={sortedSetlists.map((s) => s.name)}
+              empty="For gigs and sessions"
+              color="var(--key-9, var(--accent))"
+            />
           </div>
 
           {recentCards.length > 0 && (
             <section className="flex flex-col gap-2">
-              <SectionHeader title="Recently opened" />
-              <RecentCards items={recentCards} />
+              <h2 className="px-1 text-sm font-bold text-muted">Jump back in</h2>
+              <RecentStrip items={recentCards} />
             </section>
           )}
 
-          <section className="flex flex-col gap-1.5">
-            <SectionHeader
-              title="Setlists"
-              detail={setlists.length > PREVIEW ? String(setlists.length) : undefined}
-              href={setlists.length ? "/tunes/setlists" : undefined}
-              onAdd={() => setNamingSetlist(true)}
-              addLabel="New setlist"
-            />
-            {setlists.length === 0 ? (
-              <button type="button" onClick={() => setNamingSetlist(true)} className="flex items-center gap-3 rounded-2xl bg-surface p-4 text-left text-sm text-muted hover:bg-surface-hover">
-                <SetlistIcon className="h-5 w-5 shrink-0 text-accent" />
-                Make a setlist for a gig or a session — share it by link or post it to Community.
-              </button>
-            ) : (
-              [...setlists]
-                .sort((a, b) => b.updatedAt - a.updatedAt)
-                .slice(0, PREVIEW)
-                .map((sl) => <SetlistRow key={sl.id} setlist={sl} />)
-            )}
-          </section>
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+            <div className="flex min-w-0 flex-col gap-4">
+              <Panel
+                title={TUNE_LIST_LABEL.tunes}
+                icon={NoteIcon}
+                detail={tunes.length ? `${withChart} of ${tunes.length} with a chart` : undefined}
+                href="/tunes/list?list=tunes"
+                onAdd={(e) => openListAdd(e, "tunes")}
+                addLabel="Add to Tunes I Know"
+                flush
+              >
+                {tunes.length === 0 ? (
+                  <EmptyState
+                    icon={NoteIcon}
+                    title="No tunes yet"
+                    body="Add a jazz standard or your own tune. Each one gets a page for its chart, keys and notes."
+                    action={<Pill primary icon={PlusIcon} label="Add a tune" onClick={(e) => openListAdd(e, "tunes")} />}
+                  />
+                ) : (
+                  <>
+                    <p className="px-4 pb-1 text-xs text-muted">Latest additions</p>
+                    <Rows>{recentlyAdded.map(row("tunes"))}</Rows>
+                  </>
+                )}
+              </Panel>
+              {isAuthenticated && (
+                <Panel title={TUNE_LIST_LABEL.learn} icon={StarIcon} detail={learn.length || undefined} href="/tunes/list?list=learn" onAdd={(e) => openListAdd(e, "learn")} addLabel="Add to Tunes to Learn" flush>
+                  {learn.length === 0 ? (
+                    <p className="px-4 pb-3 text-sm text-muted">Tunes you want to learn, kept apart from the ones you know.</p>
+                  ) : (
+                    <Rows>{[...learn].reverse().slice(0, PREVIEW).map(row("learn"))}</Rows>
+                  )}
+                </Panel>
+              )}
+            </div>
 
-          <section className="flex flex-col gap-1">
-            <SectionHeader
-              title={TUNE_LIST_LABEL.tunes}
-              detail={tunes.length ? `${tunes.length - withChart} without a chart` : undefined}
-              href="/tunes/list?list=tunes"
-              onAdd={(e) => openListAdd(e, "tunes")}
-            />
-            {tunes.length === 0 ? <EmptyCard>No tunes yet — press + to add a jazz standard or your own.</EmptyCard> : [...tunes].reverse().slice(0, PREVIEW).map(row("tunes"))}
-          </section>
-
-          {isAuthenticated && (
-            <section className="flex flex-col gap-1">
-              <SectionHeader title={TUNE_LIST_LABEL.learn} href="/tunes/list?list=learn" onAdd={(e) => openListAdd(e, "learn")} />
-              {learn.length === 0 ? <EmptyCard>Tunes you want to learn, kept apart from the ones you know.</EmptyCard> : [...learn].reverse().slice(0, PREVIEW).map(row("learn"))}
-            </section>
-          )}
+            <Panel title="Setlists" icon={SetlistIcon} detail={setlists.length || undefined} href={setlists.length ? "/tunes/setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist">
+              {setlists.length === 0 ? (
+                <button type="button" onClick={() => setNamingSetlist(true)} className="flex w-full items-center gap-3 rounded-xl bg-background p-3 text-left text-sm text-muted hover:bg-surface-hover">
+                  <SetlistIcon className="h-5 w-5 shrink-0 text-accent" />
+                  Make a setlist for a gig or a session — share it by link or post it to Community.
+                </button>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {sortedSetlists.slice(0, PREVIEW).map((sl) => (
+                    <SetlistCard key={sl.id} setlist={sl} href={setlistHref(sl.id)} tuneNames={sl.tuneIds.map((id) => tuneNameById.get(id)).filter((n): n is string => !!n)} />
+                  ))}
+                </div>
+              )}
+            </Panel>
+          </div>
         </>
       )}
 
@@ -223,6 +277,6 @@ export default function TunesDashboard() {
           onClose={() => setCreating(null)}
         />
       )}
-    </PageShell>
+    </LibraryPage>
   );
 }

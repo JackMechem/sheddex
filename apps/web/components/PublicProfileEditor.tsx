@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@jam-practice/convex/_generated/api";
 import AvatarUpload from "@/components/AvatarUpload";
+import BannerPicker from "@/components/BannerPicker";
 import Hint from "@/components/Hint";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SwitchRow from "@/components/SwitchRow";
@@ -32,6 +33,7 @@ export default function PublicProfileEditor() {
   const [instruments, setInstruments] = useState<string[]>([]);
   const [instrumentInput, setInstrumentInput] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [showPractice, setShowPractice] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -48,6 +50,7 @@ export default function PublicProfileEditor() {
       setUsername(profile.username);
       setInstruments(profile.instruments);
       setIsPublic(profile.isPublic);
+      setShowPractice(profile.showPracticeStats !== false);
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [profile, initialized]);
@@ -90,6 +93,7 @@ export default function PublicProfileEditor() {
         username: normalizedUsername,
         instruments,
         isPublic,
+        showPracticeStats: showPractice,
       });
       setSaved(true);
     } catch (err) {
@@ -118,6 +122,8 @@ export default function PublicProfileEditor() {
       </div>
 
       <AvatarUpload avatarUrl={profile?.avatarUrl ?? null} />
+
+      <BannerPicker banner={profile?.banner} />
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-muted">Username</span>
@@ -220,6 +226,12 @@ export default function PublicProfileEditor() {
         onChange={setIsPublic}
         disabled={!profile && username.trim().length === 0}
         hint="Anyone can find and view a public profile, even without an account — including in search results on the Community page."
+      />
+      <SwitchRow
+        label="Show my Shed Log stats on my profile"
+        checked={showPractice}
+        onChange={setShowPractice}
+        hint="Your streak, best streak, hours, days practiced, the last 26 weeks and milestones. Never your routines, tasks or notes."
       />
 
       {error && <p className="text-sm text-danger">{error}</p>}

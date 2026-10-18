@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export type MenuItem = { label: string; onSelect: () => void; danger?: boolean };
+export type MenuItem = { label: string; onSelect: () => void; danger?: boolean; icon?: React.ReactNode };
 export type MenuState = { x: number; y: number; items: MenuItem[] };
 
 const MENU_WIDTH = 208;
@@ -50,11 +50,12 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState; onClos
             item.onSelect();
             onClose();
           }}
-          className={`rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
+          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
             item.danger ? "text-danger" : ""
           }`}
         >
-          {item.label}
+          {item.icon && <span className="shrink-0">{item.icon}</span>}
+          <span className="min-w-0">{item.label}</span>
         </button>
       ))}
     </div>

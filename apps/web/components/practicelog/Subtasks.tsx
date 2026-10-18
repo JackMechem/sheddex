@@ -1,0 +1,80 @@
+"use client";
+
+import { useState } from "react";
+import { CheckIcon, CloseIcon, PlusIcon } from "@/components/tools";
+import type { Subtask } from "@/lib/practiceLog";
+
+/** A task's checklist: small checkboxes, and — when `onAdd` is given — a "+ subtask" box. */
+export default function Subtasks({
+  items,
+  isDone,
+  onToggle,
+  onAdd,
+  onRemove,
+  color = "var(--accent)",
+}: {
+  items: Subtask[];
+  isDone: (id: string) => boolean;
+  onToggle: (id: string) => void;
+  onAdd?: (title: string) => void;
+  onRemove?: (id: string) => void;
+  color?: string;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  if (!items.length && !onAdd) return null;
+  const doneCount = items.filter((x) => isDone(x.id)).length;
+  return (
+    <div className="mt-1.5 flex flex-col gap-0.5">
+      {items.map((x) => {
+        const done = isDone(x.id);
+        return (
+          <div key={x.id} className="group/sub flex items-center gap-2 text-sm">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={done}
+              aria-label={`${x.title} done`}
+              onClick={() => onToggle(x.id)}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-[1.5px] ${done ? "log-check border-transparent text-white" : "border-surface-hover hover:border-muted"}`}
+              style={done ? { background: color } : undefined}
+            >
+              {done && <CheckIcon className="h-3 w-3" />}
+            </button>
+            <span className={`min-w-0 flex-1 truncate ${done ? "text-muted line-through" : ""}`}>{x.title}</span>
+            {onRemove && (
+              <button type="button" onClick={() => onRemove(x.id)} aria-label={`Remove ${x.title}`} className="rounded p-0.5 text-muted opacity-0 hover:text-foreground group-hover/sub:opacity-100">
+                <CloseIcon className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+      {items.length > 1 && <span className="text-[11px] font-semibold tabular-nums text-muted">{doneCount}/{items.length} subtasks</span>}
+      {onAdd &&
+        (adding ? (
+          <input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => {
+              setAdding(false);
+              setTitle("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && title.trim()) {
+                onAdd(title.trim());
+                setTitle("");
+              } else if (e.key === "Escape") setAdding(false);
+            }}
+            placeholder="Subtask — press Enter"
+            className="w-full rounded-md bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          />
+        ) : (
+          <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-1 self-start text-xs font-semibold text-muted hover:text-foreground">
+            <PlusIcon className="h-3 w-3" /> Subtask
+          </button>
+        ))}
+    </div>
+  );
+}

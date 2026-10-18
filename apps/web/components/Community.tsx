@@ -10,20 +10,36 @@ import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { PostListItem } from "@/components/CommunityTunes";
-import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader, StatCard, menuPosition } from "@/components/library/shared";
+import { EmptyCard, PageHeader, PageShell, SearchBox, SectionHeader, menuPosition } from "@/components/library/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
-import { HeartIcon, NoteIcon, PlusIcon, UsersIcon } from "@/components/tools";
+import ProfileBanner from "@/components/ProfileBanner";
+import type { BannerValue } from "@/lib/banners";
+import { CalendarIcon, HeartIcon, NoteIcon, PlusIcon, SetlistIcon } from "@/components/tools";
+import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { useSetlists } from "@/lib/useSetlists";
 import { SIGN_IN_PATH } from "@/lib/landing";
 
+type Feed = "latest" | "following" | "popular";
+type KindFilter = "all" | "tunes" | "setlist" | "routine" | "milestone";
+
+const KIND_FILTERS: { value: KindFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "tunes", label: "Tunes" },
+  { value: "setlist", label: "Setlists" },
+  { value: "routine", label: "Routines" },
+  { value: "milestone", label: "Milestones" },
+];
+
 /**
- * The Community page, laid out like the Tunes and Chord Charts dashboards (and the mobile app's
- * Community tab): a big title with a + (post tunes, or post one of your setlists), one search
- * across people and posts, stat cards that open Liked / Following / My posts, then the latest
- * posts. Every post opens its own page (`/post/[id]`); posting is the full-page composer
- * (`/community/new`), which checks for a public profile. Searching people works signed out; posts
- * need an account (browsing them always has).
+ * The Community page: a feed of what people post — tunes, setlists, Shed Log routines and
+ * milestone cards. On top, your own strip (picture, @username, posts / followers / following,
+ * liked) and New post; one search across people and posts; the feed as Latest / Following /
+ * Popular with a filter by kind. On wide screens a right-hand column has your profile card,
+ * people from the feed you don't follow yet, and links to Liked / Following / My posts. Signed
+ * out: what Community is, Sign up / Sign in, and people search (which works without an account).
+ * Every post opens its own page (`/post/[id]`); posting is the full-page composer
+ * (`/community/new`), which checks for a public profile.
  */
 export default function Community() {
   const router = useRouter();
@@ -33,15 +49,20 @@ export default function Community() {
   const likedIds = useQuery(api.communityTunes.myLikes, authed);
   const mine = useQuery(api.communityTunes.mine, authed);
   const me = useQuery(api.users.current, authed);
+  const profile = useQuery(api.profiles.getMine, authed);
   const following = useQuery(api.follows.listFollowing, me?._id ? { userId: me._id } : "skip");
+  const followers = useQuery(api.follows.listFollowers, me?._id ? { userId: me._id } : "skip");
   const removePost = useMutation(api.communityTunes.remove);
   const { setlists } = useSetlists();
 
   const [query, setQuery] = useState("");
+  const [feed, setFeed] = useState<Feed>("latest");
+  const [kind, setKind] = useState<KindFilter>("all");
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [deletingId, setDeletingId] = useState<Id<"communityTunes"> | null>(null);
 
   const likedSet = useMemo(() => new Set(likedIds ?? []), [likedIds]);
+  const followingNames = useMemo(() => new Set((following ?? []).map((f) => f.username).filter(Boolean)), [following]);
   const trimmed = query.trim();
   const q = trimmed.toLowerCase();
   const people = useQuery(api.profiles.search, trimmed ? { query: trimmed } : "skip");
@@ -54,6 +75,33 @@ export default function Community() {
     });
   }, [posts, q]);
 
+  const feedPosts = useMemo(() => {
+    if (!posts) return undefined;
+    let list = posts;
+    if (feed === "following") list = list.filter((p) => p.authorUsername && followingNames.has(p.authorUsername));
+    if (kind !== "all") list = list.filter((p) => (kind === "tunes" ? !p.kind : p.kind === kind));
+    if (feed === "popular") list = [...list].sort((a, b) => b.likeCount - a.likeCount || b.createdAt - a.createdAt);
+    return list;
+  }, [posts, feed, kind, followingNames]);
+
+  // People posting lately whom you don't follow yet (newest first, one each).
+  const suggestions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { username: string; avatarUrl: string | null; posts: number }[] = [];
+    for (const p of posts ?? []) {
+      const u = p.authorUsername;
+      if (!u || p.isMine || followingNames.has(u)) continue;
+      if (seen.has(u)) {
+        const row = out.find((o) => o.username === u);
+        if (row) row.posts++;
+        continue;
+      }
+      seen.add(u);
+      out.push({ username: u, avatarUrl: p.authorAvatarUrl ?? null, posts: 1 });
+    }
+    return out.slice(0, 5);
+  }, [posts, followingNames]);
+
   function openNewMenu(e: React.MouseEvent) {
     if (!isAuthenticated) {
       router.push(SIGN_IN_PATH);
@@ -63,10 +111,11 @@ export default function Community() {
     setMenu({
       ...pos,
       items: [
-        { label: "Post tunes", onSelect: () => router.push("/community/new") },
+        { label: "Post tunes", icon: <NoteIcon className="h-4 w-4 text-accent" />, onSelect: () => router.push("/community/new") },
         setlists.length
           ? {
               label: "Post a setlist…",
+              icon: <SetlistIcon className="h-4 w-4 text-accent" />,
               // A second menu, in the same spot, listing your setlists.
               onSelect: () =>
                 setTimeout(
@@ -80,98 +129,158 @@ export default function Community() {
                   0,
                 ),
             }
-          : { label: "Post a setlist (make one in Tunes first)", onSelect: () => router.push("/tunes") },
+          : { label: "Post a setlist (make one in Tunes first)", icon: <SetlistIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push("/tunes") },
+        { label: "Share a routine or progress (from the Shed Log)", icon: <CalendarIcon className="h-4 w-4 text-accent" />, onSelect: () => router.push("/shed-log/routines") },
       ],
     });
   }
 
   const postList = (list: NonNullable<typeof posts>) => (
-    <ul className="flex flex-col gap-2">
+    <ul className="flex flex-col gap-3">
       {list.map((post) => (
         <PostListItem key={post.id} post={post} liked={likedSet.has(post.id)} onDelete={post.isMine ? () => setDeletingId(post.id) : undefined} />
       ))}
     </ul>
   );
 
+  const counts = {
+    posts: mine?.length ?? 0,
+    followers: followers?.length ?? 0,
+    following: following?.length ?? 0,
+    liked: likedIds?.length ?? 0,
+  };
+  const username = profile?.username || null;
+
   return (
-    <PageShell>
+    <PageShell wide fullWidth={false}>
       <PageHeader
         title="Community"
+        helpTopic="community"
         actions={
           <button
             type="button"
             onClick={openNewMenu}
-            aria-label="New post"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+            className="flex h-11 items-center gap-1.5 rounded-full bg-accent pl-4 pr-5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
           >
-            <PlusIcon className="h-5 w-5" />
+            <PlusIcon className="h-5 w-5" /> New post
           </button>
         }
       />
-      <SearchBox value={query} onChange={setQuery} placeholder="Search people and posts…" />
 
       {isLoading ? (
         <div className="flex justify-center py-10">
           <LoadingSpinner />
         </div>
-      ) : trimmed ? (
-        <>
-          <Section title="People">
-            {people === undefined ? (
-              <Spinner />
-            ) : people.length === 0 ? (
-              <EmptyCard>No one named “{trimmed}”.</EmptyCard>
-            ) : (
-              <div className="overflow-hidden rounded-2xl bg-surface">
-                {people.map((p, i) => (
-                  <Link key={p.userId} href={`/u/${p.username}`} className={`flex items-center gap-3 px-3 py-2.5 hover:bg-surface-hover ${i ? "border-t border-background" : ""}`}>
-                    <UserAvatar url={p.avatarUrl} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">@{p.username}</span>
-                      {p.instruments.length > 0 && <span className="block truncate text-xs text-muted">{p.instruments.join(", ")}</span>}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </Section>
-          <Section title="Posts">
-            {!isAuthenticated ? (
-              <EmptyCard>Sign in to search posts.</EmptyCard>
-            ) : posts === undefined ? (
-              <Spinner />
-            ) : matchingPosts.length === 0 ? (
-              <EmptyCard>No posts match “{trimmed}”.</EmptyCard>
-            ) : (
-              postList(matchingPosts)
-            )}
-          </Section>
-        </>
       ) : (
-        <>
-          <div className="flex gap-3">
-            <StatCard icon={HeartIcon} count={likedIds?.length ?? 0} label="Liked" href={isAuthenticated ? "/community/liked" : SIGN_IN_PATH} />
-            <StatCard icon={UsersIcon} count={following?.length ?? 0} label="Following" href={isAuthenticated ? "/community/following" : SIGN_IN_PATH} />
-            <StatCard icon={NoteIcon} count={mine?.length ?? 0} label="My posts" href={isAuthenticated ? "/community/posts" : SIGN_IN_PATH} />
+        <div className={`grid gap-6 ${isAuthenticated ? "xl:grid-cols-[minmax(0,1fr)_18rem]" : "mx-auto w-full max-w-3xl"}`}>
+          <div className="flex min-w-0 flex-col gap-5">
+            {isAuthenticated ? (
+              <div className="xl:hidden">
+                <MeCard username={username} avatarUrl={profile?.avatarUrl ?? null} banner={profile?.banner} isPublic={!!profile?.isPublic} counts={counts} />
+              </div>
+            ) : (
+              <SignedOutHero />
+            )}
+
+            <SearchBox value={query} onChange={setQuery} placeholder="Search people and posts…" />
+
+            {trimmed ? (
+              <>
+                <Section title="People">
+                  {people === undefined ? (
+                    <Spinner />
+                  ) : people.length === 0 ? (
+                    <EmptyCard>No one named “{trimmed}”.</EmptyCard>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {people.map((p) => (
+                        <Link key={p.userId} href={`/u/${p.username}`} className="flex items-center gap-3 rounded-2xl bg-surface p-3 hover:bg-surface-hover">
+                          <UserAvatar url={p.avatarUrl} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-semibold">@{p.username}</span>
+                            <span className="block truncate text-xs text-muted">{p.instruments.length ? p.instruments.join(", ") : "Musician"}</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+                <Section title="Posts">
+                  {!isAuthenticated ? (
+                    <EmptyCard>Sign in to search posts.</EmptyCard>
+                  ) : posts === undefined ? (
+                    <Spinner />
+                  ) : matchingPosts.length === 0 ? (
+                    <EmptyCard>No posts match “{trimmed}”.</EmptyCard>
+                  ) : (
+                    postList(matchingPosts)
+                  )}
+                </Section>
+              </>
+            ) : isAuthenticated ? (
+              <>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-1 rounded-full bg-surface p-1">
+                    {(["latest", "following", "popular"] as Feed[]).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setFeed(f)}
+                        aria-pressed={feed === f}
+                        className={`flex-1 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${feed === f ? "bg-background shadow-sm" : "text-muted hover:text-foreground"}`}
+                      >
+                        {f === "latest" ? "Latest" : f === "following" ? "Following" : "Popular"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                    {KIND_FILTERS.map((k) => (
+                      <button
+                        key={k.value}
+                        type="button"
+                        onClick={() => setKind(k.value)}
+                        aria-pressed={kind === k.value}
+                        className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${kind === k.value ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:text-foreground"}`}
+                      >
+                        {k.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {feedPosts === undefined ? (
+                  <Spinner />
+                ) : feedPosts.length === 0 ? (
+                  <EmptyCard>
+                    {feed === "following" && counts.following === 0
+                      ? "Follow people to see their posts here — try the suggestions, or search for someone you know."
+                      : feed === "following"
+                        ? "Nothing from people you follow yet."
+                        : kind !== "all"
+                          ? "Nothing of that kind yet."
+                          : "Nobody's posted yet — be the first with New post."}
+                  </EmptyCard>
+                ) : (
+                  postList(feedPosts)
+                )}
+              </>
+            ) : null}
           </div>
 
-          <Section title="Latest posts">
-            {!isAuthenticated ? (
-              <div className="flex flex-col items-start gap-3 rounded-2xl bg-surface p-4">
-                <p className="text-sm text-muted">Sign in to see what sheddex users have posted — tunes, setlists, and the chord charts that come with them.</p>
-                <Link href={SIGN_IN_PATH} className="rounded-xl bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
-                  Sign in
-                </Link>
+          {/* Right column on wide screens. */}
+          {isAuthenticated && (
+            <aside className="hidden flex-col gap-4 xl:flex">
+              <div className="sticky top-6 flex flex-col gap-4">
+                <MeCard username={username} avatarUrl={profile?.avatarUrl ?? null} banner={profile?.banner} isPublic={!!profile?.isPublic} counts={counts} column />
+                {suggestions.length > 0 && <Suggestions people={suggestions} />}
               </div>
-            ) : posts === undefined ? (
-              <Spinner />
-            ) : posts.length === 0 ? (
-              <EmptyCard>Nobody&apos;s posted yet — be the first with +.</EmptyCard>
-            ) : (
-              postList(posts)
-            )}
-          </Section>
-        </>
+            </aside>
+          )}
+          {isAuthenticated && suggestions.length > 0 && !trimmed && (
+            <div className="xl:hidden">
+              <Suggestions people={suggestions} />
+            </div>
+          )}
+        </div>
       )}
 
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
@@ -188,6 +297,103 @@ export default function Community() {
         />
       )}
     </PageShell>
+  );
+}
+
+/** Your strip: picture, @username, and counts that open Posts / Followers / Following / Liked. */
+function MeCard({
+  username,
+  avatarUrl,
+  banner,
+  isPublic,
+  counts,
+  column = false,
+}: {
+  username: string | null;
+  avatarUrl: string | null;
+  banner: BannerValue;
+  isPublic: boolean;
+  counts: { posts: number; followers: number; following: number; liked: number };
+  column?: boolean;
+}) {
+  const stats: [number, string, string][] = [
+    [counts.posts, "Posts", "/community/posts"],
+    [counts.followers, "Followers", "/community/following"],
+    [counts.following, "Following", "/community/following"],
+    [counts.liked, "Liked", "/community/liked"],
+  ];
+  return (
+    <div className="overflow-hidden rounded-3xl bg-surface">
+      <ProfileBanner banner={banner} className="h-16" />
+      <div className={`-mt-8 flex gap-3 px-4 pb-4 ${column ? "flex-col" : "flex-col sm:flex-row sm:items-end"}`}>
+        <Link href={username ? `/u/${username}` : "/account"} className={`flex min-w-0 gap-3 ${column ? "flex-col items-start gap-1" : "items-end"}`}>
+          <span className="relative z-10 rounded-full ring-4 ring-surface">
+            <UserAvatar url={avatarUrl} size={column ? "lg" : "xl"} />
+          </span>
+          <span className="min-w-0 pb-1">
+            <span className="block truncate text-lg font-extrabold">{username ? `@${username}` : "Your profile"}</span>
+            <span className="block text-xs font-semibold text-muted">{isPublic ? "Public profile" : "Private — only you can see it"}</span>
+          </span>
+        </Link>
+        <div className={`grid grid-cols-4 gap-1 ${column ? "" : "sm:ml-auto sm:min-w-[20rem]"}`}>
+          {stats.map(([n, label, href]) => (
+            <Link key={label} href={href} className="flex flex-col items-center rounded-xl px-1 py-1.5 hover:bg-background">
+              <span className="text-lg font-extrabold tabular-nums">{n}</span>
+              <span className="text-[11px] font-semibold text-muted">{label}</span>
+            </Link>
+          ))}
+        </div>
+        {!isPublic && (
+          <Link href="/account?tab=profile" className="rounded-xl bg-accent/10 px-3 py-2 text-xs font-semibold text-accent hover:bg-accent/15">
+            Make your profile public to post and be found →
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Suggestions({ people }: { people: { username: string; avatarUrl: string | null; posts: number }[] }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-3xl bg-surface p-4">
+      <h2 className="text-sm font-bold">People to follow</h2>
+      {people.map((p) => (
+        <Link key={p.username} href={`/u/${p.username}`} className="-mx-2 flex items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-background">
+          <UserAvatar url={p.avatarUrl} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold">@{p.username}</span>
+            <span className="block text-xs text-muted">
+              {p.posts} recent post{p.posts === 1 ? "" : "s"}
+            </span>
+          </span>
+          <span className="text-xs font-semibold text-accent">View</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/** Signed out: what Community is, with sign up / sign in. */
+function SignedOutHero() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-surface p-6 sm:p-8">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
+      <div className="relative flex flex-col gap-4">
+        <div className="flex -space-x-2">
+          {["bg-accent", "bg-emerald-500", "bg-amber-500", "bg-fuchsia-500"].map((c, i) => (
+            <span key={c} className={`flex h-10 w-10 items-center justify-center rounded-full text-white ring-4 ring-surface ${c}`}>
+              {[<NoteIcon key="n" className="h-5 w-5" />, <SetlistIcon key="s" className="h-5 w-5" />, <CalendarIcon key="c" className="h-5 w-5" />, <HeartIcon key="h" className="h-5 w-5" filled />][i]}
+            </span>
+          ))}
+        </div>
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">See what other musicians are working on</h2>
+          <p className="mt-1 max-w-xl text-muted">Tunes and setlists with their charts, practice routines you can add to your own Shed Log, and milestone cards. Follow people, like posts, share your own.</p>
+        </div>
+        <SignInButtons />
+        <p className="text-xs text-muted">You can still search for people below without an account.</p>
+      </div>
+    </div>
   );
 }
 
@@ -214,7 +420,7 @@ export function CommunitySubPage({ title, children }: { title: string; children:
   const router = useRouter();
   const { isLoading, isAuthenticated } = useConvexAuth();
   return (
-    <PageShell>
+    <PageShell fullWidth={false}>
       <PageHeader title={title} back={() => router.push("/community")} />
       {isLoading ? (
         <Spinner />

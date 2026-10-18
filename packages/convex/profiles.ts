@@ -1,11 +1,15 @@
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { normalizeUsername, usernameError } from "@jam-practice/core/username";
 import { resolvePublicTunes } from "@jam-practice/core/profileTunes";
 import { TUNES_TO_LEARN_KEY } from "@jam-practice/core/tunesToLearn";
 import { LEARNING_KEY, summarizeLearning } from "@jam-practice/core/learningPath";
 import type { PublicTune } from "@jam-practice/core/profileTunes";
+import { type PublicPracticeStats, practiceLogFrom, publicPracticeStats } from "@jam-practice/core/practiceLog";
+
+const PRACTICE_LOG_KEY = "jam-practice-practice-log";
 import { resolveLinkedChart } from "./lib/chordCharts";
 
 const TUNES_SYNCED_SETTINGS_KEY = "tunes";
@@ -23,7 +27,7 @@ export const getMine = query({
       .unique();
     if (!row) return null;
     const avatarUrl = row.avatarStorageId ? await ctx.storage.getUrl(row.avatarStorageId) : null;
-    return { ...row, avatarUrl };
+    return { ...row, avatarUrl, banner: await bannerOf(ctx, row) };
   },
 });
 
@@ -59,8 +63,9 @@ export const upsertProfile = mutation({
     username: v.string(),
     instruments: v.array(v.string()),
     isPublic: v.boolean(),
+    showPracticeStats: v.optional(v.boolean()),
   },
-  handler: async (ctx, { username, instruments, isPublic }) => {
+  handler: async (ctx, { username, instruments, isPublic, showPracticeStats }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not signed in");
     const normalized = normalizeUsername(username);
@@ -83,6 +88,7 @@ export const upsertProfile = mutation({
       username: normalized,
       instruments: instruments.map((i) => i.trim()).filter((i) => i.length > 0),
       isPublic,
+      ...(showPracticeStats !== undefined ? { showPracticeStats } : {}),
       updatedAt: Date.now(),
     };
     if (mine) {
@@ -180,6 +186,51 @@ export const setAvatar = mutation({
   },
 });
 
+/** The banner as the pages draw it: an uploaded image's URL, a built-in design's id, or null
+    (the default design). */
+async function bannerOf(ctx: QueryCtx, row: { bannerPreset?: string; bannerStorageId?: Id<"_storage"> }) {
+  if (row.bannerStorageId) {
+    const url = await ctx.storage.getUrl(row.bannerStorageId);
+    if (url) return { url };
+  }
+  return row.bannerPreset ? { preset: row.bannerPreset } : null;
+}
+
+/** Picks a built-in banner (an id, up to 40 characters; the web app falls back to the default for
+    one it doesn't know), removing an uploaded banner image if there was one. */
+export const setBannerPreset = mutation({
+  args: { preset: v.string() },
+  handler: async (ctx, { preset }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in");
+    const mine = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    const id = preset.slice(0, 40);
+    if (mine?.bannerStorageId) await ctx.storage.delete(mine.bannerStorageId);
+    if (mine) await ctx.db.patch(mine._id, { bannerPreset: id, bannerStorageId: undefined, updatedAt: Date.now() });
+    else await ctx.db.insert("profiles", { userId, username: "", instruments: [], isPublic: false, bannerPreset: id, updatedAt: Date.now() });
+  },
+});
+
+/** Sets an uploaded banner image (uploaded through `generateAvatarUploadUrl`), deleting the
+    previous one. */
+export const setBannerImage = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, { storageId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not signed in");
+    const mine = await ctx.db
+      .query("profiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (mine?.bannerStorageId) await ctx.storage.delete(mine.bannerStorageId);
+    if (mine) await ctx.db.patch(mine._id, { bannerStorageId: storageId, updatedAt: Date.now() });
+    else await ctx.db.insert("profiles", { userId, username: "", instruments: [], isPublic: false, bannerStorageId: storageId, updatedAt: Date.now() });
+  },
+});
+
 export const removeAvatar = mutation({
   args: {},
   handler: async (ctx) => {
@@ -204,8 +255,9 @@ export const removeAvatar = mutation({
     each list, not a curated subset (there's nothing to opt into anymore — see `upsertProfile`),
     and never `notes` (which could hold private practice notes). */
 export const getPublicByUsername = query({
-  args: { username: v.string() },
-  handler: async (ctx, { username }) => {
+  /** `today` is the viewer's date ("YYYY-MM-DD") so the streak is counted from their day. */
+  args: { username: v.string(), today: v.optional(v.string()) },
+  handler: async (ctx, { username, today }) => {
     const normalized = normalizeUsername(username);
     const row = await ctx.db
       .query("profiles")
@@ -214,7 +266,7 @@ export const getPublicByUsername = query({
     if (!row || !row.isPublic) return null;
 
     const avatarUrl = row.avatarStorageId ? await ctx.storage.getUrl(row.avatarStorageId) : null;
-    const [tunesRow, tunesToLearnRow, learningRow] = await Promise.all([
+    const [tunesRow, tunesToLearnRow, learningRow, logRow] = await Promise.all([
       ctx.db
         .query("syncedSettings")
         .withIndex("by_user_key", (q) =>
@@ -229,7 +281,25 @@ export const getPublicByUsername = query({
         .query("syncedSettings")
         .withIndex("by_user_key", (q) => q.eq("userId", row.userId).eq("key", LEARNING_KEY))
         .unique(),
+      row.showPracticeStats === false
+        ? Promise.resolve(null)
+        : ctx.db
+            .query("syncedSettings")
+            .withIndex("by_user_key", (q) => q.eq("userId", row.userId).eq("key", PRACTICE_LOG_KEY))
+            .unique(),
     ]);
+
+    // Shed Log stats (streaks, hours, milestones) — never routines, tasks or notes.
+    let practice: PublicPracticeStats | null = null;
+    if (logRow) {
+      try {
+        const data = practiceLogFrom(JSON.parse(logRow.value));
+        const day = today && /^\d{4}-\d{2}-\d{2}$/.test(today) ? today : new Date().toISOString().slice(0, 10);
+        practice = data ? publicPracticeStats(data, day) : null;
+      } catch {
+        practice = null;
+      }
+    }
 
     // Ear-training learning paths: only the per-tool level/star counts, never the raw scores.
     let learningValue: unknown = null;
@@ -262,6 +332,8 @@ export const getPublicByUsername = query({
       tunes: await withLinkedCharts(resolvePublicTunes(tunesRow?.value)),
       tunesToLearn: await withLinkedCharts(resolvePublicTunes(tunesToLearnRow?.value)),
       earTraining: summarizeLearning(learningValue),
+      practice,
+      banner: await bannerOf(ctx, row),
     };
   },
 });

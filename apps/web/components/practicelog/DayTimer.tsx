@@ -1,0 +1,90 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { PauseIcon, PlayIcon, StopwatchIcon, TrashIcon } from "@/components/tools";
+import { discardDayTimer, pauseDayTimer, startDayTimer, unflushedMs, useDayTimer } from "@/lib/dayStopwatch";
+import { type PracticeLogData, minutesOn, todayKey } from "@/lib/practiceLog";
+
+/** "1:05:09", "23:10". */
+export function formatStopwatch(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+
+/** The day timer's total for a day, ticking while it runs. */
+export function useDayTimerMs(data: PracticeLogData, date: string): { ms: number; running: boolean; liveMs: number } {
+  const { running, date: runningDate } = useDayTimer();
+  const live = running && runningDate === date;
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!live) return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [live]);
+  const liveMs = live ? unflushedMs() : 0;
+  // The day's whole practice time: the day timer plus everything added onto it.
+  return { ms: Math.round(minutesOn(data, date, liveMs) * 60000), running: live, liveMs };
+}
+
+/**
+ * The day timer card: a stopwatch for the day's practice — start it whenever you sit down to
+ * play; starting a routine starts it too, and it keeps going through routines and breaks between
+ * them until you pause it. Today's can be started; another day's just shows its time.
+ */
+export default function DayTimer({ data, date, compact = false, onClear }: { data: PracticeLogData; date: string; compact?: boolean; onClear?: () => void }) {
+  const { ms, running } = useDayTimerMs(data, date);
+  const [confirming, setConfirming] = useState(false);
+  const isToday = date === todayKey();
+  if (!isToday && ms === 0) return null;
+  return (
+    <div className={`flex items-center gap-3 rounded-2xl border ${running ? "border-accent/30 bg-accent/10" : "border-transparent bg-surface"} ${compact ? "px-3 py-2" : "px-4 py-3"}`}>
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${running ? "bg-accent text-accent-foreground" : "bg-background text-muted"}`}>
+        <StopwatchIcon className={`h-5 w-5 ${running ? "animate-pulse" : ""}`} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className={`font-extrabold tabular-nums ${compact ? "text-xl" : "text-2xl"}`}>{formatStopwatch(ms)}</div>
+        <div className="text-xs font-semibold text-muted">
+          {running ? "Practiced today · timer running" : isToday ? (ms ? "Practiced today · timer paused" : "Day timer — start it when you sit down to play") : "Practiced this day"}
+        </div>
+      </div>
+      {onClear && ms > 0 && (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          aria-label="Clear this day's time"
+          title="Clear this day's time"
+          className="shrink-0 rounded-full p-2 text-muted hover:bg-background hover:text-danger"
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      )}
+      {confirming && onClear && (
+        <ConfirmDialog
+          title="Clear this day's time?"
+          message="All the time logged for this day goes: the day timer, time logged by hand, time on tasks and in tools. Tasks you checked off stay checked."
+          confirmLabel="Clear time"
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            if (running) discardDayTimer();
+            onClear();
+          }}
+        />
+      )}
+      {isToday &&
+        (running ? (
+          <button type="button" onClick={pauseDayTimer} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+            <PauseIcon className="h-4 w-4" /> Pause
+          </button>
+        ) : (
+          <button type="button" onClick={startDayTimer} className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            <PlayIcon className="h-4 w-4" /> {ms ? "Resume" : "Start"}
+          </button>
+        ))}
+    </div>
+  );
+}

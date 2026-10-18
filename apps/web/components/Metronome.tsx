@@ -47,6 +47,7 @@ import {
 } from "@/lib/metronomeEngine";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 const DEFAULT_BPM = 100;
 
@@ -110,6 +111,8 @@ export default function Metronome() {
     getMetronomeServerSnapshot,
   );
   const { running, currentBeat, currentSub } = engineState;
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/metronome", running);
 
   useEffect(() => {
     updateMetronomeSettings({

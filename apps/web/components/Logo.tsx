@@ -63,3 +63,13 @@ export default function Logo({ height = 32, className = "", title = "sheddex" }:
     </svg>
   );
 }
+
+/** Just the mark — the crossed sticks and off-beat dashes — on no background, in the theme's
+    accent (the collapsed sidebar's logo). */
+export function LogoMark({ size = 28, className = "", title = "sheddex" }: { size?: number; className?: string; title?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="334 78 50 39" role="img" aria-label={title} className={className}>
+      <Sticks />
+    </svg>
+  );
+}

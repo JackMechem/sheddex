@@ -1,7 +1,7 @@
 import { stepAt } from "@/lib/practiceTimer";
 import type { PracticeSession, RunSegment } from "@/lib/practiceTimer";
 import { playNote } from "@/lib/tones";
-import type { PendingTimerEntry } from "@/lib/practiceLog";
+import { DAY_STOPWATCH_ID, type PendingTimerEntry, toDateKey } from "@/lib/practiceLog";
 
 export type EngineState = {
   /** A snapshot of the session being run, not a live reference — editing or deleting the saved
@@ -41,7 +41,7 @@ export type EngineState = {
 };
 
 const STORAGE_KEY = "jam-practice-timer-running";
-/** Steps run (finished or cut short) waiting to be added to the Practice Log — it takes them
+/** Steps run (finished or cut short) waiting to be added to the Shed Log — it takes them
     (`takePendingLogEntries`) when it's open, so time is logged even if it wasn't open at the time. */
 const PENDING_KEY = "jam-practice-log-pending";
 export const PENDING_EVENT = "practice-log-pending";
@@ -66,7 +66,7 @@ function persist() {
   }
 }
 
-/** Records the current step for the Practice Log: `done` when its time ran out, otherwise how long
+/** Records the current step for the Shed Log: `done` when its time ran out, otherwise how long
     it ran before being skipped or stopped. Breaks aren't practice, so they're left out. */
 function recordStep(done: boolean) {
   if (!state || state.current.isBreak) return;
@@ -84,6 +84,23 @@ function recordStep(done: boolean) {
     segmentId: session.type === "custom" ? (session.segments[state.index]?.id ?? "") : "pomodoro",
     ...(session.type === "custom" && session.link ? { link: session.link } : {}),
   };
+  queueLogEntry(entry);
+}
+
+/** Whether the day timer is running for a day — set by `dayStopwatch.ts` (which imports this
+    file, so it registers itself rather than being imported here). */
+let dayTimerCovers: ((date: string) => boolean) | null = null;
+export function setDayTimerCoverage(fn: (date: string) => boolean) {
+  dayTimerCovers = fn;
+}
+
+/** Adds practice to the queue the Shed Log takes in — the timer's steps, and time in tools.
+    Each entry notes whether the day timer was running for its day (`covered`): if it wasn't, the
+    time is added to the day timer too, so the day timer is the day's whole practice time. */
+export function queueLogEntry(entry: PendingTimerEntry) {
+  if (entry.segmentId !== DAY_STOPWATCH_ID && entry.covered === undefined) {
+    entry = { ...entry, covered: dayTimerCovers?.(entry.link?.date ?? toDateKey(new Date(entry.at))) ?? false };
+  }
   try {
     const raw = window.localStorage.getItem(PENDING_KEY);
     const list = raw ? (JSON.parse(raw) as PendingTimerEntry[]) : [];
@@ -91,7 +108,7 @@ function recordStep(done: boolean) {
     window.localStorage.setItem(PENDING_KEY, JSON.stringify(list.slice(-500)));
     window.dispatchEvent(new Event(PENDING_EVENT));
   } catch {
-    // storage unavailable — the step just isn't logged
+    // storage unavailable — this practice just isn't logged
   }
 }
 

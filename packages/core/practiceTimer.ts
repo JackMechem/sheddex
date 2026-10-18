@@ -34,7 +34,7 @@ export type PracticeSession =
       type: "custom";
       segments: Segment[];
       updatedAt: number;
-      /** Set when this run is a Practice Log routine on a day — each segment's id is then a task's
+      /** Set when this run is a Shed Log routine on a day — each segment's id is then a task's
           id, and finished steps check those tasks off (`practiceLog.applyTimerEntries`). */
       link?: { routineId: string; date: string };
     }

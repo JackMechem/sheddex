@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import TilingLayout from "@/components/TilingLayout";
+import PracticeLogGlobal from "@/components/practicelog/PracticeLogGlobal";
 import { prefersReducedMotion } from "@/lib/stickStrike";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useRecordToolVisits } from "@/lib/toolRecents";
@@ -26,12 +27,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isDesktop = useIsDesktop();
   useRecordToolVisits();
 
-  if (!enabled || !isDesktop) return <AnimatedPage>{children}</AnimatedPage>;
+  if (!enabled || !isDesktop)
+    return (
+      <>
+        <PracticeLogGlobal />
+        <AnimatedPage>{children}</AnimatedPage>
+      </>
+    );
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
-      <TilingLayout />
-    </div>
+    <>
+      <PracticeLogGlobal />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background lg:my-2 lg:ml-2 lg:mr-2 lg:rounded-3xl">
+        <TilingLayout />
+      </div>
+    </>
   );
 }
 

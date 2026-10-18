@@ -7,6 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, PageShell } from "@/components/library/shared";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { AttachmentList } from "@/components/practicelog/Attachments";
+import RoutineIcon, { RoutineIconPicker } from "@/components/practicelog/RoutineIcon";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from "@/components/tools";
 import {
   type Repeat,
@@ -23,6 +24,7 @@ import {
   formatTime,
   isDateKey,
   newRoutine,
+  newSubtask,
   newTask,
   parseTime,
   scheduleTasks,
@@ -34,7 +36,7 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
 
-/** `/practice-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
+/** `/shed-log/routine/edit?id=…` (or `?date=…` for a new one starting that day). */
 export default function RoutineEditorPage({ id, date }: { id?: string; date?: string }) {
   const log = usePracticeLog();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -49,7 +51,7 @@ export default function RoutineEditorPage({ id, date }: { id?: string; date?: st
   if (id && !existing) {
     return (
       <PageShell>
-        <BackButton href="/practice-log" label="Practice Log" />
+        <BackButton href="/shed-log" label="Shed Log" />
         <p className="rounded-2xl bg-surface p-4 text-muted">That routine doesn&apos;t exist anymore.</p>
       </PageShell>
     );
@@ -83,7 +85,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       return { ...prev, tasks };
     });
 
-  const done = () => router.push(isNew ? `/practice-log${returnDate ? `?date=${returnDate}` : ""}` : `/practice-log/routine?id=${encodeURIComponent(r.id)}`);
+  const done = () => router.push(isNew ? `/shed-log${returnDate ? `?date=${returnDate}` : ""}` : `/shed-log/routine?id=${encodeURIComponent(r.id)}`);
 
   function save() {
     if (!r.name.trim()) {
@@ -94,7 +96,9 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       setError("It ends before it starts.");
       return;
     }
-    const tasks = r.tasks.filter((t) => t.title.trim() || t.minutes > 0).map((t) => ({ ...t, title: t.title.trim() }));
+    const tasks = r.tasks
+      .filter((t) => t.title.trim() || t.minutes > 0)
+      .map((t) => ({ ...t, title: t.title.trim(), subtasks: (t.subtasks ?? []).filter((x) => x.title.trim()).map((x) => ({ ...x, title: x.title.trim() })) }));
     log.saveRoutine({ ...r, name: r.name.trim(), tasks });
     done();
   }
@@ -120,6 +124,8 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
       {error && <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm font-medium text-danger">{error}</p>}
 
       <Card title="Routine">
+        <div className="flex items-center gap-3">
+        <RoutineIcon icon={r.icon} color={r.color} size="lg" />
         <input
           autoFocus={isNew}
           value={r.name}
@@ -128,8 +134,9 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
             setError(null);
           }}
           placeholder="Name — e.g. Morning warm-up"
-          className="rounded-xl bg-background px-3 py-2.5 text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="min-w-0 flex-1 rounded-xl bg-background px-3 py-2.5 text-lg font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
+        </div>
         <textarea
           value={r.description}
           onChange={(e) => set({ description: e.target.value })}
@@ -151,6 +158,10 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
             />
           ))}
         </div>
+      </Card>
+
+      <Card title="Icon">
+        <RoutineIconPicker value={r.icon} color={r.color} onChange={(icon) => set({ icon })} />
       </Card>
 
       <Card title="When">
@@ -273,6 +284,29 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
                   className="w-full resize-y rounded-lg bg-surface px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 />
               </div>
+              <div className="flex flex-col gap-1 pl-7">
+                {(task.subtasks ?? []).map((sub, j) => (
+                  <div key={sub.id} className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 shrink-0 rounded border-[1.5px] border-surface-hover" />
+                    <input
+                      value={sub.title}
+                      onChange={(e) => setTask(i, { subtasks: (task.subtasks ?? []).map((x, k) => (k === j ? { ...x, title: e.target.value } : x)) })}
+                      placeholder="Subtask"
+                      className="min-w-0 flex-1 rounded-md bg-surface px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    />
+                    <IconButton label="Remove subtask" onClick={() => setTask(i, { subtasks: (task.subtasks ?? []).filter((_, k) => k !== j) })}>
+                      <CloseIcon className="h-3.5 w-3.5" />
+                    </IconButton>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setTask(i, { subtasks: [...(task.subtasks ?? []), newSubtask()] })}
+                  className="flex items-center gap-1 self-start text-xs font-semibold text-muted hover:text-foreground"
+                >
+                  <PlusIcon className="h-3 w-3" /> Subtask
+                </button>
+              </div>
               <div className="pl-7">
                 <AttachmentList items={task.attachments} onChange={(attachments) => setTask(i, { attachments })} compact />
               </div>
@@ -308,7 +342,7 @@ function Editor({ initial, isNew, log, returnDate }: { initial: Routine; isNew: 
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
             log.deleteRoutine(r.id);
-            router.push("/practice-log/routines");
+            router.push("/shed-log/routines");
           }}
         />
       )}

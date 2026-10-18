@@ -168,7 +168,7 @@ export function SaveTakeDialog({
   blob: Blob;
   durationSec: number;
   initialTuneId: string | null;
-  /** A Practice Log clip: the day it's on, and the routines that day it can be attached to
+  /** A Shed Log clip: the day it's on, and the routines that day it can be attached to
       (`routineId` preselects one; null = the day itself). */
   log?: { date: string; routineId: string | null; routines: { id: string; name: string }[] };
   /** The mix it was recorded with, when the tune's song played along (its line-up measured). */

@@ -25,6 +25,7 @@ import {
 import { TUNER_INSTRUMENTS, getInstrument, getTuning } from "@/lib/tunings";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 const PANEL_IDS = ["tuner-instrument", "tuner-input", "tuner-tone"];
 const SETTINGS_KEY = "jam-practice-tuner";
@@ -93,6 +94,8 @@ export default function Tuner() {
   const tunerState = useSyncExternalStore(subscribeTuner, getTunerSnapshot, getTunerServerSnapshot);
   const { listening, error, reading } = tunerState;
   const [playing, setPlaying] = useState<Playing | null>(null);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/tuner", listening || playing !== null);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
 
   const toneRef = useRef<ToneHandle | null>(null);

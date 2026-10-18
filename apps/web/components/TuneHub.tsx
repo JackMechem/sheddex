@@ -1,6 +1,8 @@
 "use client";
 
-import { BackButton } from "@/components/library/shared";
+import { ChartPaper } from "@/components/library/chartView";
+import { Chip, Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
+import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -185,147 +187,171 @@ function Hub({
     recordRef.current(tune.id);
   }, [tune.id]);
 
+  const firstKey = tune.keys.find((k) => k.enabled)?.value ?? (chart?.key || null);
+  const btn = "inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover";
+
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <BackButton onClick={() => router.back()} className="mb-2" />
-          <h1 className="truncate text-3xl font-bold">{tune.name}</h1>
-          <p className="text-sm text-muted">
-            {[LIST_LABEL[list], tune.timeSignature, tempos.length ? `${tempos.join(", ")} BPM` : null].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setEditing(true)} className="flex items-center gap-1.5 rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-            <PencilIcon className="h-4 w-4" /> Edit
-          </button>
-          {(other === "tunes" || canUseLearn) && (
-            <button type="button" onClick={() => moveTo(other)} className="rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-              Move to {LIST_LABEL[other]}
+    <LibraryPage>
+      <Hero
+        title={tune.name}
+        color={keyColor(firstKey)}
+        back={() => router.back()}
+        leading={<KeyBadge label={firstKey} size="lg" />}
+        subtitle={
+          <span className="mt-1 flex flex-wrap gap-1">
+            <Chip accent>{LIST_LABEL[list]}</Chip>
+            {tune.timeSignature && <Chip>{tune.timeSignature}</Chip>}
+            {tempos.map((t, i) => (
+              <Chip key={i}>{t} BPM</Chip>
+            ))}
+            <Chip>{knownPcs.size} of 12 keys</Chip>
+            {chart && <Chip>Chart in {chart.key ? displayKey(chart.key) : "—"}</Chip>}
+          </span>
+        }
+        actions={
+          <>
+            <Pill icon={PencilIcon} label="Edit" onClick={() => setEditing(true)} />
+            {(other === "tunes" || canUseLearn) && <Pill label={`Move to ${LIST_LABEL[other]}`} onClick={() => moveTo(other)} />}
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete tune"
+              title="Delete tune"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-muted hover:bg-surface-hover hover:text-danger"
+            >
+              <TrashIcon className="h-4 w-4" />
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            aria-label="Delete tune"
-            title="Delete tune"
-            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface text-muted hover:bg-surface-hover hover:text-danger"
+          </>
+        }
+      />
+
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="flex min-w-0 flex-col gap-4">
+          {/* Chord chart */}
+          <ChartPaper
+            top={
+              <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 font-bold">
+                  <ChordChartIcon className="h-4 w-4 text-accent" />
+                  Chord chart
+                  {chart && <span className="text-sm font-medium text-muted">{chart.title !== tune.name ? `· ${chart.title}` : ""}</span>}
+                </h2>
+                {chart && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={previewKey}
+                      onChange={setPreviewKey}
+                      options={[{ value: "", label: `Original (${chart.key || "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
+                      className="min-w-32"
+                    />
+                    <button type="button" onClick={openInChordCharts} className={btn}>
+                      Open
+                    </button>
+                    <button type="button" onClick={() => setPicking(true)} className={btn}>
+                      Change
+                    </button>
+                    <button type="button" onClick={() => patch({ chordChartId: undefined })} className={btn}>
+                      Unlink
+                    </button>
+                  </div>
+                )}
+              </div>
+            }
           >
-            <TrashIcon className="h-4 w-4" />
-          </button>
+            {tune.chordChartId && (selectedSongLoading || libraryLoading) ? (
+              <div className="flex justify-center py-10">
+                <LoadingSpinner />
+              </div>
+            ) : shownChart ? (
+              <ChordChart song={shownChart} hideHeader />
+            ) : (
+              <div className="flex flex-col gap-3">
+                <p className="px-1 text-sm text-muted">
+                  {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : "No chord chart linked yet."}
+                </p>
+                {matches.map((m) => (
+                  <div key={m.song.id} className="flex items-center gap-3 rounded-xl bg-background p-3">
+                    <KeyBadge label={m.song.key} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold">{m.song.title}</div>
+                      <div className="truncate text-xs text-muted">{["Same name", m.playlist].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => patch({ chordChartId: m.song.id })}
+                      className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
+                    >
+                      Link it
+                    </button>
+                  </div>
+                ))}
+                <div>
+                  <button type="button" onClick={() => setPicking(true)} className={btn}>
+                    <LinkIcon className="h-4 w-4" /> Link a chart
+                  </button>
+                </div>
+              </div>
+            )}
+          </ChartPaper>
+
+          <div className="rounded-2xl bg-surface p-4 sm:p-5">
+            <TuneRecordings tuneId={tune.id} />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:sticky xl:top-6 xl:grid-cols-1">
+          {/* Keys */}
+          <section className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="font-bold">Keys I know it in</h2>
+              <span className="text-sm font-semibold tabular-nums text-muted">{knownPcs.size} / 12</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-background">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(knownPcs.size / 12) * 100}%` }} />
+            </div>
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-4">
+              {KEY_NAMES.map((name, pc) => {
+                const known = knownPcs.has(pc);
+                const color = `var(--key-${pc}, var(--accent))`;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => toggleKey(pc)}
+                    aria-pressed={known}
+                    title={known ? "Known — click to unmark" : "Click to mark as known"}
+                    className="rounded-xl py-2.5 text-sm font-bold transition-colors"
+                    style={known ? { background: color, color: "var(--accent-foreground)" } : { background: "var(--background)", color: "var(--muted)" }}
+                  >
+                    {name}
+                    {suffix}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted">Jam Practice picks from the keys you mark here.</p>
+          </section>
+
+          {/* Notes */}
+          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+            <h2 className="font-bold">Notes</h2>
+            <textarea
+              value={notes}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                pending.current = e.target.value;
+                if (timer.current) clearTimeout(timer.current);
+                timer.current = setTimeout(flushNotes, NOTES_SAVE_MS);
+              }}
+              onBlur={flushNotes}
+              placeholder="Form, tricky changes, voicings, recordings to check out…"
+              rows={7}
+              className="w-full resize-y rounded-xl bg-background p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            />
+            <p className="text-xs text-muted">Saved as you type.</p>
+          </section>
         </div>
       </div>
-
-      {/* Chord chart */}
-      <section className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-bold">Chord chart</h2>
-          {chart && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={previewKey}
-                onChange={setPreviewKey}
-                options={[{ value: "", label: `Original (${chart.key || "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
-                className="min-w-32"
-              />
-              <button type="button" onClick={openInChordCharts} className="rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-                Open in Chord Charts
-              </button>
-              <button type="button" onClick={() => setPicking(true)} className="rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-                Change
-              </button>
-              <button type="button" onClick={() => patch({ chordChartId: undefined })} className="rounded-lg bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-                Unlink
-              </button>
-            </div>
-          )}
-        </div>
-        {tune.chordChartId && (selectedSongLoading || libraryLoading) ? (
-          <div className="flex justify-center py-10">
-            <LoadingSpinner />
-          </div>
-        ) : shownChart ? (
-          <div className="rounded-2xl bg-surface p-3 sm:p-5">
-            <ChordChart song={shownChart} hideHeader />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-            <p className="text-sm text-muted">
-              {tune.chordChartId ? "The linked chart isn't in your chord charts anymore." : "No chord chart linked yet."}
-            </p>
-            {matches.map((m) => (
-              <div key={m.song.id} className="flex items-center gap-3 rounded-xl bg-background p-3">
-                <ChordChartIcon className="h-5 w-5 shrink-0 text-accent" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">{m.song.title}</div>
-                  <div className="truncate text-xs text-muted">{[m.song.key, m.playlist].filter(Boolean).join(" · ")}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => patch({ chordChartId: m.song.id })}
-                  className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
-                >
-                  Link it
-                </button>
-              </div>
-            ))}
-            <div>
-              <button type="button" onClick={() => setPicking(true)} className="flex items-center gap-1.5 rounded-lg bg-background px-3 py-2 text-sm font-medium hover:bg-surface-hover">
-                <LinkIcon className="h-4 w-4" /> Link a chart
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Keys */}
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">Keys I know it in</h2>
-          <span className="text-sm tabular-nums text-muted">{knownPcs.size} of 12</span>
-        </div>
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-          {KEY_NAMES.map((name, pc) => {
-            const known = knownPcs.has(pc);
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => toggleKey(pc)}
-                aria-pressed={known}
-                title={known ? "Known — click to unmark" : "Click to mark as known"}
-                className={`rounded-xl py-3 text-base font-bold transition-colors ${
-                  known ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
-                }`}
-              >
-                {name}
-                {suffix}
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-muted">Jam Practice picks from the keys you mark here.</p>
-      </section>
-
-      <TuneRecordings tuneId={tune.id} />
-
-      {/* Notes */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-bold">Notes</h2>
-        <textarea
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            pending.current = e.target.value;
-            if (timer.current) clearTimeout(timer.current);
-            timer.current = setTimeout(flushNotes, NOTES_SAVE_MS);
-          }}
-          onBlur={flushNotes}
-          placeholder="Form, tricky changes, voicings, recordings to check out…"
-          rows={6}
-          className="w-full resize-y rounded-2xl bg-surface p-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent"
-        />
-      </section>
 
       {editing && <TuneEditorModal initial={tune} isNew={false} onSave={(t) => { patch(t); setEditing(false); }} onClose={() => setEditing(false)} />}
       {picking && (
@@ -352,6 +378,6 @@ function Hub({
           onCancel={() => setConfirmDelete(false)}
         />
       )}
-    </main>
+    </LibraryPage>
   );
 }

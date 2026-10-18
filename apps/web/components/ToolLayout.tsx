@@ -3,6 +3,8 @@
 import { createContext, useContext } from "react";
 import { NAV_LINKS } from "@/components/tools";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
+import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
+import { topicForHref } from "@/lib/helpContent";
 
 const LayoutContext = createContext<"split" | "stacked">("split");
 
@@ -48,19 +50,25 @@ export default function ToolLayout({
   children: React.ReactNode;
 }) {
   const stacked = layout === "stacked";
-  const TitleIcon = NAV_LINKS.find((link) => link.label === title)?.icon;
+  const link = NAV_LINKS.find((l) => l.label === title);
+  const TitleIcon = link?.icon;
+  const topic = link ? topicForHref(link.href) : undefined;
+  const intro = useIntro(topic);
 
   return (
     <LayoutContext.Provider value={layout}>
       <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
-        <div className="absolute left-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 sm:pl-[4.5rem] lg:top-2 lg:pl-6">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-accent">
-            {TitleIcon && <TitleIcon className="h-7 w-7 shrink-0" />}
-            {title}
+        <div className="absolute left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 pr-4 sm:pl-[4.5rem] lg:top-3 lg:pl-8">
+          <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {TitleIcon && <TitleIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" />}
+            <span className="truncate">{title}</span>
           </h1>
+          {topic && <div className="ml-1.5"><IntroButton onClick={intro.show} label={`How ${title} works`} /></div>}
           {help && <div className="ml-3">{help}</div>}
           {titleExtra && <div className="ml-4 pr-4">{titleExtra}</div>}
         </div>
+
+        {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
 
         {credit && (
           <p className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] right-[calc(env(safe-area-inset-right)+1.5rem)] z-10 text-xs text-muted/70">

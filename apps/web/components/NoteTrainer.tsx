@@ -63,6 +63,7 @@ import AdvancedSlider from "@/components/AdvancedSlider";
 import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
+import { useToolActivity } from "@/lib/toolTime";
 
 const MIN_INTERVAL_SECONDS = 0.5;
 const MAX_INTERVAL_SECONDS = 10;
@@ -245,6 +246,8 @@ export default function NoteTrainer() {
   const [note, setNote] = useState<string | null>(null);
   const [nextNote, setNextNote] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/note-trainer", running);
   const [error, setError] = useState<string | null>(null);
   const [inputs, setInputs] = useState<InputDevice[]>([]);
   const [status, setStatus] = useState<Grade | null>(null);

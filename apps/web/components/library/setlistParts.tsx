@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { TUNE_LIST_LABEL, useTuneLists, type TuneListId } from "@/components/library/useTuneActions";
 import { tuneSummary } from "@/components/library/shared";
-import { CheckIcon, PlusIcon, SearchIcon, SetlistIcon } from "@/components/tools";
+import { CheckIcon, PlusIcon, SearchIcon } from "@/components/tools";
 import { KEY_NAMES } from "@/lib/iRealPro";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
-import type { Setlist, SetlistOverride } from "@/lib/useSetlists";
+import type { SetlistOverride } from "@/lib/useSetlists";
 import { displayKey, isMinorKey, setlistKey } from "@jam-practice/core/setlistKeys";
 import { sortByText } from "@jam-practice/core/sortText";
 import { nameId, searchStandards, standardToTune, type Standard } from "@/lib/standards";
@@ -17,24 +16,6 @@ import { nameId, searchStandards, standardToTune, type Standard } from "@/lib/st
 
 export function setlistHref(id: string) {
   return `/tunes/setlist?id=${encodeURIComponent(id)}`;
-}
-
-/** One setlist in a list — name, tune count, shared — opening its page. */
-export function SetlistRow({ setlist }: { setlist: Setlist }) {
-  const n = setlist.tuneIds.length;
-  return (
-    <Link href={setlistHref(setlist.id)} className="flex items-center gap-3 rounded-xl bg-surface px-4 py-3 transition-colors hover:bg-surface-hover">
-      <SetlistIcon className="h-5 w-5 shrink-0 text-accent" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold">{setlist.name}</span>
-        <span className="block truncate text-xs text-muted">
-          {n} tune{n === 1 ? "" : "s"}
-          {setlist.shareId ? " · shared" : ""}
-        </span>
-      </span>
-      <span className="text-muted">›</span>
-    </Link>
-  );
 }
 
 /** A tune's key and tempo *in a setlist*: the setlist's own choice if it made one, otherwise the

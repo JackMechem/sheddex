@@ -1,5 +1,8 @@
 "use client";
 
+import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
+import { ICON_BY_ID } from "@/components/help/helpParts";
+import { topicById } from "@/lib/helpContent";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChevronLeftIcon, ChordChartIcon, DotsVerticalIcon, PlusIcon, SearchIcon } from "@/components/tools";
@@ -10,10 +13,12 @@ import type { LibrarySongMeta } from "@/lib/useChordChartsLibrary";
 /** Shared pieces of the Tunes and Chord Charts pages (`components/library/*`), modeled on the
     mobile app's Tunes and Chord Charts tabs. */
 
-export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+/** `fullWidth` (default): no max width from `lg` up. Off, the page keeps its max width on desktop
+    too (Community). */
+export function PageShell({ children, wide = false, fullWidth = true }: { children: ReactNode; wide?: boolean; fullWidth?: boolean }) {
   return (
     <main
-      className={`mx-auto flex w-full ${wide ? "max-w-5xl" : "max-w-4xl"} flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12`}
+      className={`mx-auto flex w-full ${wide ? "max-w-5xl" : "max-w-4xl"} flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 ${fullWidth ? "lg:max-w-none lg:px-8" : ""} lg:pt-12`}
     >
       {children}
     </main>
@@ -41,14 +46,38 @@ export function BackButton({ onClick, href, label = "Back", className = "" }: { 
   );
 }
 
-export function PageHeader({ title, subtitle, back, actions }: { title: string; subtitle?: string; back?: () => void; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  back,
+  actions,
+  helpTopic,
+}: {
+  title: string;
+  subtitle?: string;
+  back?: () => void;
+  actions?: ReactNode;
+  /** A Help page topic id: shows the page's icon and a ? for its intro (which also opens by
+      itself on the first visit). */
+  helpTopic?: string;
+}) {
+  const topic = helpTopic ? topicById(helpTopic) : undefined;
+  const intro = useIntro(topic);
+  const Icon = topic ? ICON_BY_ID[topic.id] : undefined;
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         {back && (
           <BackButton onClick={back} className="mb-2" />
         )}
-        <h1 className="truncate text-3xl font-extrabold tracking-tight">{title}</h1>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h1 className="flex min-w-0 items-center gap-2 text-3xl font-extrabold tracking-tight">
+            {Icon && <Icon className="h-7 w-7 shrink-0 text-accent" />}
+            <span className="truncate">{title}</span>
+          </h1>
+          {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
+        </div>
+        {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
         {subtitle && <p className="truncate text-sm text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

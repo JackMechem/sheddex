@@ -34,7 +34,7 @@ export default function PracticeTimerRing({
       down) and pulses it in the danger color instead of ticking, the same "something needs your
       attention" treatment as the rest of the alarm UI. */
   alarming?: boolean;
-  /** "sm": a small ring, for a running routine on the Practice Log. */
+  /** "sm": a small ring, for a running routine on the Shed Log. */
   size?: "lg" | "sm";
 }) {
   const circleRef = useRef<SVGCircleElement>(null);

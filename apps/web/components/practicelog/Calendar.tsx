@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, MicIcon, StarIcon } from "@/components/tools";
+import { CheckIcon, CloseIcon, MicIcon, StarIcon } from "@/components/tools";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import {
   type DayRoutine,
   type PracticeLogData,
@@ -11,7 +12,9 @@ import {
   formatMinutesShort,
   formatTime,
   fromDateKey,
-  dayProgress,
+  dayStatus,
+  routineStatus,
+  type DayStatus,
   minutesOn,
   monthGrid,
   parseTime,
@@ -20,7 +23,7 @@ import {
   scheduleTasks,
   startOfWeek,
   todayKey,
-  weekdayOf,
+  weekdayOf, goalOn
 } from "@/lib/practiceLog";
 
 const colorOf = (i: number) => ROUTINE_COLORS[i % ROUTINE_COLORS.length];
@@ -47,7 +50,7 @@ export function MonthView({
   const days = useMemo(() => monthGrid(year, month), [year, month]);
   const today = todayKey();
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:flex-1">
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
       <div className="grid grid-cols-7 border-b border-surface-hover">
         {WEEKDAY_SHORT.map((d) => (
           <div key={d} className="py-2 text-center text-xs font-semibold text-muted">
@@ -64,12 +67,12 @@ export function MonthView({
           const clips = clipsByDate.get(key) ?? 0;
           const isSel = key === selected;
           const tasks = data.days[key]?.tasks ?? [];
-          const goal = data.prefs.dailyGoal;
+          const goal = goalOn(data, key);
           const goalMet = goal > 0 && minutes >= goal;
           const heat = minutes > 0 ? 8 + 26 * Math.min(1, goal > 0 ? minutes / goal : 1) : 0;
-          const prog = dayProgress(data, key);
-          // Every task planned that day checked off: the day goes green with a check.
-          const completed = prog.total > 0 && prog.done === prog.total;
+          // A past day: green with a check when everything was done, yellow with a dash when
+          // some of it was (or time was logged), red with an X when nothing was.
+          const status = dayStatus(data, key, today);
           return (
             <button
               key={key}
@@ -77,12 +80,12 @@ export function MonthView({
               onClick={() => onSelect(key)}
               aria-label={`${d.toDateString()}${items.length ? `, ${items.length} routine${items.length === 1 ? "" : "s"}` : ""}`}
               aria-pressed={isSel}
-              className={`relative flex min-h-[4.5rem] flex-col gap-1 border-surface-hover p-1 text-left transition-colors sm:min-h-[7rem] sm:p-1.5 ${i % 7 ? "border-l" : ""} ${i >= 7 ? "border-t" : ""} ${
+              className={`relative flex min-h-[4.5rem] flex-col gap-1 border-surface-hover p-1 text-left transition-colors sm:min-h-[7rem] sm:p-1.5 lg:min-h-0 lg:overflow-hidden ${i % 7 ? "border-l" : ""} ${i >= 7 ? "border-t" : ""} ${
                 isSel ? "ring-2 ring-inset ring-accent" : "hover:bg-surface-hover/50"
               } ${inMonth ? "" : "opacity-60"}`}
               style={
-                completed
-                  ? { background: "color-mix(in srgb, #22c55e 24%, transparent)" }
+                status
+                  ? { background: `color-mix(in srgb, ${STATUS_COLOR[status]} ${status === "partial" ? 26 : status === "done" ? 24 : 20}%, transparent)` }
                   : heat
                     ? { background: `color-mix(in srgb, var(--accent) ${heat}%, transparent)` }
                     : undefined
@@ -97,11 +100,7 @@ export function MonthView({
                   >
                     {d.getDate()}
                   </span>
-                  {completed && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white" title="Everything done">
-                      <CheckIcon className="h-3.5 w-3.5" />
-                    </span>
-                  )}
+                  {status && <StatusBadge status={status} />}
                 </span>
                 <span className="flex items-center gap-1 text-[10px] font-semibold tabular-nums text-muted">
                   {goalMet && <StarIcon filled className="h-3.5 w-3.5 text-amber-400" />}
@@ -117,13 +116,13 @@ export function MonthView({
               {/* Phones: a dot per routine. */}
               <div className="flex flex-wrap gap-0.5 px-0.5 sm:hidden">
                 {items.map((it) => (
-                  <RoutineDot key={it.routine.id} item={it} />
+                  <RoutineDot key={it.routine.id} item={it} status={routineStatus(it, key, today)} />
                 ))}
                 {tasks.length > 0 && <span className="h-1.5 w-1.5 rounded-full" style={tasks.every((t) => t.done) ? { background: TASK_COLOR } : { boxShadow: `inset 0 0 0 1.5px ${TASK_COLOR}` }} />}
               </div>
               <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
                 {items.slice(0, tasks.length ? 2 : 3).map((it) => (
-                  <RoutineChip key={it.routine.id} item={it} />
+                  <RoutineChip key={it.routine.id} item={it} status={routineStatus(it, key, today)} />
                 ))}
                 {items.length > (tasks.length ? 2 : 3) && <span className="px-1 text-[10px] font-semibold text-muted">+{items.length - (tasks.length ? 2 : 3)} more</span>}
                 {tasks.length > 0 && <TasksChip tasks={tasks} />}
@@ -151,10 +150,10 @@ function TasksChip({ tasks }: { tasks: { title: string; done: boolean }[] }) {
   );
 }
 
-function RoutineDot({ item }: { item: DayRoutine }) {
+function RoutineDot({ item, status = null }: { item: DayRoutine; status?: DayStatus | null }) {
   const { done, total } = progressOf(item.routine, item.occurrence);
   const complete = total > 0 && done === total;
-  const color = colorOf(item.routine.color);
+  const color = status && status !== "done" ? STATUS_COLOR[status] : colorOf(item.routine.color);
   return (
     <span
       className="h-1.5 w-1.5 rounded-full"
@@ -163,7 +162,7 @@ function RoutineDot({ item }: { item: DayRoutine }) {
   );
 }
 
-function RoutineChip({ item }: { item: DayRoutine }) {
+function RoutineChip({ item, status = null }: { item: DayRoutine; status?: DayStatus | null }) {
   const { done, total } = progressOf(item.routine, item.occurrence);
   const complete = total > 0 && done === total;
   const color = colorOf(item.routine.color);
@@ -172,16 +171,29 @@ function RoutineChip({ item }: { item: DayRoutine }) {
       className={`flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium leading-tight ${item.occurrence.skipped ? "line-through opacity-50" : ""}`}
       style={{ background: `color-mix(in srgb, ${color} ${complete ? 30 : 14}%, transparent)` }}
     >
-      {complete ? <CheckIcon className="h-3 w-3 shrink-0" /> : <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />}
+      <RoutineIcon icon={item.routine.icon} color={item.routine.color} size="xs" />
       <span className="truncate">{item.routine.name || "Untitled routine"}</span>
-      {!complete && done > 0 && <span className="ml-auto shrink-0 tabular-nums text-muted">{done}/{total}</span>}
+      {complete ? (
+        <CheckIcon className="ml-auto h-3 w-3 shrink-0" />
+      ) : status === "missed" ? (
+        <span className="ml-auto flex shrink-0 items-center gap-0.5 font-semibold text-red-500" title={item.occurrence.skipped ? "Skipped" : "Missed"}>
+          <CloseIcon className="h-3 w-3" />
+        </span>
+      ) : status === "partial" ? (
+        <span className="ml-auto flex shrink-0 items-center gap-0.5 font-semibold text-amber-600 dark:text-amber-400" title="Partly done">
+          <span className="tabular-nums">{done}/{total}</span>
+          <span className="h-0.5 w-2 rounded-full bg-current" />
+        </span>
+      ) : (
+        done > 0 && <span className="ml-auto shrink-0 tabular-nums text-muted">{done}/{total}</span>
+      )}
     </span>
   );
 }
 
 const HOUR_PX = 48;
 
-type Block = { routineId: string; color: string; title: string; tasks: string[]; start: number; end: number; complete: boolean; skipped: boolean; lane: number; lanes: number };
+type Block = { routineId: string; color: string; icon?: string; colorIdx?: number; title: string; tasks: string[]; start: number; end: number; complete: boolean; skipped: boolean; lane: number; lanes: number };
 
 /** A routine's timed tasks as blocks — tasks back to back are one block. */
 function blocksFor(item: DayRoutine): Omit<Block, "lane" | "lanes">[] {
@@ -200,6 +212,8 @@ function blocksFor(item: DayRoutine): Omit<Block, "lane" | "lanes">[] {
       cur = {
         routineId: routine.id,
         color: colorOf(routine.color),
+        icon: routine.icon ?? "note",
+        colorIdx: routine.color,
         title: routine.name || "Untitled routine",
         tasks: [s.task.title || "Task"],
         start: s.start,
@@ -272,6 +286,7 @@ export function WeekView({
           untimed: items.filter((it) => !scheduleTasks(it.routine, it.occurrence).some((s) => s.start !== null)),
           untimedTasks: tasks.filter((t) => parseTime(t.time) === null),
           blocks: layoutLanes([...items.flatMap(blocksFor), ...taskBlocks]),
+          status: dayStatus(data, key, todayKey()),
           minutes: minutesOn(data, key),
         };
       }),
@@ -299,10 +314,10 @@ export function WeekView({
   const hasUntimed = perDay.some((d) => d.untimed.length > 0 || d.untimedTasks.length > 0);
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:flex-1">
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
       <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover">
         <div />
-        {perDay.map(({ key, minutes }) => {
+        {perDay.map(({ key, minutes, status }) => {
           const d = fromDateKey(key);
           return (
             <button
@@ -312,8 +327,24 @@ export function WeekView({
               className={`flex flex-col items-center gap-0.5 py-2 ${key === selected ? "bg-accent/10" : "hover:bg-surface-hover/50"}`}
             >
               <span className="text-xs font-semibold text-muted">{WEEKDAY_SHORT[weekdayOf(key)]}</span>
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${key === today ? "bg-accent text-accent-foreground" : ""}`}>{d.getDate()}</span>
-              <span className="h-3 text-[10px] tabular-nums text-muted">{minutes > 0 ? formatMinutesShort(Math.round(minutes)) : ""}</span>
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${key === today ? "bg-accent text-accent-foreground" : status ? "text-white" : ""}`}
+                style={key !== today && status ? { background: STATUS_COLOR[status] } : undefined}
+                title={status ? STATUS_LABEL[status] : undefined}
+              >
+                {d.getDate()}
+              </span>
+              <span className={`flex h-3 items-center gap-0.5 text-[10px] tabular-nums ${status === "missed" ? "font-bold text-red-500" : "text-muted"}`}>
+                {status === "missed" ? (
+                  <>
+                    <CloseIcon className="h-2.5 w-2.5" /> Missed
+                  </>
+                ) : minutes > 0 ? (
+                  formatMinutesShort(Math.round(minutes))
+                ) : (
+                  ""
+                )}
+              </span>
             </button>
           );
         })}
@@ -325,7 +356,7 @@ export function WeekView({
             <div key={key} className="flex min-w-0 flex-col gap-0.5 border-l border-surface-hover p-0.5">
               {untimed.map((it) => (
                 <button key={it.routine.id} type="button" onClick={() => onSelect(key)} className="min-w-0 text-left">
-                  <RoutineChip item={it} />
+                  <RoutineChip item={it} status={routineStatus(it, key, today)} />
                 </button>
               ))}
               {untimedTasks.length > 0 && (
@@ -373,7 +404,8 @@ export function WeekView({
                       boxShadow: `inset 3px 0 0 ${b.color}`,
                     }}
                   >
-                    <span className="flex items-center gap-0.5 font-semibold">
+                    <span className="flex items-center gap-1 font-semibold">
+                      {b.icon !== undefined && <RoutineIcon icon={b.icon} color={b.colorIdx ?? 0} size="xs" />}
                       {b.complete && <CheckIcon className="h-3 w-3 shrink-0" />}
                       <span className="truncate">{b.title}</span>
                     </span>
@@ -392,5 +424,17 @@ export function WeekView({
         </div>
       </div>
     </div>
+  );
+}
+
+const STATUS_COLOR: Record<DayStatus, string> = { done: "#22c55e", partial: "#eab308", missed: "#ef4444" };
+const STATUS_LABEL: Record<DayStatus, string> = { done: "Everything done", partial: "Partly done", missed: "Missed" };
+
+/** The round badge on a past day: a check, a dash or an X. */
+function StatusBadge({ status }: { status: DayStatus }) {
+  return (
+    <span className="flex h-5 w-5 items-center justify-center rounded-full text-white" style={{ background: STATUS_COLOR[status] }} title={STATUS_LABEL[status]}>
+      {status === "done" ? <CheckIcon className="h-3.5 w-3.5" /> : status === "missed" ? <CloseIcon className="h-3 w-3" /> : <span className="h-0.5 w-2.5 rounded-full bg-white" />}
+    </span>
   );
 }

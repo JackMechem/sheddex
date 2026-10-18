@@ -9,6 +9,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import Flyout, { FlyoutItem } from "@/components/Flyout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import UserAvatar from "@/components/UserAvatar";
+import StreakBadge from "@/components/practicelog/StreakBadge";
 import { GoogleIcon, UserIcon, svgProps } from "@/components/tools";
 
 function DotsIcon({ className }: { className?: string }) {
@@ -284,7 +285,7 @@ export function AuthForm({
   );
 }
 
-function SignInModal({ onClose }: { onClose: () => void }) {
+export function SignInModal({ onClose, initialFlow = "signIn" }: { onClose: () => void; initialFlow?: "signIn" | "signUp" }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -307,7 +308,7 @@ function SignInModal({ onClose }: { onClose: () => void }) {
         className="flex w-full max-w-sm flex-col gap-4 rounded-2xl bg-surface p-5 text-left text-foreground shadow-2xl shadow-black/20"
         onClick={(e) => e.stopPropagation()}
       >
-        <AuthForm onClose={onClose} />
+        <AuthForm onClose={onClose} initialFlow={initialFlow} />
       </div>
     </div>
   );
@@ -351,9 +352,6 @@ export default function AccountMenu({
     // sign-up/sign-in), fall back to email/name, the same label this button always showed.
     const username = profile?.username ? `@${profile.username}` : null;
     const label = username ?? (user?.email ?? user?.name ?? "Account");
-    // Once there's a real username, the email (if any) shows as a second, smaller line under it
-    // — there's nothing to show twice when `label` already *is* the email (no username yet).
-    const email = username && user?.email ? user.email : null;
 
     if (collapsed) {
       // Not `buttonClass` — no horizontal padding at all (the row's own width comes from the
@@ -362,14 +360,15 @@ export default function AccountMenu({
       // with no container showing even on hover — the avatar's own ring (`UserAvatar`'s own
       // `ring-foreground/10`) is the only visual framing it gets.
       return (
-        <Link
-          href="/account"
-          onClick={onNavigate}
-          title={email ? `${label} — ${email}` : label}
-          className="flex items-center justify-center py-2"
-        >
-          <UserAvatar url={profile?.avatarUrl ?? null} size="sm" />
-        </Link>
+        <div className="relative mx-auto flex w-fit items-center justify-center py-1.5">
+          <Link href="/account" onClick={onNavigate} title={label} className="flex items-center justify-center rounded-full">
+            <UserAvatar url={profile?.avatarUrl ?? null} size="sm" />
+          </Link>
+          {/* The streak, on the picture's corner. */}
+          <span className="absolute -bottom-1 -right-3">
+            <StreakBadge compact onNavigate={onNavigate} />
+          </span>
+        </div>
       );
     }
 
@@ -383,16 +382,17 @@ export default function AccountMenu({
         <Link
           href="/account"
           onClick={onNavigate}
-          className={`${buttonClass(false, large)} ${large ? "pr-12" : "pr-10"}`}
+          className={`${buttonClass(false, large)} ${large ? "pr-32" : "pr-28"}`}
         >
           <UserAvatar url={profile?.avatarUrl ?? null} size="sm" />
           <span className="flex min-w-0 flex-col items-start">
             <span className="truncate">{label}</span>
-            {email && (
-              <span className="truncate text-xs font-normal text-muted">{email}</span>
-            )}
+
           </span>
         </Link>
+        <span className={`absolute top-1/2 -translate-y-1/2 ${large ? "right-11" : "right-9"}`}>
+          <StreakBadge onNavigate={onNavigate} />
+        </span>
         <Flyout
           icon={DotsIcon}
           label="Account options"
@@ -431,15 +431,24 @@ export default function AccountMenu({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setSignInOpen(true)}
-        title={collapsed ? "Sign in" : undefined}
-        className={buttonClass(collapsed, large)}
-      >
-        <UserIcon className={large ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0"} />
-        {!collapsed && <span className="truncate">Sign in</span>}
-      </button>
+      <div className={`relative flex ${collapsed ? "flex-col items-center gap-1" : "items-center"}`}>
+        <button
+          type="button"
+          onClick={() => setSignInOpen(true)}
+          title={collapsed ? "Sign in" : undefined}
+          className={`${buttonClass(collapsed, large)} ${collapsed ? "" : large ? "pr-24" : "pr-20"}`}
+        >
+          <UserIcon className={large ? "h-5 w-5 shrink-0" : "h-4 w-4 shrink-0"} />
+          {!collapsed && <span className="truncate">Sign in</span>}
+        </button>
+        {collapsed ? (
+          <StreakBadge compact onNavigate={onNavigate} />
+        ) : (
+          <span className="absolute right-1 top-1/2 -translate-y-1/2">
+            <StreakBadge onNavigate={onNavigate} />
+          </span>
+        )}
+      </div>
       {signInOpen && <SignInModal onClose={() => setSignInOpen(false)} />}
     </>
   );

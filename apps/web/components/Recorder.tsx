@@ -50,6 +50,7 @@ import {
 import { DEFAULT_MIX, formatDuration, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
 import { EMPTY_STRUCTURE, type Structure, cycleSectionAccent, cycleSectionSubAccent, sectionAt } from "@/lib/structure";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
+import { useToolActivity } from "@/lib/toolTime";
 
 // The same key and shape as the app's Recorder, so settings follow you between the two. Everything
 // from `bpm` on is the Metronome tool's own settings shape.
@@ -112,6 +113,8 @@ export default function Recorder({ tuneId }: { tuneId?: string }) {
 
   const rec = useSyncExternalStore(subscribeRecorder, getRecorderSnapshot, getRecorderServerSnapshot);
   const busy = rec.phase !== "idle";
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/recorder", busy);
   const click = useSyncExternalStore(subscribeMetronome, getMetronomeSnapshot, getMetronomeServerSnapshot);
   const clicking = busy && settings.metronome && click.running;
   const [take, setTake] = useState<FinishedTake | null>(null);

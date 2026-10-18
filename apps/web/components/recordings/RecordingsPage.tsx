@@ -30,6 +30,7 @@ export default function RecordingsPage() {
     <PageShell>
       <PageHeader
         title="My recordings"
+        helpTopic="recordings"
         actions={
           <Link href="/recorder" className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
             <MicIcon className="h-4 w-4" /> Record

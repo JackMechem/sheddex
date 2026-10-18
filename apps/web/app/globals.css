@@ -27,6 +27,51 @@
   --danger: #e8848f;
 }
 
+/* Tool-category colors (the sidebar's icon tiles). Fallback: fixed hues. Where the browser can,
+   they're the theme's own accent turned around the color wheel at the same lightness and
+   saturation (OKLCH), so every theme gets its own harmonious set; a floor on the chroma keeps
+   them apart on near-grey accents. The hue steps are spaced so neighbouring sections differ. */
+:root {
+  --cat-0: #6366f1;
+  --cat-1: #8b5cf6;
+  --cat-2: #0ea5e9;
+  --cat-3: #ec4899;
+  --cat-4: #10b981;
+  --cat-5: #f97316;
+  --cat-6: #eab308;
+}
+@supports (color: oklch(from red l c h)) {
+  :root,
+  .dark {
+    --cat-0: oklch(from var(--accent) l max(c, 0.09) h);
+    --cat-1: oklch(from var(--accent) l max(c, 0.09) calc(h + 154));
+    --cat-2: oklch(from var(--accent) l max(c, 0.09) calc(h + 308));
+    --cat-3: oklch(from var(--accent) l max(c, 0.09) calc(h + 103));
+    --cat-4: oklch(from var(--accent) l max(c, 0.09) calc(h + 257));
+    --cat-5: oklch(from var(--accent) l max(c, 0.09) calc(h + 51));
+    --cat-6: oklch(from var(--accent) l max(c, 0.09) calc(h + 206));
+  }
+}
+
+/* Key colours for the Tunes / Chord Charts pages: one hue per key, keys a fifth apart next to each
+   other, taken from the theme's accent (like the category colours). */
+@supports (color: oklch(from red l c h)) {
+  :root, .dark {
+    --key-0: oklch(from var(--accent) l max(c, 0.09) calc(h + 0));
+    --key-1: oklch(from var(--accent) l max(c, 0.09) calc(h + 210));
+    --key-2: oklch(from var(--accent) l max(c, 0.09) calc(h + 60));
+    --key-3: oklch(from var(--accent) l max(c, 0.09) calc(h + 270));
+    --key-4: oklch(from var(--accent) l max(c, 0.09) calc(h + 120));
+    --key-5: oklch(from var(--accent) l max(c, 0.09) calc(h + 330));
+    --key-6: oklch(from var(--accent) l max(c, 0.09) calc(h + 180));
+    --key-7: oklch(from var(--accent) l max(c, 0.09) calc(h + 30));
+    --key-8: oklch(from var(--accent) l max(c, 0.09) calc(h + 240));
+    --key-9: oklch(from var(--accent) l max(c, 0.09) calc(h + 90));
+    --key-10: oklch(from var(--accent) l max(c, 0.09) calc(h + 300));
+    --key-11: oklch(from var(--accent) l max(c, 0.09) calc(h + 150));
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
@@ -248,7 +293,7 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
   .star-pop, .level-rise, .level-pulse { animation: none; }
 }
 
-/* Practice Log: a check-off burst, a checkbox pop, toasts sliding in, the goal ring glowing. */
+/* Shed Log: a check-off burst, a checkbox pop, toasts sliding in, the goal ring glowing. */
 @keyframes log-burst {
   0% { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
   100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1); opacity: 0; }

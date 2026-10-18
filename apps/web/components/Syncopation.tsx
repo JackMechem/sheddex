@@ -29,6 +29,7 @@ import {
 import { useTapTempo } from "@/lib/meterControls";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
+import { useToolActivity } from "@/lib/toolTime";
 
 type AfterExercise = "new" | "repeat" | "stop";
 
@@ -96,6 +97,8 @@ export default function Syncopation() {
   const preview = useMemo(() => generateExercise(seed, genOpts), [seed, genOpts]);
 
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/syncopation", running);
   const [starting, setStarting] = useState(false);
   const [download, setDownload] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);

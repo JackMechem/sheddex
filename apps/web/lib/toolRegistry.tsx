@@ -34,7 +34,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
     loading: PaneLoading,
   }),
   "/practice-timer": dynamic(() => import("@/components/PracticeTimer"), { loading: PaneLoading }),
-  "/practice-log": dynamic(() => import("@/components/PracticeLog"), { loading: PaneLoading }),
+  "/shed-log": dynamic(() => import("@/components/practicelog/GatedPracticeLog"), { loading: PaneLoading }),
   "/metronome": dynamic(() => import("@/components/Metronome"), { loading: PaneLoading }),
   "/random-metric-modulation": dynamic(() => import("@/components/RandomMetricModulation"), {
     loading: PaneLoading,
@@ -53,6 +53,7 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/syncopation": dynamic(() => import("@/components/Syncopation"), { loading: PaneLoading }),
   "/community": dynamic(() => import("@/components/Community"), { loading: PaneLoading }),
   "/account": dynamic(() => import("@/components/AccountPage"), { loading: PaneLoading }),
+  "/help": dynamic(() => import("@/components/help/HelpPage"), { loading: PaneLoading }),
   // "/privacy", "/terms", and "/credits" aren't here — unlike every page above, those three don't
   // have a separate importable component at all; their content is written directly inline in
   // their own `app/*/page.tsx` file (`app/privacy/page.tsx` etc.), so there's nothing to

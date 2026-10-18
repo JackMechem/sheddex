@@ -54,7 +54,7 @@ export function StopwatchIcon({ className }: { className?: string }) {
   );
 }
 
-/** A calendar page with a check — the Practice Log. */
+/** A calendar page with a check — the Shed Log. */
 export function CalendarIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -554,11 +554,25 @@ export function UsersIcon({ className }: { className?: string }) {
     (and not required to match) whichever icon a tool inside it happens to use for itself. */
 export const CATEGORY_ICONS: Record<Category, (props: { className?: string }) => React.JSX.Element> = {
   Community: UsersIcon,
-  "Timing & Tuning": MetronomeIcon,
-  "Ear Training": EarIcon,
-  Practice: BookIcon,
-  Drummers: DrumIcon,
-  Audio: WaveIcon,
+  "Play along": BassIcon,
+  "Time & rhythm": MetronomeIcon,
+  "Ear training": EarIcon,
+  "On your instrument": NoteIcon,
+  Drums: DrumIcon,
+  "Practice tools": StopwatchIcon,
+};
+
+/** One color per category: the sidebar's icon tiles, so a tool's group reads at a glance. CSS
+    variables (`app/globals.css`, `--cat-0`…`--cat-6`) derived from the theme's accent, so they
+    suit whichever theme is on. Text/icons on a solid one use `--accent-foreground`. */
+export const CATEGORY_COLORS: Record<Category, string> = {
+  Community: "var(--cat-0)",
+  "Play along": "var(--cat-1)",
+  "Time & rhythm": "var(--cat-2)",
+  "Ear training": "var(--cat-3)",
+  "On your instrument": "var(--cat-4)",
+  Drums: "var(--cat-5)",
+  "Practice tools": "var(--cat-6)",
 };
 
 /** Every tool's own icon component (web-only SVG JSX) — the one thing `@jam-practice/core/navLinks`
@@ -575,7 +589,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/guess-the-chord": ChordIcon,
   "/guess-the-progression": ProgressionIcon,
   "/practice-timer": StopwatchIcon,
-  "/practice-log": CalendarIcon,
+  "/shed-log": CalendarIcon,
   "/metronome": MetronomeIcon,
   "/random-metric-modulation": MetricModulationIcon,
   "/tempo-trainer": TempoTrainerIcon,

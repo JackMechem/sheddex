@@ -9,7 +9,7 @@ import { Id } from "@jam-practice/convex/_generated/dataModel";
     looking at someone *else's* profile (`PublicProfilePage.tsx` handles both of those checks
     itself before mounting this). `follow`/`unfollow` (`convex/follows.ts`) are both idempotent, so
     a stray double-click can't produce a weird state either way. */
-export default function FollowButton({ targetUserId }: { targetUserId: Id<"users"> }) {
+export default function FollowButton({ targetUserId, size = "md" }: { targetUserId: Id<"users">; size?: "sm" | "md" }) {
   const isFollowing = useQuery(api.follows.followStatus, { targetUserId });
   const followMutation = useMutation(api.follows.follow);
   const unfollowMutation = useMutation(api.follows.unfollow);
@@ -30,7 +30,7 @@ export default function FollowButton({ targetUserId }: { targetUserId: Id<"users
       type="button"
       onClick={() => void toggle()}
       disabled={isFollowing === undefined || pending}
-      className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+      className={`shrink-0 rounded-full ${size === "sm" ? "px-3 py-1 text-xs" : "px-5 py-2 text-sm"} font-semibold transition-colors disabled:opacity-50 ${
         isFollowing
           ? "bg-surface hover:bg-surface-hover"
           : "bg-accent text-accent-foreground hover:bg-accent-hover"

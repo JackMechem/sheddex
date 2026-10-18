@@ -61,6 +61,7 @@ import LevelComplete from "@/components/learning/LevelComplete";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
+import { useToolActivity } from "@/lib/toolTime";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
@@ -235,6 +236,8 @@ export default function GuessTheChord() {
 
   const [round, setRound] = useState<ChordRound | null>(null);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/guess-the-chord", running);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<Grade | null>(null);
   const [typed, setTyped] = useState("");

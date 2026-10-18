@@ -39,6 +39,7 @@ import {
 } from "@/lib/stickControlEngine";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 const SETTINGS_KEY = "jam-practice-stick-control";
 
@@ -168,6 +169,8 @@ export default function StickControl() {
   }
   const stop = stopStickControl;
   useSpaceToggle(running ? stop : start);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/random-sticking-warmup", running);
 
   const phaseLabel =
     phase === "countoff"

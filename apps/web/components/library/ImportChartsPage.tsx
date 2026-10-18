@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { PageHeader, PageShell } from "@/components/library/shared";
+import { Hero, LibraryPage, Pill } from "@/components/library/ui";
 import SwitchRow from "@/components/SwitchRow";
-import { TrashIcon } from "@/components/tools";
+import { DownloadIcon, TrashIcon } from "@/components/tools";
 import { decodeChartString, looksLikeChartString } from "@/lib/chartString";
 import { parseIrealPlaylist } from "@/lib/iRealPro";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
@@ -23,7 +22,6 @@ function parsePlaylistInput(text: string) {
 
 /** Importing chord charts: paste a chart link or playlist link (or pick a file it's saved in). */
 export default function ImportChartsPage() {
-  const router = useRouter();
   const { importSongs, clearAll, totalSongs } = useChordChartsLibrary(null);
   const [text, setText] = useState("");
   const [replaceExisting, setReplaceExisting] = useState(true);
@@ -62,67 +60,96 @@ export default function ImportChartsPage() {
   }
 
   return (
-    <PageShell>
-      <PageHeader title="Import charts" back={() => router.push("/chord-charts")} />
-      <textarea
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Paste a chord chart link or playlist link"
-        rows={5}
-        className="w-full resize-y rounded-2xl bg-surface p-4 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    <LibraryPage>
+      <Hero
+        title="Import charts"
+        icon={DownloadIcon}
+        backHref="/chord-charts"
+        backLabel="Chord Charts"
+        subtitle={`Add charts to your library — you have ${totalSongs} now.`}
       />
-      <SwitchRow
-        label="Update charts you already have"
-        checked={replaceExisting}
-        onChange={setReplaceExisting}
-        hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same playlist. Turn this off to only add charts you don't have yet."
-      />
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => text.trim() && !importing && void run(text)}
-          disabled={!text.trim() || importing}
-          className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
-        >
-          {importing ? "Importing…" : "Import"}
-        </button>
-        <button type="button" onClick={() => fileRef.current?.click()} className="rounded-lg bg-surface px-4 py-2.5 text-sm font-medium hover:bg-surface-hover">
-          Choose file…
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".txt,.html,text/plain,text/html"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => typeof reader.result === "string" && void run(reader.result);
-            reader.onerror = () => setStatus({ kind: "error", message: "Couldn't read that file." });
-            reader.readAsText(file);
-          }}
-        />
-      </div>
-      {status && (
-        <div className="flex flex-col gap-2">
-          <p className={`text-sm ${status.kind === "error" ? "text-danger" : ""}`}>{status.message}</p>
-          {status.kind === "ok" && (
-            <button type="button" onClick={() => router.push("/chord-charts")} className="self-start rounded-lg bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-hover">
-              Back to chord charts
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <section className="flex flex-col gap-4 rounded-2xl bg-surface p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">1</span>
+            <h2 className="font-bold">Paste a chart link or a playlist link</h2>
+          </div>
+          <textarea
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste a chord chart link or playlist link"
+            rows={6}
+            className="w-full resize-y rounded-xl bg-background p-4 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          />
+          <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center gap-2 self-start text-sm font-semibold text-accent hover:underline">
+            …or choose a file it&apos;s saved in
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".txt,.html,text/plain,text/html"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => typeof reader.result === "string" && void run(reader.result);
+              reader.onerror = () => setStatus({ kind: "error", message: "Couldn't read that file." });
+              reader.readAsText(file);
+            }}
+          />
+          <div className="flex items-center gap-3 border-t border-foreground/[0.06] pt-4">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">2</span>
+            <h2 className="font-bold">Choose how</h2>
+          </div>
+          <div className="rounded-xl bg-background px-3">
+            <SwitchRow
+              label="Update charts you already have"
+              checked={replaceExisting}
+              onChange={setReplaceExisting}
+              hint="When a chart in the link is already in your library (same title, composer and key), replace yours with the one from the link — it stays in the same playlist. Turn this off to only add charts you don't have yet."
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => text.trim() && !importing && void run(text)}
+              disabled={!text.trim() || importing}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-6 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+            >
+              <DownloadIcon className="h-4 w-4" />
+              {importing ? "Importing…" : "Import"}
             </button>
+          </div>
+          {status && (
+            <div className={`flex flex-col gap-2 rounded-xl p-3 ${status.kind === "error" ? "bg-danger/10" : "bg-accent/10"}`}>
+              <p className={`text-sm ${status.kind === "error" ? "text-danger" : ""}`}>{status.message}</p>
+              {status.kind === "ok" && <Pill label="Back to chord charts" href="/chord-charts" />}
+            </div>
           )}
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => setConfirmClear(true)}
-        disabled={totalSongs === 0}
-        className="mt-6 flex items-center gap-1.5 self-start text-sm font-medium text-danger disabled:opacity-40"
-      >
-        <TrashIcon className="h-4 w-4" /> Delete all chord charts
-      </button>
+        </section>
+
+        <aside className="flex flex-col gap-4">
+          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-sm">
+            <h2 className="font-bold">What happens</h2>
+            <p className="text-muted">A playlist link comes in as a playlist of the same name. Charts you already have are updated or left alone, never doubled up.</p>
+            <p className="text-muted">The chart builder can turn a chart you make into a link to share.</p>
+          </section>
+          <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-sm">
+            <h2 className="font-bold text-danger">Start over</h2>
+            <p className="text-muted">Remove every chart and playlist in your library.</p>
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              disabled={totalSongs === 0}
+              className="flex items-center gap-1.5 self-start rounded-full bg-danger/10 px-3.5 py-2 text-sm font-semibold text-danger hover:bg-danger/20 disabled:opacity-40"
+            >
+              <TrashIcon className="h-4 w-4" /> Delete all chord charts
+            </button>
+          </section>
+        </aside>
+      </div>
       {confirmClear && (
         <ConfirmDialog
           title="Delete all chord charts?"
@@ -135,6 +162,6 @@ export default function ImportChartsPage() {
           onCancel={() => setConfirmClear(false)}
         />
       )}
-    </PageShell>
+    </LibraryPage>
   );
 }

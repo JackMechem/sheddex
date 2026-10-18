@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { OPEN_PALETTE_EVENT } from "@/components/CommandPalette";
+import { usePathname, useRouter } from "next/navigation";
 import { svgProps } from "@/components/tools";
 import { TOOL_COMPONENTS } from "@/lib/toolRegistry";
 import {
-  type PaneEdge,
   type PaneSplit,
   type PaneTree,
   collectLeaves,
@@ -16,27 +14,10 @@ import {
   updateLeafHref,
 } from "@/lib/tilingLayout";
 import {
-  requestSplit as setPendingSplit,
   syncAddressBar,
   updateTilingState,
   useTilingState,
 } from "@/lib/useTilingLayout";
-
-const EDGES: PaneEdge[] = ["up", "right", "down", "left"];
-
-function EdgeIcon({ edge, className }: { edge: PaneEdge; className?: string }) {
-  const paths: Record<PaneEdge, string> = {
-    up: "M12 19V5M12 5l-5 5M12 5l5 5",
-    down: "M12 5v14M12 19l-5-5M12 19l5-5",
-    left: "M19 12H5M5 12l5-5M5 12l5 5",
-    right: "M5 12h14M19 12l-5-5M19 12l-5 5",
-  };
-  return (
-    <svg {...svgProps(className)}>
-      <path d={paths[edge]} />
-    </svg>
-  );
-}
 
 function CloseIcon({ className }: { className?: string }) {
   return (
@@ -45,13 +26,6 @@ function CloseIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-const EDGE_BUTTON_POSITION: Record<PaneEdge, string> = {
-  up: "left-1/2 top-2 -translate-x-1/2",
-  down: "left-1/2 bottom-2 -translate-x-1/2",
-  left: "left-2 top-1/2 -translate-y-1/2",
-  right: "right-2 top-1/2 -translate-y-1/2",
-};
 
 /** One pane: the actual tool (mounted via `TOOL_COMPONENTS`), a small split button centered on
     each of its four edges (hover-revealed — `opacity-0 group-hover:opacity-100`, the same
@@ -72,13 +46,11 @@ function Pane({
   href,
   canClose,
   onFocus,
-  onRequestSplit,
   onClose,
 }: {
   href: string;
   canClose: boolean;
   onFocus: () => void;
-  onRequestSplit: (edge: PaneEdge) => void;
   onClose: () => void;
 }) {
   const Component = TOOL_COMPONENTS[href];
@@ -88,18 +60,6 @@ function Pane({
       onPointerDownCapture={onFocus}
       className="group relative flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
-      {EDGES.map((edge) => (
-        <button
-          key={edge}
-          type="button"
-          onClick={() => onRequestSplit(edge)}
-          aria-label={`Split ${edge === "up" || edge === "down" ? edge : `to the ${edge}`}`}
-          title="Split this pane"
-          className={`absolute z-20 flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 text-muted opacity-0 shadow-sm transition-opacity hover:bg-surface-hover hover:text-foreground group-hover:opacity-100 ${EDGE_BUTTON_POSITION[edge]}`}
-        >
-          <EdgeIcon edge={edge} className="h-3.5 w-3.5" />
-        </button>
-      ))}
       {canClose && (
         <button
           type="button"
@@ -123,7 +83,7 @@ function Pane({
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center text-sm text-muted">
             <p>This tool isn&apos;t available anymore.</p>
-            <p className="text-xs">Use one of the edge buttons to pick a different one.</p>
+            <p className="text-xs">Close this pane, or right-click a page in the sidebar to open another.</p>
           </div>
         )}
       </div>
@@ -208,7 +168,6 @@ function PaneNode({
   node,
   canClose,
   onFocus,
-  onRequestSplit,
   onClose,
   onResize,
 }: {
@@ -218,7 +177,6 @@ function PaneNode({
       showing a close button that does nothing is its own small confusion worth avoiding). */
   canClose: boolean;
   onFocus: (id: string) => void;
-  onRequestSplit: (targetId: string, edge: PaneEdge) => void;
   onClose: (targetId: string) => void;
   onResize: (splitId: string, sizes: [number, number]) => void;
 }) {
@@ -228,7 +186,6 @@ function PaneNode({
         href={node.href}
         canClose={canClose}
         onFocus={() => onFocus(node.id)}
-        onRequestSplit={(edge) => onRequestSplit(node.id, edge)}
         onClose={() => onClose(node.id)}
       />
     );
@@ -239,7 +196,6 @@ function PaneNode({
         node={node.children[0]}
         canClose={canClose}
         onFocus={onFocus}
-        onRequestSplit={onRequestSplit}
         onClose={onClose}
         onResize={onResize}
       />
@@ -247,7 +203,6 @@ function PaneNode({
         node={node.children[1]}
         canClose={canClose}
         onFocus={onFocus}
-        onRequestSplit={onRequestSplit}
         onClose={onClose}
         onResize={onResize}
       />
@@ -287,6 +242,7 @@ function PaneNode({
  */
 export default function TilingLayout() {
   const pathname = usePathname();
+  const router = useRouter();
   const state = useTilingState();
   // The last pathname this component actually reacted to — *not* just "whatever `active.href`
   // currently says," which is what the outside-navigation effect below used to compare against
@@ -307,6 +263,16 @@ export default function TilingLayout() {
   // it only reacts when Next's own router genuinely moved (a sidebar Link, `/` search, or
   // browser back/forward), which is the only case it needs to catch.
   const lastSeenPathnameRef = useRef(pathname);
+
+  // Split screen with a single pane isn't split screen: go back to the plain page (also covers a
+  // single-pane layout left over from the old "Advanced layouts" toggle).
+  useEffect(() => {
+    if (!state.tree) return;
+    const leaves = collectLeaves(state.tree);
+    if (leaves.length !== 1) return;
+    updateTilingState({ enabled: false, tree: null, activePaneId: null });
+    if (leaves[0].href !== window.location.pathname || leaves[0].href !== pathname) router.replace(leaves[0].href);
+  }, [state.tree, pathname, router]);
 
   // Seed a single pane showing wherever you currently are — a fallback for the rare case this
   // mounts with no tree at all (normally `AdvancedLayoutsButton`'s own click handler already seeds
@@ -342,15 +308,16 @@ export default function TilingLayout() {
     if (leaf) syncAddressBar(leaf.href);
   }
 
-  function requestPaneSplit(targetId: string, edge: PaneEdge) {
-    setPendingSplit(targetId, edge);
-    window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
-  }
-
   function closePane(targetId: string) {
     const next = removePane(state.tree!, targetId);
     if (!next) return; // the only pane left — nothing to collapse into
     const leaves = collectLeaves(next);
+    // Down to one pane: split screen is over — back to the plain page.
+    if (leaves.length === 1) {
+      updateTilingState({ enabled: false, tree: null, activePaneId: null });
+      router.replace(leaves[0].href);
+      return;
+    }
     const stillActive = leaves.some((l) => l.id === state.activePaneId);
     const nextActive = stillActive ? leaves.find((l) => l.id === state.activePaneId)! : leaves[0];
     updateTilingState({ tree: next, activePaneId: nextActive.id });
@@ -366,7 +333,6 @@ export default function TilingLayout() {
       node={state.tree}
       canClose={collectLeaves(state.tree).length > 1}
       onFocus={focusPane}
-      onRequestSplit={requestPaneSplit}
       onClose={closePane}
       onResize={resizeSplitNode}
     />

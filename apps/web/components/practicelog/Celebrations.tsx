@@ -12,12 +12,12 @@ import {
   minutesOn,
   progressOf,
   streak,
-  todayKey,
+  todayKey, goalOn
 } from "@/lib/practiceLog";
 import { playNote } from "@/lib/tones";
 
 /**
- * The Practice Log's rewards: a little burst and a rising note for every task checked off (the
+ * The Shed Log's rewards: a little burst and a rising note for every task checked off (the
  * note climbs with each one you do that day), and confetti + a fanfare + a toast for the big
  * moments — a routine finished, the daily goal reached, everything done, a streak kept alive or a
  * streak / hours milestone. `useCelebrations` watches the log for those moments (so the timer
@@ -25,7 +25,10 @@ import { playNote } from "@/lib/tones";
  */
 
 type ToastKind = "routine" | "goal" | "day" | "streak" | "hours";
-type Toast = { id: number; kind: ToastKind; title: string; detail?: string; color?: string };
+type Toast = { id: number; kind: ToastKind; title: string; detail?: string; color?: string; share?: "streak" | "hours" | "day" };
+
+/** Asks the Shed Log to open "Share your progress" on a card (`detail` = the card kind). */
+export const SHARE_PROGRESS_EVENT = "practice-log-share-progress";
 type Burst = { id: number; x: number; y: number; color: string };
 type State = { toasts: Toast[]; bursts: Burst[]; rain: number | null };
 
@@ -61,6 +64,18 @@ function rain() {
 
 // A pentatonic ladder: each task done today plays the next step up.
 const LADDER = ["C5", "D5", "E5", "G5", "A5", "C6", "D6", "E6", "G6", "A6", "C7"];
+
+/** The check-off note for the nth task done (exported for the landing page's demo). */
+export function playTaskNote(n: number) {
+  taskNote(n);
+}
+
+/** A big moment outside the log itself (the landing page's demo): toast, confetti, fanfare. */
+export function celebrateNow(title: string, detail: string, sound = true) {
+  toast({ kind: "routine", title, detail });
+  rain();
+  if (sound) fanfare(true);
+}
 
 function taskNote(n: number) {
   playNote(LADDER[Math.min(LADDER.length - 1, Math.max(0, n - 1))], 0.35, "pluck");
@@ -122,21 +137,24 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
       big = true;
     }
 
-    const goal = data.prefs.dailyGoal;
+    const goal = goalOn(data, now.today);
     if (goal > 0 && was.todayMinutes < goal && now.todayMinutes >= goal) {
-      toast({ kind: "goal", title: "Daily goal reached!", detail: `${goal} minutes today. Anything more is a bonus.` });
+      toast({ kind: "goal", title: "Daily goal reached!", detail: `${goal} minutes today. Anything more is a bonus.`, share: "day" });
       big = true;
     }
 
     if (now.todayTotal > 0 && now.todayDone === now.todayTotal && was.todayDone < was.todayTotal) {
-      toast({ kind: "day", title: "Everything done today", detail: `${now.todayTotal} of ${now.todayTotal} tasks. That's a full day.` });
+      toast({ kind: "day", title: "Everything done today", detail: `${now.todayTotal} of ${now.todayTotal} tasks. That's a full day.`, share: "day" });
+      // A moment after the confetti, open today's report to download or share.
+      const date = todayKey();
+      setTimeout(() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: { kind: "day", date, celebrate: true } })), 2600);
       big = true;
     }
 
     if (was.todayMinutes === 0 && now.todayMinutes > 0) {
       const s = streak(data, now.today);
       if (STREAK_MILESTONES.includes(s)) {
-        toast({ kind: "streak", title: `${s}-day streak!`, detail: "You've practiced every day. Keep the chain going." });
+        toast({ kind: "streak", title: `${s}-day streak!`, detail: "You've practiced every day. Keep the chain going.", share: "streak" });
         big = true;
       } else if (s >= 2) {
         toast({ kind: "streak", title: `Streak: ${s} days`, detail: "Today counts — the streak lives on." });
@@ -147,7 +165,7 @@ export function useCelebrations(data: PracticeLogData, ready: boolean) {
 
     const hit = HOUR_MILESTONES.find((h) => was.hours < h && now.hours >= h);
     if (hit) {
-      toast({ kind: "hours", title: `${hit} hour${hit === 1 ? "" : "s"} of practice!`, detail: "All logged here, one session at a time." });
+      toast({ kind: "hours", title: `${hit} hour${hit === 1 ? "" : "s"} of practice!`, detail: "All logged here, one session at a time.", share: "hours" });
       big = true;
     }
 
@@ -238,10 +256,19 @@ export default function Celebrations() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white" style={{ background: TOAST_COLOR[t.kind] }}>
               {t.kind === "streak" ? <FlameIcon className="h-5 w-5" /> : t.kind === "routine" || t.kind === "day" ? <CheckIcon className="h-5 w-5" /> : <StarIcon className="h-5 w-5" filled />}
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="font-extrabold">{t.title}</div>
               {t.detail && <div className="text-sm text-muted">{t.detail}</div>}
             </div>
+            {t.share && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: t.share === "day" ? { kind: "day", date: todayKey() } : t.share }))}
+                className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground hover:bg-accent-hover"
+              >
+                Share
+              </button>
+            )}
           </div>
         ))}
       </div>

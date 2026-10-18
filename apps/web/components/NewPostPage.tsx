@@ -79,7 +79,7 @@ export default function NewPostPage({ setlistId }: { setlistId?: string }) {
   const blocked = !isAuthenticated || !profile?.isPublic;
 
   return (
-    <PageShell>
+    <PageShell fullWidth={false}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <BackButton onClick={() => router.back()} className="mb-2" />

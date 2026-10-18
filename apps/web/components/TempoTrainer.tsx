@@ -46,6 +46,7 @@ import {
 } from "@/lib/tempoTrainerEngine";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 // A silent stretch this long would make the tool pointless (you'd just be practicing with the
 // click on) at one end, and impractical to configure at the other — the same "generous but
@@ -113,6 +114,8 @@ export default function TempoTrainer() {
     getTempoTrainerServerSnapshot,
   );
   const { running, phase, currentBeat, currentSub } = engineState;
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/tempo-trainer", running);
 
   useEffect(() => {
     updateTempoTrainerSettings({

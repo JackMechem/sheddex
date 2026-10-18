@@ -1,0 +1,621 @@
+/**
+ * The Help page's topics (`components/help/HelpPage.tsx`): every tool and the main features of the
+ * site, each with what it's for, how to use it in a few steps, its main features and a few tips.
+ * `shot` names the screenshots in `public/help/<shot>-{light,dark}.png` (retake them with the
+ * script described in PROJECT.md when a page changes a lot). Keep the words short — the pictures do
+ * the explaining.
+ */
+
+export type HelpStep = { title: string; text: string };
+
+/** One option of a tool, explained. */
+export type HelpOption = { name: string; text: string };
+
+export type HelpTopic = {
+  id: string;
+  title: string;
+  group: string;
+  /** The page it's about (shown as "Open …"), if it's a page. */
+  href?: string;
+  /** One line: what it's for. */
+  tagline: string;
+  purpose: string;
+  steps: HelpStep[];
+  features: string[];
+  /** Each option and what it does. */
+  options?: HelpOption[];
+  tips?: string[];
+  shot?: string;
+};
+
+export const HELP_GROUPS = ["Getting started", "Your library", "Play along", "Time & rhythm", "Ear training", "On your instrument", "Drums", "Practice tools"];
+
+export const HELP_TOPICS: HelpTopic[] = [
+  // ---------------------------------------------------------------- getting started
+  {
+    id: "dashboard",
+    title: "Dashboard",
+    group: "Getting started",
+    href: "/dashboard",
+    tagline: "Your starting place every time you open sheddex.",
+    purpose: "Today's practice at a glance, where you left off, and every tool one click away.",
+    steps: [
+      { title: "Check today", text: "Your goal ring, streak, this week and total hours sit at the top." },
+      { title: "Do what's on today", text: "Start a routine or tick off today's tasks right from the dashboard." },
+      { title: "Pick up where you left off", text: "The tools, tunes and charts you used last are one click away." },
+      { title: "Find anything", text: "Search tools and your tunes from the box at the top." },
+    ],
+    features: ["Today's goal, streak, week and hours", "On today: routines and tasks", "The last 18 weeks of practice", "Tune of the day", "Favorites and recent tools", "Your library counts and setlists"],
+    tips: ["Press / anywhere to search every tool.", "Star tools in the sidebar to pin them as Favorites."],
+    shot: "dashboard",
+  },
+  {
+    id: "shed-log",
+    title: "Shed Log",
+    group: "Getting started",
+    href: "/shed-log",
+    tagline: "Your practice calendar: plan it, do it, watch it add up.",
+    purpose: "Plan routines, check off tasks, time your practice and keep a streak going. Needs an account.",
+    steps: [
+      { title: "Make a routine", text: "Press +, pick Routine, add tasks with minutes and choose the days it repeats." },
+      { title: "Practice", text: "Tick a task to log its minutes, or press Start to run the routine on the timer." },
+      { title: "Let the day timer run", text: "It counts the whole day — routines, tasks and any tool you use." },
+      { title: "Watch it fill in", text: "Hit your daily goal to keep the streak; done days go green, missed ones red." },
+    ],
+    features: [
+      "Repeating routines with tasks, subtasks and times",
+      "One-off tasks on any day",
+      "A day timer and a daily goal",
+      "Log time by hand if you forgot the timer",
+      "Notes, attachments and recordings on every day",
+      "Streaks, celebrations and shareable progress cards",
+      "Month and week calendars",
+    ],
+    options: [
+      { name: "Routine", text: "A named list of tasks that repeats: every day, on chosen weekdays, every few days or monthly. Pick an icon and color, an optional start time, and when it ends (never, or on a date)." },
+      { name: "Tasks and subtasks", text: "Each task has minutes, an optional time of day, notes and attachments. Subtasks are a checklist inside a task. You can also add a task to a routine for just one day." },
+      { name: "Day tasks", text: "One-off tasks on a single day, not part of any routine. Add them from the Tasks card or the + menu." },
+      { name: "Day timer", text: "A stopwatch for the whole day. It starts when you start a routine and keeps running after; its total is your practice time for the day." },
+      { name: "Daily goal", text: "How many minutes count as a full day. Hitting it keeps your streak, fills the ring and turns the day green." },
+      { name: "Log time", text: "Forgot the timer? Add minutes to the day or to one task by hand. Checking a task off logs its planned minutes; unchecking takes them back." },
+      { name: "Count time in tools", text: "On by default: while a tool is actually running (a metronome playing, a round going), that time is added to today." },
+      { name: "Sounds", text: "Plays a rising note as you check tasks off and a fanfare when you finish a routine or hit your goal." },
+      { name: "Attachments and recordings", text: "Link tunes, setlists, chord charts or tools to a day, routine or task, and record clips to a day or routine." },
+      { name: "Share", text: "Share a routine by link or post it to Community; share a progress card (streak, hours or days, for a week, month or year)." },
+    ],
+    tips: ["The ? next to the Shed Log title replays its quick tour.", "Share a routine by link, or post it to Community, from the routine's page."],
+    shot: "shed-log",
+  },
+  {
+    id: "practice-timer",
+    title: "Practice Timer",
+    group: "Practice tools",
+    href: "/practice-timer",
+    tagline: "Timers back to back, or a Pomodoro.",
+    purpose: "Chain named timers — scales, a break, a tune — and run them without watching the clock.",
+    steps: [
+      { title: "Make a session", text: "Open New session, add steps with names and minutes, or pick Pomodoro." },
+      { title: "Start it", text: "Each step counts down and the next one starts with a chime." },
+      { title: "Keep an eye on it anywhere", text: "The sidebar shows what's running, with pause and skip." },
+    ],
+    features: ["Saved sessions", "Pomodoro with named work cycles", "Alarm mode that waits for you", "Keeps running across pages and reloads"],
+    options: [
+      { name: "New session", text: "Opens the editor. Custom: a list of steps, each with a name and minutes, run back to back. Pomodoro: work, short break and long break lengths." },
+      { name: "Pomodoro cycles", text: "Set number stops after the work cycles you choose; Keep going runs until you stop it. Long break every N cycles sets when the longer break comes. Each work cycle can have its own name." },
+      { name: "Sound", text: "Which tone plays when a step ends, and whether it plays at all." },
+      { name: "Alarm mode", text: "Instead of moving on by itself, the timer waits and keeps ringing until you press Continue." },
+      { name: "Full-screen alert", text: "With alarm mode, shows a full-screen Continue / Stop wherever you are on the site." },
+    ],
+    tips: ["Time on the Practice Timer counts in your Shed Log too."],
+    shot: "practice-timer",
+  },
+  {
+    id: "split-screen",
+    title: "Split screen",
+    group: "Getting started",
+    tagline: "Two tools side by side.",
+    purpose: "Run a metronome next to a chord chart, or a tuner above an ear trainer, on one screen.",
+    steps: [
+      { title: "Right-click a page in the sidebar", text: "Any tool, the Dashboard, the Shed Log or your library." },
+      { title: "Pick a direction", text: "Open in split screen side by side, or top and bottom." },
+      { title: "Resize and close", text: "Drag the line between panes; close a pane with its ×." },
+    ],
+    features: ["As many panes as you like", "Drag to resize", "The address bar follows the pane you're using", "Desktop only"],
+    tips: ["Close panes down to one to go back to the normal page."],
+  },
+  {
+    id: "account",
+    title: "Account, sync & themes",
+    group: "Getting started",
+    href: "/account",
+    shot: "account",
+    tagline: "Optional — but it keeps everything everywhere.",
+    purpose: "Every tool works without an account. With one, your settings, tunes, charts, recordings and Shed Log follow you to every device.",
+    steps: [
+      { title: "Sign in or sign up", text: "From the bottom of the sidebar — email and password, or Google." },
+      { title: "Pick a username", text: "It's how others find you in Community." },
+      { title: "Make it yours", text: "Choose from 30 themes in the sidebar's ⋮ menu → Theme." },
+    ],
+    features: ["Sync across devices", "A public profile (optional)", "Recordings saved to your account", "30 color themes"],
+  },
+
+  // ---------------------------------------------------------------- your library
+  {
+    id: "community",
+    title: "Community",
+    group: "Your library",
+    href: "/community",
+    tagline: "Find musicians and what they're working on.",
+    purpose: "Search public profiles, follow people, and browse posted tunes, setlists, routines and progress.",
+    steps: [
+      { title: "Search", text: "Find people by username and see the tunes they know." },
+      { title: "Browse posts", text: "Tunes, setlists, Shed Log routines and milestone cards." },
+      { title: "Take what helps", text: "Add a tune to your lists, save a setlist, or add a routine to your Shed Log." },
+    ],
+    features: ["Public profiles", "Follow people", "Like and share posts", "Post tunes, setlists, routines and progress cards"],
+    options: [
+      { name: "Search", text: "Finds people by username and posts by title or tune name." },
+      { name: "Liked, Following, My posts", text: "Posts you've liked, people you follow and who follows you, and everything you've posted." },
+      { name: "Posting", text: "Post tunes, a setlist (kept in sync with it), a Shed Log routine or a progress card. Needs a public profile." },
+    ],
+    tips: ["Posting needs a public profile (Account → Public Profile)."],
+    shot: "community",
+  },
+  {
+    id: "tunes",
+    title: "Tunes & setlists",
+    group: "Your library",
+    href: "/tunes",
+    tagline: "Every tune you know, and the ones you're learning.",
+    purpose: "Keep your repertoire with keys, tempos, notes and linked charts, and put tunes in order for a gig.",
+    steps: [
+      { title: "Add tunes", text: "Pick from 600+ jazz standards or add your own." },
+      { title: "Open a tune", text: "See its chart, the keys you know it in, notes and recordings." },
+      { title: "Make a setlist", text: "Order tunes for a gig, with a key and tempo for each." },
+    ],
+    features: ["Tunes I Know and Tunes to Learn", "Keys, tempos and notes per tune", "Setlists with drag to reorder", "Read all a setlist's charts in a row", "Share setlists by link"],
+    options: [
+      { name: "Tunes I Know / Tunes to Learn", text: "Two lists: what you can play now, and what you're working on." },
+      { name: "A tune's page", text: "The chart linked to it (transposable), the keys you know it in, tempos, notes, recordings and the song to play along with." },
+      { name: "Setlists", text: "Tunes in order, each with its own key and tempo for that set. Drag to reorder, share by link, or read all the charts in a row." },
+    ],
+    shot: "tunes",
+  },
+  {
+    id: "chord-charts",
+    title: "Chord Charts",
+    group: "Your library",
+    href: "/chord-charts",
+    tagline: "Read, build and transpose charts.",
+    purpose: "Import iReal-style playlists or build your own charts, then read them full screen in any key.",
+    steps: [
+      { title: "Import or build", text: "Paste a playlist link, or make a chart with the on-screen chord keypad." },
+      { title: "Read it", text: "Open a chart; pick a key to transpose it; go full screen." },
+      { title: "Organize", text: "Keep charts in playlists and link them to your tunes." },
+    ],
+    features: ["Import playlists", "Chart builder with sections, repeats and codas", "Transpose to any key", "Playlists", "Linked to tunes and setlists"],
+    options: [
+      { name: "Import", text: "Paste a playlist link to add its charts. Update charts you already have replaces older copies." },
+      { name: "New chart", text: "Type chords bar by bar with a keypad for symbols; add sections, repeats, endings and codas." },
+      { name: "Key", text: "Shows the chart in any key without changing the saved one." },
+      { name: "Playlists", text: "Charts live once in your library; playlists just list them, so a chart can be in several." },
+    ],
+    shot: "chord-charts",
+  },
+  {
+    id: "recordings",
+    title: "Recordings",
+    group: "Your library",
+    href: "/recordings",
+    shot: "recordings",
+    tagline: "Every take, linked to a tune.",
+    purpose: "Listen back to your takes, line them up over the real song, and keep notes on each.",
+    steps: [
+      { title: "Record", text: "Use the Recorder, or Record a clip on any Shed Log day." },
+      { title: "Link it", text: "Attach a take to a tune or a Shed Log routine." },
+      { title: "Listen back", text: "Play it on its own or over the tune's song with a mixer." },
+    ],
+    features: ["Saved to your account", "Linked to tunes and Shed Log days", "Play over the original song", "Notes per take"],
+  },
+
+  // ---------------------------------------------------------------- tools
+  {
+    id: "jam-practice",
+    title: "Jam Practice",
+    group: "Play along",
+    href: "/jam-practice",
+    tagline: "Pick a tune at random and get counted in.",
+    purpose: "Keeps your repertoire fresh: a random tune, key and tempo from your list, with a count-off.",
+    steps: [
+      { title: "Build your list", text: "Add tunes, or use the built-in jazz standards." },
+      { title: "Shuffle", text: "Get a tune, a key and a tempo." },
+      { title: "Play", text: "A count-off starts you at the right tempo." },
+    ],
+    features: ["Your tunes or 600+ standards", "Random key and tempo", "Count-off", "Keep going one after another"],
+    options: [
+      { name: "Tunes", text: "Your list of tunes to draw from — your own or the jazz standards. Each tune can have several tempos and keys; only the ones switched on can be picked." },
+      { name: "Count-off", text: "How many bars of clicks before you start, and whether beat one is accented." },
+      { name: "Keep metronome going", text: "Keeps clicking after the count-off so you play along with the time." },
+      { name: "Keep going", text: "Picks the next tune automatically when you're done with one." },
+    ],
+    shot: "jam-practice",
+  },
+  {
+    id: "bass-genius",
+    title: "Bass Genius",
+    group: "Play along",
+    href: "/bass-genius",
+    tagline: "A bass player to walk the changes with you.",
+    purpose: "An upright bass plays a walking line over any chart — with piano and drums if you like — written out as it plays.",
+    steps: [
+      { title: "Pick the changes", text: "Choose one of your charts, or type a progression." },
+      { title: "Set the band", text: "Tempo, feel, chords (piano or Rhodes) and drums." },
+      { title: "Play along", text: "Watch the bass line on the staff as it's played." },
+    ],
+    features: ["Walking or two-feel", "Bass lines in the style of transcriptions you add", "Comping piano or Rhodes", "A swinging drummer", "Mixer"],
+    options: [
+      { name: "Tune", text: "Play over one of your chord charts, or type chords (Dm7 G7 | Cmaj7) or numerals (ii V I) in any key. Key transposes the chart; How long sets the number of choruses or keep going; Count-in adds bars first." },
+      { name: "Bass player", text: "Computer walks a line from scratch. Your own players (and the built-in one) play from the transcriptions you add: Their phrases reuses their actual lines, Their style writes new lines the way they play." },
+      { name: "Feel", text: "Walking in 4 or a two feel (half notes). Only for the Computer." },
+      { name: "Touch", text: "How hard the bass is plucked — soft, medium or strong — which changes the sound, not just the volume." },
+      { name: "Swing", text: "How long the first eighth note of each pair is. Auto swings harder at slow tempos and straighter as it gets faster." },
+      { name: "Chords", text: "Off, piano or Rhodes. Comping plays varied rhythms; Held plays one chord per change, on the beat." },
+      { name: "Drums", text: "Off, just time (ride, hi-hat on 2 and 4), or with comping (snare, setups into sections). Drum settings has every detail of the swing and ride pattern." },
+      { name: "Mix", text: "Levels for bass, chords, drums, the click and the room sound." },
+    ],
+    shot: "bass-genius",
+  },
+  {
+    id: "note-trainer",
+    title: "Note Trainer",
+    group: "On your instrument",
+    href: "/note-trainer",
+    tagline: "Find notes on your instrument, fast.",
+    purpose: "Random notes in your instrument's range; in listen mode it hears you play and grades you.",
+    steps: [
+      { title: "Pick your instrument", text: "Its range sets which notes come up." },
+      { title: "Timed or Listen", text: "Timed shows notes on a clock; Listen grades what you play into the mic." },
+      { title: "Shed what's weak", text: "Struggles keeps score — drill just the notes you miss." },
+    ],
+    features: ["Timed and Listen modes", "Per-string drills for string players", "Struggles and history", "Count-down rings"],
+    options: [
+      { name: "Notes", text: "Your instrument, which sets the range of notes that can come up, and how sharps and flats are spelled." },
+      { name: "Timed / Listen", text: "Timed shows a note and moves on after a set time. Listen uses your microphone and grades what you play as correct, close or wrong." },
+      { name: "Listen settings", text: "Max time to play each note, the time between notes, tuning tolerance (how many cents off still counts), how long the note must be held, and half credit after a wrong note." },
+      { name: "Drill every note", text: "Goes through every note in the range once; anything you miss comes back." },
+      { name: "Ignore octave", text: "Accepts the right note in any octave and drops the octave number from the display." },
+      { name: "Sound & display", text: "Play the note out loud, show the next note ahead, and click sound feedback during the countdown." },
+      { name: "Struggles", text: "Every note's results over time. Shed weak notes starts a run of just the ones you miss most; string players can shed one string." },
+      { name: "History", text: "Your times for full runs with the same settings, so you can see yourself getting faster." },
+    ],
+    shot: "note-trainer",
+  },
+  {
+    id: "scale-trainer",
+    title: "Scale Trainer",
+    group: "On your instrument",
+    href: "/scale-trainer",
+    tagline: "Random scales, graded note by note.",
+    purpose: "Any key, any mode from the pool you choose — play it into the mic and it follows you note by note.",
+    steps: [
+      { title: "Choose scales", text: "Major modes, melodic minor, pentatonics, symmetric scales…" },
+      { title: "Play", text: "In Listen mode each note lights up as you hit it." },
+      { title: "Drill", text: "Go through every scale in all 12 keys, or just your weak ones." },
+    ],
+    features: ["30+ scales and modes", "Listen mode with partial credit", "Drill every scale", "Struggles by key and mode"],
+    options: [
+      { name: "Scales", text: "Which scales and modes can come up — major modes, harmonic and melodic minor, pentatonics, blues and symmetric scales." },
+      { name: "Range", text: "The register the scales are played in." },
+      { name: "Timed / Listen", text: "Timed shows a scale for a set time. Listen follows you note by note through the mic, root to root." },
+      { name: "Partial credit", text: "Gives each note one retry: a fixed mistake counts as partial instead of failing the scale." },
+      { name: "Ignore repeated notes", text: "Playing the same note twice in a row isn't counted as a mistake." },
+      { name: "Drill every scale", text: "Every chosen scale in all 12 keys." },
+      { name: "Show scale notes", text: "Shows the notes of the scale while you play it." },
+      { name: "Struggles", text: "Which key-and-scale combinations give you trouble; Shed weak scales drills just those." },
+    ],
+    shot: "scale-trainer",
+  },
+  {
+    id: "interval-trainer",
+    title: "Interval Trainer",
+    group: "On your instrument",
+    href: "/interval-trainer",
+    tagline: "Play any interval from any note.",
+    purpose: "Builds the reflex of finding intervals on your instrument, up or down.",
+    steps: [
+      { title: "Pick intervals", text: "Choose which ones, and whether they go down too." },
+      { title: "Play them", text: "Listen mode grades the two notes you play." },
+      { title: "Chain them", text: "Continue from the last note for long interval runs." },
+    ],
+    features: ["All intervals in an octave", "Up and down", "Chained mode", "Struggles and drill"],
+    options: [
+      { name: "Intervals", text: "Which intervals can come up, from a minor 2nd to an octave, and whether they can go down as well as up." },
+      { name: "Range", text: "The register the starting notes come from." },
+      { name: "Timed / Listen", text: "Timed shows each interval for a set time. Listen grades the two notes you play into the mic." },
+      { name: "Continue from previous note", text: "Each interval starts on the note the last one ended on, so you keep moving around the instrument." },
+      { name: "Drill every interval", text: "Every chosen interval, in each direction, from all 12 notes." },
+      { name: "Show interval notes", text: "Shows both note names, not just the starting note and interval." },
+      { name: "Struggles", text: "Which intervals (and directions) you miss most; Shed weak intervals drills them." },
+    ],
+    shot: "interval-trainer",
+  },
+  {
+    id: "guess-the-interval",
+    title: "Guess the Interval",
+    group: "Ear training",
+    href: "/guess-the-interval",
+    tagline: "Hear it, name it.",
+    purpose: "Ear training for intervals, on real piano and Rhodes samples.",
+    steps: [
+      { title: "Listen", text: "An interval plays, melodic or harmonic." },
+      { title: "Pick", text: "Choose which interval it was." },
+      { title: "Level up", text: "Learn mode walks you through levels with stars to earn." },
+    ],
+    features: ["Practice and Learn modes", "Levels with stars", "Struggles and history", "Piano or Rhodes"],
+    options: [
+      { name: "Practice / Learn", text: "Practice plays rounds from the intervals you choose. Learn is a path of levels: pass a level with 80% to unlock the next and earn up to three stars." },
+      { name: "Intervals", text: "Which intervals can come up, and whether descending ones are included." },
+      { name: "Range", text: "The register the intervals are played in." },
+      { name: "Sound & display", text: "Melodic (one note then the other) or harmonic (together), piano or Rhodes, and whether to show the notes after you answer." },
+      { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every interval, and the countdown clicks." },
+      { name: "Struggles and History", text: "Which intervals you miss most, with a Shed weak intervals run, and your times for full runs." },
+    ],
+    shot: "guess-the-interval",
+  },
+  {
+    id: "guess-the-chord",
+    title: "Guess the Chord",
+    group: "Ear training",
+    href: "/guess-the-chord",
+    tagline: "Hear a chord, type its symbol.",
+    purpose: "From triads to altered dominants and slash chords — type what you hear, chart style.",
+    steps: [
+      { title: "Listen", text: "A chord plays, block or arpeggiated." },
+      { title: "Type it", text: "Use the keypad for symbols: -7, ^7, ø, °, alt…" },
+      { title: "See the answer", text: "Then work through Learn mode's levels." },
+    ],
+    features: ["33 chord qualities", "Slash chords", "Symbol keypad", "Learn mode levels"],
+    options: [
+      { name: "Practice / Learn", text: "Practice uses the chords you choose. Learn adds qualities level by level, from major and minor to extended chords." },
+      { name: "Chords", text: "Which chord qualities can come up, grouped as triads, sixths, sevenths, altered dominants, extensions and sus/add." },
+      { name: "Register", text: "How low or high the chords are played." },
+      { name: "Give the root", text: "Fills in the root for you, so you only name the quality. Off means you name the whole chord." },
+      { name: "Slash chords", text: "How often a different bass note is played under the chord, which you then type after a slash." },
+      { name: "Sound & display", text: "Block or arpeggiated, piano or Rhodes, and whether to show the notes after you answer." },
+      { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every chord." },
+    ],
+    shot: "guess-the-chord",
+  },
+  {
+    id: "guess-the-progression",
+    title: "Guess the Progression",
+    group: "Ear training",
+    href: "/guess-the-progression",
+    tagline: "Hear a progression, write it down.",
+    purpose: "Hear common jazz, pop, minor and blues progressions and write them as numerals or chord names.",
+    steps: [
+      { title: "Listen", text: "The key's tonic, then the progression." },
+      { title: "Write it", text: "Roman numerals (ii7 V7 I^7) or chord names." },
+      { title: "Check", text: "Each chord is graded on its own." },
+    ],
+    features: ["29 progressions", "Numerals or chord names", "Learn mode levels", "Per-chord grading"],
+    options: [
+      { name: "Answer with", text: "Roman numerals (ii7 V7 I^7) or chord names (Dm7 G7 Cmaj7)." },
+      { name: "Type chord qualities", text: "On, the whole chord is graded. Off, only the root (or numeral) and major vs. minor count." },
+      { name: "Progressions", text: "Which progressions can come up: jazz, pop and rock, minor, cadences and blues." },
+      { name: "Key", text: "A random key every round or one fixed key, and whether the key's tonic chord plays first so you know where home is." },
+      { name: "Sound", text: "Chord length, block or arpeggiated, piano or Rhodes." },
+      { name: "Timing", text: "Max time to answer, time between rounds, number of rounds or drill every progression." },
+      { name: "Practice / Learn", text: "Learn walks you through levels, starting from I–IV–V–I." },
+    ],
+    shot: "guess-the-progression",
+  },
+  {
+    id: "metronome",
+    title: "Metronome",
+    group: "Time & rhythm",
+    href: "/metronome",
+    tagline: "Any meter, any accent pattern.",
+    purpose: "A metronome that does odd meters, changing meters, subdivisions and accents properly.",
+    steps: [
+      { title: "Set the tempo", text: "Drag, type, or tap it in." },
+      { title: "Set the meter", text: "Time signature and subdivision from the chips under the beats." },
+      { title: "Shape the accents", text: "Tap a beat to cycle accent, normal or silent." },
+    ],
+    features: ["Odd and changing meters (structures)", "Subdivisions with their own accents", "Tempo by any note value", "5 click sounds", "Tap tempo"],
+    options: [
+      { name: "Tempo", text: "Drag the slider, use − and +, type it, or tap it in. The note above the number sets which note value the BPM counts (e.g. quarter = 120 in 6/8)." },
+      { name: "Time", text: "The time signature — any number of beats over any note value." },
+      { name: "Subdivision", text: "Clicks between the beats: eighths, triplets, sixteenths and more." },
+      { name: "Accents", text: "Tap a beat (or a subdivision) in the strip to cycle it between accent, normal and silent." },
+      { name: "One meter / Changing meters", text: "Changing meters lets you build sections (each with its own time signature, subdivision and accents) and put them in a form, like 2 bars of 11/8 then a bar of 12/8, looping." },
+      { name: "Sound", text: "Five click sounds and the volume." },
+    ],
+    tips: ["Space starts and stops it."],
+    shot: "metronome",
+  },
+  {
+    id: "random-metric-modulation",
+    title: "Polyrhythm Metric Modulation Metronome",
+    group: "Time & rhythm",
+    href: "/random-metric-modulation",
+    tagline: "A tempo that jumps by musical ratios.",
+    purpose: "Practice metric modulation: every few bars the tempo moves by a ratio like 3:2 or 4:3.",
+    steps: [
+      { title: "Pick ratios", text: "Choose which modulations can happen." },
+      { title: "Start", text: "See the next tempo coming before it lands." },
+      { title: "Hear the old pulse", text: "Optionally keep the previous tempo clicking alongside." },
+    ],
+    features: ["Ratios from 3:2 to 2:1", "Return-home mode", "Previous-tempo click", "Modulation log"],
+    options: [
+      { name: "Modulation", text: "Which ratios can happen (3:2, 4:3, 2:1…), how many bars between jumps, or Play until tempos realign so each jump lasts until the old and new tempos line up again." },
+      { name: "Return to original tempo", text: "Alternates between modulating away and coming back home instead of drifting." },
+      { name: "Avoid repeating", text: "Never uses the same ratio twice in a row." },
+      { name: "Previous tempo click", text: "A second click that keeps playing the tempo you just left, so you can hear the relationship." },
+      { name: "Meter & subdivision", text: "The time signature, subdivision and accents of the main click." },
+      { name: "Modulations", text: "A log of every jump in this run." },
+    ],
+    shot: "random-metric-modulation",
+  },
+  {
+    id: "tempo-trainer",
+    title: "Tempo Trainer",
+    group: "Time & rhythm",
+    href: "/tempo-trainer",
+    tagline: "The click drops out — can you hold it?",
+    purpose: "The metronome goes silent for a few bars at a time so you learn to keep time yourself.",
+    steps: [
+      { title: "Set the cycle", text: "Bars on, bars off." },
+      { title: "Play through the silence", text: "When the click comes back, you'll hear if you drifted." },
+    ],
+    features: ["Mute cycles", "Same meters and sounds as the Metronome"],
+    options: [
+      { name: "Mute cycle", text: "How many bars the click plays, then how many bars it goes silent." },
+      { name: "Time, Subdivision, Sections", text: "The same meter controls as the Metronome, including changing meters." },
+      { name: "Sound", text: "The click sound and volume." },
+    ],
+    shot: "tempo-trainer",
+  },
+  {
+    id: "tuner",
+    title: "Tuner",
+    group: "On your instrument",
+    href: "/tuner",
+    tagline: "Tune by mic or by ear.",
+    purpose: "A chromatic tuner that listens through your mic, plus reference tones to tune by ear.",
+    steps: [
+      { title: "Pick your instrument", text: "Its strings show as quick reference pitches." },
+      { title: "Start listening", text: "Play a note and center the needle." },
+      { title: "Or tap a note", text: "Hear it and tune to it by ear." },
+    ],
+    features: ["Mic tuning", "Reference tones", "Instrument tunings", "Adjustable A = 440"],
+    options: [
+      { name: "Instrument", text: "Sets the reference pitches shown for each string or the instrument's usual notes." },
+      { name: "Input", text: "Which microphone to listen to." },
+      { name: "Reference & tone", text: "A4 = 440 Hz or another reference, a tuning offset in cents, and the sound and octave of the reference tone." },
+    ],
+    shot: "tuner",
+  },
+  {
+    id: "slow-downer",
+    title: "Slow Downer",
+    group: "Play along",
+    href: "/slow-downer",
+    tagline: "Slow it down, keep the pitch.",
+    purpose: "Learn solos and tricky passages: slow a song down without changing its pitch and loop a section.",
+    steps: [
+      { title: "Load a song", text: "Any audio file from your device." },
+      { title: "Set the speed", text: "Slower, without the pitch dropping." },
+      { title: "Loop it", text: "Drag a loop on the waveform; add markers with notes." },
+    ],
+    features: ["Speed without pitch change", "A–B loops", "Markers with notes", "Zoom and pan the waveform"],
+    options: [
+      { name: "Speed", text: "How fast it plays, from very slow to faster than normal." },
+      { name: "Keep original pitch", text: "On, slowing down keeps the pitch. Off, it drops like a slowed record." },
+      { name: "Loop", text: "Drag on the waveform to loop a section; it repeats until you clear it." },
+      { name: "Markers", text: "Named points with notes, to jump between sections." },
+      { name: "Saved files", text: "Files you've loaded stay in this browser to open again." },
+    ],
+    shot: "slow-downer",
+  },
+  {
+    id: "recorder",
+    title: "Recorder",
+    group: "Practice tools",
+    href: "/recorder",
+    shot: "recorder",
+    tagline: "Record a take, with a metronome if you like.",
+    purpose: "One take at a time, saved to your account and linked to a tune.",
+    steps: [
+      { title: "Set the metronome", text: "Optional — with a count-in." },
+      { title: "Record", text: "Press the big button; stop when you're done." },
+      { title: "Save it", text: "Name it, link a tune, add notes." },
+    ],
+    features: ["Optional metronome and count-in", "Auto gain and mono", "Play along with the tune's song", "Saved to your account"],
+    options: [
+      { name: "Metronome", text: "On or off, with the full Metronome's tempo, meter, subdivision and accents." },
+      { name: "Count-in", text: "How many bars of click before the take starts." },
+      { name: "Auto gain", text: "Lets the browser even out your level. Off records exactly what the mic hears." },
+      { name: "Mono", text: "Records one channel — left, right or both mixed — for interfaces with a single mic on one side." },
+      { name: "Play the song", text: "When recording for a tune with a song uploaded, plays the song along with you, from a start point and at a volume you choose." },
+    ],
+    tips: ["Wear headphones so the click isn't in the take."],
+  },
+  {
+    id: "random-sticking-warmup",
+    title: "Random Sticking Warmup",
+    group: "Drums",
+    href: "/random-sticking-warmup",
+    tagline: "A fresh sticking every time.",
+    purpose: "A random sticking pattern paired with a roll, written out and counted in, for warming up.",
+    steps: [
+      { title: "Pick a roll type", text: "Single strokes, double strokes, triplets — or random." },
+      { title: "Start", text: "Read the sticking as it plays; the next one is shown below." },
+    ],
+    features: ["Written-out sticking", "Repeats and auto-advance", "Accent the beats", "A click per stroke or per hand"],
+    options: [
+      { name: "Roll type", text: "What follows the straight eighth notes: single strokes, double strokes, triplets — or random, from the types you pick." },
+      { name: "Triplet stickings", text: "Alternating (RLR) and/or broken double (RRL / LLR)." },
+      { name: "Repeat count", text: "How many times each pattern loops before it's done." },
+      { name: "New pattern when done", text: "Moves straight on to the next pattern (shown underneath) instead of stopping." },
+      { name: "Count-off bars", text: "Bars of click before the first pattern." },
+      { name: "Click", text: "A pulse on the beat, a click on every stroke, or a different pitch for each hand." },
+    ],
+    shot: "random-sticking-warmup",
+  },
+  {
+    id: "drum-generator",
+    title: "Drum Generator",
+    group: "Play along",
+    href: "/drum-generator",
+    tagline: "A drummer for any groove.",
+    purpose: "Jazz and Latin American grooves on a real kit, written out as they play — to play along with or learn.",
+    steps: [
+      { title: "Pick a style", text: "Swing, bossa, samba, mambo, songo, merengue, tango and more." },
+      { title: "Shape it", text: "Clave direction, fills, variation, the instruments it plays." },
+      { title: "Play along", text: "Follow the notation as it plays; mix each drum." },
+    ],
+    features: ["30+ styles", "Notation as it plays", "Clave and fill options", "A fader per drum"],
+    options: [
+      { name: "Style", text: "Grooves grouped by country: swing, shuffle and waltz; bossa, samba, baião; mambo, songo, son; merengue; calypso; tango and more." },
+      { name: "Timekeeping", text: "What the right hand plays: the style's own instrument, or always hi-hat, ride, bell or cowbell, or Automatic to move around." },
+      { name: "Cross-stick and woodblock", text: "Play the style's own part, a clave (son, rumba, bossa, 6/8), or nothing." },
+      { name: "Clave direction", text: "3-2 or 2-3, when a two-bar clave is in play." },
+      { name: "Fills", text: "How often a fill leads into the next phrase." },
+      { name: "Variation and human feel", text: "How much the groove changes bar to bar, and how loose the timing and dynamics are." },
+      { name: "Mix", text: "A fader for each part of the kit, and the room sound." },
+    ],
+    shot: "drum-generator",
+  },
+  {
+    id: "syncopation",
+    title: "Syncopation",
+    group: "Drums",
+    href: "/syncopation",
+    tagline: "Endless snare reading exercises.",
+    purpose: "Random 16-bar reading exercises over a steady foot or hi-hat pattern.",
+    steps: [
+      { title: "Pick rhythms", text: "Quarters, eighths, sixteenths, triplets." },
+      { title: "Pick what's underneath", text: "Bass drum, hi-hat foot, or a hand hi-hat." },
+      { title: "Read and play", text: "Follow the lit notes; a new exercise follows." },
+    ],
+    features: ["Choose the rhythms", "Snare or snare + bass", "Repeat or new lines", "Hear the pattern or just the feet"],
+    options: [
+      { name: "Rhythms", text: "Which figures can appear — quarters, eighths, sixteenths, triplets — and whether rests are included." },
+      { name: "Lines", text: "A new bar every bar, a two-bar pattern played twice, or one bar played four times." },
+      { name: "Played on", text: "Snare only, or each note split between snare and bass drum." },
+      { name: "Underneath", text: "What keeps time while you read: bass drum, hi-hat foot, both, a hand hi-hat, or nothing." },
+      { name: "Playback", text: "Hear the pattern or just the part underneath, a hi-hat click, a count-in, and what happens after 16 bars (new exercise, again, or stop)." },
+    ],
+    shot: "syncopation",
+  },
+];
+
+export function topicById(id: string | null | undefined): HelpTopic {
+  return HELP_TOPICS.find((t) => t.id === id) ?? HELP_TOPICS[0];
+}
+
+/** The topic for a page (by its path), if there is one. */
+export function topicForHref(href: string): HelpTopic | undefined {
+  return HELP_TOPICS.find((t) => t.href === href);
+}

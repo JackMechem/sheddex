@@ -2673,7 +2673,7 @@ every family/rests/line combination (every bar fills 48 ticks, only enabled fami
 off), `tsc`, `eslint`, `next build`, and in nix Chromium (all ostinatos, line modes, playback
 lighting the notes, 390 px, no errors). **Not heard.** Mobile: listed (placeholder screen).
 
-### Practice Log (2026-10-17, web)
+### Practice Log — now the Shed Log (2026-10-17, web)
 
 `/practice-log` (Practice; `components/PracticeLog.tsx`, `components/practicelog/*`): a practice
 calendar. Data is pure in `packages/core/practiceLog.ts` (shim `lib/practiceLog.ts`) and stored as
@@ -2752,6 +2752,560 @@ Verified in nix Chromium at 2000×1300 dark and 390 wide (seeded a week of histo
 checking tasks (streak-milestone, routine-complete and goal toasts with confetti), the + flyout,
 the task dialog, week view with a day task, no overflow, no console errors; `tsc`, `eslint`,
 `next build`. Sounds not heard.
+
+**Sharing routines and progress (same day):**
+- **Routine links**: `packages/convex/routines.ts` (`share` — one row per routine in the new
+  `sharedRoutines` table, upserted —, `unshare`, `shareFor`, `getShared` open to anyone). The link
+  is `/routine/<id>` (`components/practicelog/SharedRoutinePage.tsx`) and always shows the routine
+  as it is now (`lib/routines.ts`'s `liveRoutine` reads the owner's `jam-practice-practice-log`
+  blob), the stored snapshot only if it was deleted. "Add to my Practice Log" (`AddRoutineButton`,
+  works signed out) copies it with new ids starting today (`routineFromPublic`) — tunes / setlists /
+  charts attached to it were the sharer's, so they become a "With: …" line in the notes; tool
+  attachments stay. Shared shape: `PublicRoutine` (`toPublicRoutine` / `cleanPublicRoutine` — no
+  ids, no dates, attachments as names).
+- **Community posts**: `communityTunes.kind` now also `"routine"` / `"milestone"`, with
+  `payload` (a `PublicRoutine` or a `ProgressCard`, re-read defensively by `payloadOf`) and
+  `routineId` (a routine post shows the routine live, like setlist posts). `tunes` is empty for
+  both. `postForRoutine` finds your post of a routine. Feed cards show a Routine / Milestone tag and
+  the first tasks or the card; the post page shows the routine (+ Add to my Practice Log) or the
+  card. The routine page has **Share** (`RoutineShareDialog`: make / share / stop sharing the link,
+  post with a caption). The mobile app's post type accepts the new kinds but shows them as plain
+  posts (no routine/card rendering there yet).
+- **Progress cards** (`ProgressCard.tsx`): a 1200×630 image drawn on a canvas — the same drawing
+  is the on-page preview (`ProgressCardView`) and the PNG (`progressCardFile`). Always dark: the
+  wordmark, @username and date, a headline (flame + N-day streak / N hours practiced / N days
+  practiced in the past year), three stats (best streak, total hours, days in the last year), and
+  53 weeks of days as a commit-graph grid (levels 0–4 from minutes vs the daily goal, `dayLevel`;
+  GitHub's greens), with a Less–More key. Data: `progressCard(data, today, kind)` — `levels` is a
+  string of digits, small enough to post. `ProgressShareDialog`: Streak / Hours / Year, Share image
+  (`navigator.share` with the file, else copy the image, else download), Download, Post to
+  Community with a caption (needs a public profile). Opened from **Share progress** in the header,
+  the share buttons on the streak and lifetime cards, and a **Share** button on streak-milestone
+  and hour-milestone toasts (`SHARE_PROGRESS_EVENT`).
+- Account deletion deletes `sharedRoutines`. Pushed to the **dev** Convex deployment (one new
+  table, `communityTunes` fields optional).
+Verified: a logic script (no ids in a shared routine, junk JSON clamped, copying keeps tools and
+notes the rest, card levels), signed-out Convex calls (`getShared` of a bad id → null, `share` and
+posting refused), `tsc` (web, mobile), `eslint`, `next build`, and in nix Chromium: the three
+cards with a seeded year of practice, the share dialogs signed out, a bad `/routine/` link.
+**Not verified:** anything signed in — making a link and opening it, posting a routine or a card,
+how the posts look in the feed — and the image share sheet on a phone.
+
+**Card ranges and routine icons (same day):** progress cards have a **Week / Month / Year**
+range beside the card type (Streak / Hours / **Days**, which replaced "Year"). `ProgressCard` gained
+`range`, `start`, `rangeHours`, `rangeDays` and per-day `mins` for week/month (`progressCard(…,
+range)`, `cardStart`; cards posted before ranges read as year cards). Week = seven big day squares
+with each day's minutes; Month = the calendar month as day squares with the date (and minutes when
+there's room); Year = the 53-week graph. Hours and Days headlines say "this week" / "this month" /
+"in the past year" (a year Hours card is lifetime hours). **Routine icons:** `Routine.icon` (id,
+default "note"; `PublicRoutine` carries it) picked in the editor's Icon card from
+`components/practicelog/RoutineIcon.tsx`'s `ROUTINE_ICONS` (27: instruments, practice kinds,
+flame/star/heart, morning/evening; a few drawn there, the rest from `tools.tsx`). `RoutineIcon` is
+the icon in a circle of the routine's color, shown on the day card, month chips, week blocks, the
+"Add … to this day" menu (`ContextMenu`'s `MenuItem` gained an optional `icon`), the routines
+list, the routine page, the editor, shared links and posts.
+
+**Missed days and the site built around practice (same day):**
+- **Missed**: `isMissed` — a past day with a routine left unfinished (not skipped, not before the
+  routine was created) shows red with an X in the month view, its chips get a red X, the week
+  view's date goes red ("Missed"), the day card says "Missed". A fully done day stays green.
+- **App-wide** (`components/practicelog/PracticeLogGlobal.tsx`, mounted in `AppShell` around
+  every app page, tiling too): the only place that drains the timer queue, runs
+  `useCelebrations` (so the goal confetti / streak toasts happen on whatever page you're on) and
+  hosts "Share your progress" (opened via `SHARE_PROGRESS_EVENT` from anywhere). The Practice Log
+  page no longer does these itself. `usePracticeLog`'s freshest value is now module-level, shared
+  by every instance (sidebar, dashboard, page, global), so edits from different components can't
+  overwrite each other.
+- **Time in tools counts** (`lib/toolTime.ts`, `useToolTimeTracker`): on a tool page in a visible
+  tab, time accumulates until 15 min with no input; it's queued (`queueLogEntry`, the timer's
+  queue) each minute and on leaving/hiding, segment id `tool:<href>`; `applyTimerEntries` merges it
+  into one `TimerEntry` (with `tool`) per tool per sitting (30 min). Not counted: Dashboard,
+  Community, Tunes, Chord Charts library, the Practice Log and the Practice Timer (logs itself);
+  reading a chart (`/chord-charts/view`, `/setlist-charts`) counts as Chord Charts. Pref
+  `trackTools` (default on). The Practice Log header's sliders button opens a menu: Sounds on/off,
+  Count time in tools on/off. The day panel's "Timed practice" lists tool time with each tool's
+  icon. In tiling mode the tool counted is the one the URL was on when the pane opened.
+- **Sidebar**: `StreakBadge` by the username (and by "Sign in" when signed out — the log works
+  without an account; under the avatar when the sidebar's collapsed): a flame pill with the streak
+  (gradient and flickering once you've practiced today, pulsing orange when the streak's at risk)
+  and a tiny ring for today's goal; opens the Practice Log.
+- **Dashboard** (`Home.tsx`): `TodayPractice` comes first — "Today's practice" with the Momentum
+  cards (goal, streak, week, hours; share buttons), "On today" (routines with progress bars and
+  Start / Continue on the timer, the day's tasks to tick off with the burst, quick-add) and "Your
+  practice" (the last 18 weeks as a grid of days, each linking to that day). The rest of the
+  dashboard follows.
+- **Landing page**: hero now "Practice every day. Watch it add up." with copy about streaks and
+  goals; the setlist float card became a streak card; a new **Practice Log** section (nav link)
+  with a routine demo you can tick off for real (`components/landing/PracticeLogPreview.tsx`:
+  burst, rising notes, goal ring, streak pill, then the completion toast + confetti via
+  `celebrateNow`) and a progress card from a made-up year. The final CTA mentions starting a
+  streak. **The landing screenshots (`public/landing/v2/`) still show the old dashboard** — retake
+  them (into a new folder, see that section) once the new dashboard has real-looking data.
+Verified in nix Chromium (signed out): missed days red/X in month and week; the dashboard with a
+seeded history (cards, agenda, heat grid, the sidebar badge with the goal ring), ticking a task
+there (streak toast fired from the dashboard), 12 s on the Metronome logged as a Metronome entry on
+today; the landing page at 1440 (hero, the new section, ticking the demo → confetti and toast) and
+390 wide with no overflow; no console errors. `tsc` (web, mobile), `eslint`, `next build`.
+
+**Desktop layout and the day timer (same day):** on desktop the Practice Log is exactly the window's
+height — the day panel is on the **left** and scrolls on its own, the calendar is on the right and
+fills the rest (month cells shrink to fit, `lg:min-h-0`); the page only scrolls below ~28rem of
+room. **Day timer** (`lib/dayStopwatch.ts`, `components/practicelog/DayTimer.tsx`): a stopwatch
+for the whole day, separate from the routine/task timer — Start/Pause on the day panel (today) and
+the dashboard; `startRoutine` / `startDayTasks` start it when it isn't running (for today), and it
+keeps going when they stop. A module kept in localStorage (`jam-practice-day-stopwatch`), so it
+survives pages and reloads; it hands its time to the log every 30 s, on pause and when the tab
+hides (`DAY_STOPWATCH_ID` entries → `DayLog.stopwatchMs`), and stops itself at midnight.
+`minutesOn` is now max(day timer, timed practice — routine/task timer, Practice Timer sessions,
+tool time) + planned minutes of tasks checked by hand + minutes logged by hand, so the overlap is
+never counted twice; it takes an optional live (not yet handed over) amount, used by the goal ring,
+the day panel header and the sidebar badge, which also shows the running day timer's clock.
+Verified in nix Chromium: Start routine started the day timer, it kept running after the routine
+was stopped, Pause put 6.3 s on the day next to the task's 3 s; the dashboard and sidebar showed it.
+
+**Subtasks, today-only tasks, logging time, streaks need time (same day):**
+- `RoutineTask.subtasks` (checklist items, edited in the routine editor under each task; shared
+  links/posts carry their titles); ticked per day in `Occurrence.subDone`. One-off `DayTask`s have
+  `subtasks` with their own `done`. `components/practicelog/Subtasks.tsx` renders/edits them.
+- `Occurrence.extraTasks`: tasks added to a routine for just one day ("Add a task to this routine,
+  just for today" in its card; tagged "Today only", removable, can take subtasks). `tasksOf(routine,
+  occ)` = the routine's tasks + those — used by progress, scheduling, the week view, missed days and
+  the timer (`startRoutine(…, occ)`).
+- **Log time** (`LogTimeDialog.tsx`, the "Logged by hand" card): quick amounts or h/min, on the day
+  as a whole (`extraMinutes`) or on a task (its `spentMs`, optionally checking it off). A task
+  checked off without time shows "+ Log N min" to log its planned minutes in one tap.
+- `minutesOn` now counts **only logged time** (day timer vs. task/timer/tool time, whichever is
+  more, + minutes logged by hand) — checking a task off adds nothing by itself — so a day only
+  counts toward the streak (and the goal, week, totals) once time is logged for it.
+Verified: a logic script (checked-only day = 0 min and breaks the streak, extra tasks in progress
+and schedule, subtasks round-trip through sharing), and in nix Chromium: ticking a subtask, adding a
+today-only task, the streak staying 0 until time was logged then 1, "+ Log 10 min", the Log time
+dialog on a task; `eslint`, `next build`.
+
+**Check-offs log time; the day timer is the day's total; tool time only while running (same day):**
+- Checking a task off logs its planned minutes, unchecking takes them back (`setTaskDone` /
+  `setDayTaskDone`, which remember the amount in `autoMs`; a task that already has time gets
+  nothing more, and unchecking never removes timer / hand-logged time). Used by every checkbox and
+  "Check / Uncheck every task" (`setAllTasks`).
+- **The day timer is the day's whole practice time.** Everything that wasn't timed by it is added
+  onto `stopwatchMs`: check-offs (unless the day timer is running — then that time is already being
+  counted, so nothing is added), Log time and the ± 5 min buttons (`addDayTime`), and queued timer /
+  tool entries that happened while it wasn't running (each entry is stamped `covered` when queued —
+  `setDayTimerCoverage`, registered by `dayStopwatch.ts`). The day timer card shows that total
+  ("Practiced today · timer running/paused"); `minutesOn` = max(that, timed parts) + legacy
+  `extraMinutes`.
+- **Tool time counts only while a tool is running** (`lib/toolTime.ts` rewritten): each tool calls
+  `useToolActivity(href, running)` — Metronome, Polyrhythm, Tempo Trainer, Tuner (listening or a
+  tone playing), the four trainers + three ear-training tools (a round running), Bass Genius, Slow
+  Downer (playing), Recorder (count-in/recording), Random Sticking Warmup, Drum Generator,
+  Syncopation; Jam Practice while counting off or a tune is up (visible tab only). Running time
+  counts even in a background tab. Reading a chord chart no longer counts (nothing "runs").
+Verified in nix Chromium: an open-but-stopped Metronome logged nothing; 8 s running logged 8 s
+(entry + day timer); checking a 10-min task took the day timer to 10:08, unchecking back to 0:08.
+
+**Clear a day's time:** the day timer card has a trash button (any day with time) → confirm →
+`clearDayTime` drops the day timer, hand-logged minutes, task time (`spentMs`/`autoMs`), Practice
+Timer sessions and tool time; checked tasks stay checked. If the day timer is running for that day
+it's stopped without keeping its unsaved time (`discardDayTimer`). Checked in nix Chromium.
+
+**Stats as pills (Practice Log page):** the four stat cards are now `MomentumPills` (in
+`Momentum.tsx`) — big rounded pills right of the title: today's goal (ring, a check when met;
+click → choose the daily goal), the streak (flame; "keep it alive" when today has nothing yet;
+click → share), this week (mini bars, green on goal days), total hours (a conic ring toward the
+next milestone; click → share), then an eye button to hide them (hidden: a small streak pill with
+"Show stats"). Below 2xl, Share progress and Routines are icon-only and the greeting truncates so
+the header stays one row; it wraps on phones. The dashboard still uses the big `Momentum` cards.
+
+**All stats popup:** a **Stats** pill after the stat pills opens `StatsDialog.tsx` — the big
+`Momentum` cards (goal, streak, week, hours; the goal changeable, share buttons), the last 18 weeks
+as a grid of days (`HeatGrid`, now exported from `TodayPractice.tsx`), and this month, best streak,
+days practiced and the average practice day. Escape / × / outside click closes it.
+
+**Phone layout of the Practice Log header:** the title and the (smaller, icon-only) buttons share
+one line, the greeting sits under the title, and the stat pills are a single row you swipe
+sideways (snap scrolling, no scrollbar; they wrap from `sm` up). The calendar's arrows, month and
+Month/Week switch fit one line. `Momentum` cards stack in one column on phones (dashboard and the
+Stats popup), and the Stats popup uses less padding there.
+
+**Practice Log in the sidebar:** it's no longer listed under Practice; it's its own card right under
+Dashboard (`PracticeLogNavCard.tsx`, desktop sidebar and phone menu): the icon, "Practice Log",
+today's tasks done, the streak pill, a red dot while the day timer runs, and a bar of today's
+minutes against the goal (green once met). Collapsed sidebar: the icon in a goal ring. It still
+shows as an ordinary result when searching.
+
+**Dashboard card in the sidebar:** Dashboard is now a card too (`components/DashboardNavCard.tsx`):
+the home icon on a dark tile, "Dashboard", and today's date with a greeting — stacked above the
+Practice Log card as the two places to start; collapsed, just the icon tile.
+
+**Sidebar library tiles and a Tools heading:** Community, Tunes and Chord Charts are a row of three
+tiles (icon over label, highlighted when you're in that section) under the Dashboard and Practice
+Log cards — plain rows again while searching or collapsed; a **Tools** heading sits above Favorites
+and the tool categories. The account row no longer shows the email under the username.
+
+**Collapsed sidebar redesign:** 68 px wide; the sheddex icon on top (to the landing page), then a
+search button, then rounded groups of same-size (40 px) icon buttons — Start (Dashboard tile,
+Practice Log goal ring), your library, Favorites (accent tint), and one group per tool category
+(its name as the group's tooltip); the current page is accent-tinted. The groups scroll without a
+visible scrollbar. The sidebar options (⋮) and an Expand button moved to the bottom, above the
+picture, which carries the streak badge on its corner.
+
+**Renamed: the Practice Log is the Shed Log, and it's for account holders.** Shown everywhere as
+"Shed Log"; the route moved to `/shed-log` (`/shed-log/routines`, `/shed-log/routine`,
+`/shed-log/routine/edit`), with `/practice-log/*` permanently redirecting (`next.config.ts`).
+Internal names didn't change (`components/PracticeLog.tsx`, `components/practicelog/*`,
+`packages/core/practiceLog.ts`, the synced key `jam-practice-practice-log`). Signed out:
+`ShedLogGate` (wraps every `/shed-log` page and the tiling pane via `GatedPracticeLog`) shows what
+it is, the landing page's routine demo and sample card, and **Sign up free / Sign in**
+(`SignInButtons`, opening the app's `SignInModal` — now exported, with `initialFlow`); the sidebar
+card says "Sign in to start yours" (no bar or streak); the dashboard's section is a "Start your
+Shed Log" card with the same buttons; the streak badge by the account is hidden; a shared
+routine's "Add to my Shed Log" asks you to sign in; and nothing is timed, logged or celebrated
+(`PracticeLogGlobal` and the timer drain only run signed in).
+
+**Advanced layouts removed — split screen from the sidebar's right-click menu instead.** The
+"Advanced layouts" toggle (both sidebar option menus) and the panes' edge split buttons are gone.
+Right-clicking any page in the desktop sidebar (a tool, the Dashboard / Shed Log cards, the library
+tiles; expanded or collapsed — one `onContextMenu` on the nav, reading the link under the pointer)
+opens a menu: Open / Open in split screen, side by side / Open in split screen, top and bottom
+(`openInSplit` in `lib/useTilingLayout.ts`): the first split turns split screen on with the page
+you're on and the new one; later ones split the active pane. Closing panes down to one turns split
+screen off and goes back to the plain page (also any leftover single-pane layout). The tiling
+machinery itself (`TilingLayout`, resizing, focus, the URL following the active pane) is unchanged.
+
+**Shed Log tour:** `components/practicelog/ShedLogTour.tsx` — five slides, each a small picture
+(built from the app's own pieces) and one line: plan routines; check off or time it; one timer for
+the day; hit your goal, keep the streak; look back and share. Opens by itself the first time the
+Shed Log is visited on a device (`jam-practice-shed-log-tour-seen` in localStorage), and from the ?
+next to the title. Back / Next / dots, arrow keys, Escape. Checked in nix Chromium (with the
+sign-in gate briefly bypassed, then restored): opens on the first visit, not after a reload,
+reopens from ?, fits a phone.
+
+### Help page (2026-10-17, web)
+
+`/help[?topic=<id>]` (`components/help/HelpPage.tsx`, content in `apps/web/lib/helpContent.ts`):
+every tool and feature on the left, grouped (Getting started — Dashboard, Shed Log, Split screen,
+Account/sync/themes —, Your library, then the tool categories) with a search box; the picked topic on
+the right: what it's for, a screenshot, numbered "How it works" steps, feature chips, tips,
+"Open <tool>", Previous / Next (and "Take the quick tour" on the Shed Log topic). The two columns
+scroll on their own on desktop; phones show the list, then the topic with an "All topics" back
+button. The topic is kept in the address bar with `history.replaceState` (shareable, no history
+entries). Reached from a ? button next to the sidebar's ⋮ (desktop and the mobile menu) and Help
+in the collapsed sidebar's ⋮ menu; also in the split-screen registry.
+
+Screenshots: `public/help/v1/<shot>-{light,dark}.jpg` (1280×800, the content area only, swapped by
+the `.dark` class). Taken with the nix chromium + playwright-core setup against the dev server,
+signed out, with seeded demo data (a few tunes, two Shed Log routines with ~4 months of days) and
+the Shed Log gate bypassed for that one shot (then restored). The Recorder and pages with no
+signed-out content have no screenshot. When retaking them, use a new folder and bump `SHOTS` in
+`HelpPage.tsx` (Next caches optimized images by URL). Help text never names the source the
+Syncopation exercises were modelled on. Verified: `tsc`, `eslint`, `next build`, and in the
+browser at 1440 and 390 wide (sidebar links, topics, search, back button, the tour, no overflow,
+no errors).
+
+
+**Then (same day): options explained, first-visit intros, one title style, part-done days.**
+- Every tool topic in `lib/helpContent.ts` has `options` (`HelpOption`: name + what it does), shown
+  on the Help page as "The options" (and searchable); "What it does" is now "At a glance".
+- **First-visit intro** (`components/help/ToolIntro.tsx`): the topic's screenshot, tagline and
+  steps, "Full guide and every option" (→ `/help?topic=`) and "Got it". Opens by itself the first
+  time a page is visited on this device (seen ids in localStorage `jam-practice-intros-seen`, read
+  through `useSyncExternalStore`; server snapshot = seen, so nothing pops up during SSR) and from a
+  ? next to the title (`IntroButton`, `useIntro`). Wired into `ToolLayout` (every tool, found by
+  title → `NAV_LINKS` → `topicForHref`) and `PageHeader`'s new `helpTopic` prop (Community, Tunes,
+  Chord Charts, My recordings). The Shed Log keeps its own tour, which gained a "Full guide" link.
+  Shared bits (`ICON_BY_ID`, `TopicIcon`, `Shot`) moved to `components/help/helpParts.tsx`.
+- **Titles like the Shed Log's**: `ToolLayout`'s title is now `text-2xl sm:text-3xl font-extrabold`
+  in the foreground colour with the accent icon and the ? (truncates on phones); `PageHeader` shows
+  the topic's icon and ? too.
+- **Past days in the Shed Log** (`packages/core/practiceLog.ts`: `routineStatus`, `dayStatus`,
+  `DayStatus`): green + check when everything planned was done; **yellow + a dash** when some of
+  it was (e.g. one routine finished, another not started); red + X when nothing was checked off —
+  time logged without checking anything off is still red. Skipping counts as not doing it. Only
+  the routine's own start date limits which days count (not when it was created). Month cells, chips/dots,
+  the week view's date and the routine card ("Partly done" / "Missed") use it. `isMissed` now
+  means "nothing done".
+- Screenshots retaken into `public/help/v2/` (`SHOTS = "v2"` in `helpParts.tsx`); the intros are
+  pre-marked seen (`jam-practice-intros-seen` = `*`) while taking them.
+Verified: `tsc`, `eslint`, `next build`; in nix Chromium: the Metronome intro opens on the first
+visit and not after Got it + reload, reopens from ?, Full guide lands on `/help?topic=metronome`
+with the options section; Community's intro opens; titles at 1440 and 390 (truncated, no overflow);
+seeded past days came out done / partial (2 of 3) / partial (one skipped) / missed / partial (time
+only), no errors.
+
+
+**Daily report card (same day):** a fourth progress-card kind, `"day"` ("Day" in Share your
+progress, with ‹ date › instead of the range). `packages/core/practiceLog.ts`: `dayReport(data,
+key)` → `DayReport` {minutes, goal, items (every routine task and day task checked off, with its
+logged time or else its planned minutes, plus Practice Timer and tool time; up to `REPORT_ITEMS`
+= 12, then `more`), achievements (hit the daily goal / twice over, everything done, finished
+<routine>, a streak milestone that day, passed N hours in total, longest practice day yet, first
+day in the Shed Log)}; `dayReportCard` wraps it in a `ProgressCard` (`report`, streak as of that
+day); `cleanProgressCard` accepts and cleans it (posts are milestone posts as before; Convex dev
+redeployed). Drawn by `drawDayReport` in `ProgressCard.tsx` (same 1200×630 dark card: the day's
+time and goal bar, streak, achievements on the left; "What I worked on" with routine-coloured
+dots and times on the right). Opened from "Day report" under the day panel's date (any day up to
+today), and from Share on the goal-reached and everything-done toasts (`SHARE_PROGRESS_EVENT`'s
+detail can now be `{kind: "day", date}`). Verified in nix Chromium with a seeded day (routine
+tasks with logged time, a day task, Metronome time; achievements; the date arrows); no errors.
+
+**Day report made for Instagram (same day):** the day card is now a portrait 1080×1350 (4:5) image
+(`REPORT_W`/`REPORT_H`, `cardSize(card)`; drawn at 2× = 2160×2700) with nothing under 30px: date,
+the day's time huge, the goal bar ("Daily goal done"), streak and achievements as big pills that
+wrap side by side (max 3), then "N things done" with each item's title and time (no routine
+names), as many rows as fit plus "+ N more". The preview is `aspect-[4/5]`, max `max-w-sm`.
+Other cards are unchanged (1200×630). **Auto popup:** finishing every task for today (the
+"Everything done today" moment in `useCelebrations`) opens the share dialog ~2.6 s later on today's
+Day card, titled "Day complete!" (`celebrate` flag through `SHARE_PROGRESS_EVENT`'s detail →
+`PracticeLogGlobal` → `ProgressShareDialog`). Checked in nix Chromium (dispatching the event signed
+out — the real trigger needs a signed-in account), desktop and 390 wide.
+
+**A proper daily-goal setter, and every progress card portrait (same day):**
+- `components/practicelog/GoalDialog.tsx` ("Your daily goal"): Same every day / By weekday (seven
+  day buttons; 0 = a rest day, "Use X for every day"), a big value with − / +, a 0/5–240 min
+  slider, presets (15, 30, 45 min, 1, 1.5, 2 h; Rest day), and the last 30 days as bars with each
+  day's goal marked — "You'd have hit it on N of the last M days" and your average practice day
+  with "Use it". Saves on Save. Opened from the goal card / goal pill (replacing the ± buttons and
+  the presets menu) and "Daily goal…" in the Shed Log's settings menu. Core:
+  `PracticeLogPrefs.goalByWeekday?: number[] | null` and `goalOn(data, key)` (that weekday's goal,
+  else `dailyGoal`); every place that judged a day against the goal now uses it — calendar
+  stars/heat, the ring, week bars (per-day goal marks when they differ), sidebar card, streak
+  badge, celebrations, heat grids, progress cards and the day report. A rest day shows "Rest day"
+  in the ring. `Momentum`/`MomentumPills`/`StatsDialog` take `onPrefs` (was `onGoalChange`).
+- **All progress cards are portrait 1080×1350** (`drawMilestone` for Streak / Hours / Days;
+  `cardSize` always returns that; the preview is `aspect-[4/5]` `max-w-sm`): range line, a huge
+  headline (flame for a streak), three stat boxes, then the days — seven big tiles for a week, a
+  calendar for a month, the year as two stacked blocks of weeks — and a "Less … More" key. Text is
+  30px or more (stat labels may shrink to 26px to fit). The landscape drawing is gone. The sample
+  card on the signed-out Shed Log page sits in a 17rem column.
+Verified in nix Chromium: the goal dialog (both modes, rest day, presets, Save writing
+`goalByWeekday: [0, 90, 60, …]`, 390 wide with no overflow); all nine card combinations rendered
+and checked; the landing page and the gate page with the portrait sample card; `tsc` (web,
+mobile), `eslint`, `next build`, Convex dev push.
+
+### Community, profiles, posts and account settings redesigned (2026-10-17, web)
+
+- **Community** (`components/Community.tsx`): "New post" pill (menu: Post tunes / Post a setlist… /
+  Share a routine or progress → the Shed Log's routines); one search across people (cards) and
+  posts; the feed as **Latest / Following / Popular** (Following = posts by people you follow, by
+  username; Popular = most liked) with kind chips **All / Tunes / Setlists / Routines / Milestones**.
+  `MeCard` (banner, picture, @username, Posts / Followers / Following / Liked counts linking to the
+  sub-pages, a nudge to make a private profile public → `/account?tab=profile`) sits in a right
+  column from `xl` (sticky, with **People to follow** — authors in the feed you don't follow yet,
+  newest first) and above the feed below that. Signed out: a hero ("See what other musicians are
+  working on") with Sign up / Sign in, and people search. Post cards (`PostListItem`): bigger
+  avatar, colored kind tags (setlist accent, routine green, milestone amber), the portrait milestone
+  card at 17rem wide.
+- **Public profile** (`PublicProfilePage.tsx`): banner card with the picture over it, @username,
+  instrument chips, Posts / Followers / Following / Tunes stats, Share, Follow (or Edit profile /
+  Sign in to follow); then tabs **Posts / Tunes I Know / Tunes to Learn / Ear training** (counts
+  on each) instead of stacked boxes. `FollowButton` gained `size`.
+- **Post page** (`PostPage.tsx`): back to Community; one card with a routine-colored top edge,
+  author + date + kind tag, a big title (routine icon beside it), description, for a routine three
+  stat tiles (tasks, total, schedule), an action bar (Like count, Share, Add to my Shed Log / Open
+  in your Shed Log, delete as an icon), then the content (`RoutinePreview` gained `meta={false}` to
+  skip its own summary line). From `lg` an author column: picture, @name, instruments, Follow,
+  Profile, and **More from @name** (up to 4 posts). Signed out it says "Sign in to see this post"
+  with the sign-in buttons instead of "not available".
+- **Account** (`AccountPage.tsx`, `/account?tab=…` — `app/account/page.tsx` passes `initialTab`,
+  the page keeps `?tab` in the address bar): a header card (banner, picture, @username, email,
+  Public/Private, Password/Google, View profile, Sign out); settings grouped **You** (Profile —
+  `PublicProfileEditor`), **Library** (Tunes I Know, Tunes to Learn), **Community** (Posts,
+  Following), **Preferences** (**Shed Log**: the daily goal shown and changed with `GoalDialog`,
+  sounds, counting tool time; **Appearance**: the 10 quick themes as swatches + the full
+  `ThemeModal`), **Account** (Sign-in & security, Delete account). Phones: a settings-style list
+  you tap into, with a back button. Signed out: a card with Sign up / Sign in.
+Verified: `tsc`, `eslint`, `next build`; in nix Chromium signed out (Community hero, @jack's real
+profile with tabs, the signed-out post page) and — with fake data patched in temporarily and then
+removed — the signed-in Community feed and side column, a routine post page, and the account
+page's sections, at 1440 and 390 wide with no overflow or errors. **Not verified signed in for
+real** (follow counts, the Following feed, More from @name, saving settings).
+
+**Profiles show the Shed Log (same day):** `profiles.getPublicByUsername` takes an optional
+`today` (the viewer's date) and returns `practice` from the owner's `jam-practice-practice-log`
+blob via `packages/core/practiceLog.ts`'s `practiceLogFrom` (defensive parse) +
+`publicPracticeStats`: current and best streak, hours, hours this week, days in the last 365,
+days on goal in the last 30, the last 26 weeks as levels, and the hour / streak milestones reached
+— never routines, tasks or notes. A profile can opt out: `profiles.showPracticeStats` (optional,
+missing = shown; "Show my Shed Log stats on my profile" in the profile editor; `upsertProfile`
+takes it). The public profile page shows it as a "Shed Log" card (flame + streak, four stat
+tiles, the 26-week grid, milestone badges) and has a Back button (history back, else
+`/community`). Fixed: the banner's pattern layer was painted over the profile picture (the
+picture now sits on `relative z-10`; same on the Community and Account banners). The privacy
+policy's public-profile paragraph mentions the stats. Convex dev deployed; checked against real
+dev data (@jack: 17-day streak, milestones) and in nix Chromium at 1440 and 390.
+
+**Profile banners (same day):** `profiles.bannerPreset` (an id) / `bannerStorageId` (an uploaded
+image, wins); `setBannerPreset` (also deletes an uploaded image) and `setBannerImage` (uploaded
+through `generateAvatarUploadUrl`; deletes the previous file); `getMine` and
+`getPublicByUsername` return `banner: {url} | {preset} | null`; account deletion deletes the file.
+`apps/web/lib/banners.ts`: 12 built-in designs, pure CSS (gradients and small inline-SVG patterns:
+Aurora (default), Sunset, Ocean (waveform), Forest, Midnight, Ember, Mint, Staff paper, Keys,
+Vinyl, Stripes (theme accent), Sand). `components/ProfileBanner.tsx` draws one (used on the public
+profile, the Account header and Community's `MeCard`); `components/BannerPicker.tsx` (Account →
+Profile, under the picture): preview, the designs as swatches, "Upload your own" (cropped to 3:1,
+≤1500×500 JPEG in the browser) and "Remove image". The Account header now matches the profile's
+layout (name and badges under the picture, never on the banner's edge); on both, the buttons sit
+below the banner (they used to touch it) and stay on one line on phones (icon-only Share / Sign
+out). Mobile doesn't show banners yet. Convex dev deployed.
+
+**Shed Log: resizable day panel (same day):** on desktop the grid is `var(--day-w) 1.5rem 1fr` with
+a drag handle (a pill in the middle, `role="separator"`) between the day panel and the calendar —
+drag to resize (300 px up to 60% of the page), double-click to reset (448 px), ←/→ when focused.
+Saved per device in the page's view settings (`dayWidth`, key `jam-practice-practice-log-view`;
+written on release, not on every move). Phones unchanged. Checked in nix Chromium: dragging both
+ways, the minimum, double-click reset, the saved width.
+
+**Sliders:** every `<input type="range">` should use the site's `slider` class with a
+`--progress` style (the filled part of the track) — four newer ones were using the browser's
+default look (`accent-[var(--accent)]`): the goal window, Bass Genius's Mix levels and drum
+settings, and the Drum Generator's faders. Fixed.
+
+### The sidebar's tools, reorganized (2026-10-17, web; the categories are shared with mobile)
+
+`packages/core/navLinks.ts`: categories are now by what you're doing — **Play along** (Jam
+Practice, Bass Genius, Slow Downer, Drum Generator), **Time & rhythm** (Metronome, the Polyrhythm
+metronome, Tempo Trainer), **Ear training** (the three Guess tools), **On your instrument** (Note,
+Scale, Interval Trainer, Tuner), **Drums** (Sticking Warmup, Syncopation), **Practice tools** (Shed
+Log, Practice Timer, Recorder) — plus Community as before. A new optional `short` name is used only
+in the sidebar list ("Metric Modulation", "Sticking Warmup", "Intervals" / "Chords" /
+"Progressions"); search, titles, Help and everything else use `label`. `components/tools.tsx`:
+`CATEGORY_ICONS` updated, new `CATEGORY_COLORS` (one fixed hue per category). Sidebar
+(`components/Sidebar.tsx`): no more boxed sections — each category is a small heading you click
+to fold (shows its count while folded), tools are compact rows with a `ToolTile` (the icon on a tint
+of its category's color, solid on the current page); a **Recent** row (the last 3 tools opened on
+this device, not the current one, shown once there are 2+); Favorites as a section with a star;
+the "Tools" heading is gone. Collapsed sidebar: the icon buttons carry the category colors too.
+The Help page's groups follow the new categories. The mobile app groups by the same categories
+(names changed there too; it doesn't use `short` yet). Checked in nix Chromium (expanded,
+collapsed, phone menu); `tsc` (web, mobile), `eslint`, `next build`.
+
+**Category colors follow the theme:** the fixed hues clashed with some themes, so
+`CATEGORY_COLORS` now points at CSS vars `--cat-0…6` (`app/globals.css`), each the theme's own
+`--accent` with its hue turned by a fixed step (`oklch(from var(--accent) l max(c, 0.09) calc(h + N))`
+— 0/154/308/103/257/51/206°, a chroma floor so grey-ish accents still give distinct colors). So
+they take the accent's lightness and saturation: soft on Zenburn/Rosé Pine Dawn, bright on
+Synthwave, and rotate along with any custom accent. Browsers without relative color syntax get the
+old fixed hexes. A solid (current page) tile's icon uses `--accent-foreground`. Checked across 12
+presets in nix Chromium.
+
+**Favorites as cards:** the sidebar's Favorites section is a two-column grid of small cards
+(`renderFavoriteCard` in `Sidebar.tsx`, via `CategoryBlock`'s new `renderCard`): the tool's tile
+and short name on a tint of its category color (no border; a stronger tint on the current page), a
+filled star in the corner to unstar it. While searching it falls back to plain rows. Checked in
+nix Chromium with favorites patched in temporarily (then removed).
+
+### Tunes and Chord Charts redesigned (2026-10-17, web)
+
+Every Tunes / Chord Charts page now uses `components/library/ui.tsx` (`shared.tsx` is unchanged,
+since Community, recordings and the Shed Log also use it):
+- **`Hero`**: the header card on every page. It has a tint of the page's colour, an icon tile or a
+  key badge, the title (two lines max) and a summary line, the page's buttons (they wrap under the
+  title on phones), and its search (`HeroSearch`). The three main pages also show **`LibraryTabs`**
+  (Tunes · Setlists · Chord Charts); sub-pages show a back link instead.
+- **`KeyBadge`**: the tune's or chart's key in a tile of that key's colour. The colours come from
+  `--key-0…11` in globals.css, one per key, taken from the theme accent the same way as the
+  category colours. Keys a fifth apart get neighbouring hues.
+- **Rows and cards:** `TuneItem` / `ChartItem` rows (badge, name, small chips) sit inside `Panel`
+  cards with hairline dividers. Lists on the dashboards are `ShelfCard`s (count plus the latest
+  names). Playlists are `PlaylistCard`s, with a cover in the playlist's colour (`nameColor`) showing
+  its first charts. Setlists are `SetlistCard`s (tune count in the setlist's colour, its description
+  or first tunes). The dashboards' "Recently opened" is now `RecentStrip` ("Jump back in").
+- **Pages:**
+  - Tunes dashboard: lists as shelf cards, then Tunes I Know (latest additions) and Tunes to
+    Learn, with Setlists beside them.
+  - Chord Charts dashboard: Import and New in the header, playlists as a card grid, "New playlist".
+  - Playlist page: letter sections with sticky headers, plus an A–Z jump bar when there are more
+    than 6 letters.
+  - Setlists page: a card grid, with Recent / A–Z in the header.
+  - Setlist page: numbered rows with the key each tune is played in; View all charts / Share /
+    Post sit in a side column.
+  - Tune page: the chart on the left, with keys (a progress bar, and known keys in their own
+    colour) and notes on the right from `xl`; recordings under the chart.
+  - Chart view: the header became a `Hero` (composer, style, time, playlists as chips). The chart
+    and its container are unchanged.
+  - Tune list (`TuneListManager variant="page"`): the Account tabs keep the old card look.
+  - Import: numbered steps, plus side cards for what happens and "Start over".
+- The chart renderer, the chart editor and the setlist chart reader are untouched. The old
+  `SetlistRow` is gone.
+
+Verified: `tsc`, `eslint`, `next build`. In nix Chromium (signed out, seeded with tunes, 50 charts
+from Jack's playlist, 3 playlists and 2 setlists), every page at 1440 and 390 wide, plus Gruvbox
+Dark. Also checked the Add menu, selecting a tune, a drag reorder of a setlist and chart search; no
+errors.
+
+### Sidebar: Community and Tunes as cards, no Chord Charts button (2026-10-17, web)
+
+The row of three library tiles (Community / Tunes / Chord Charts) is now two cards side by side
+under the Dashboard and Shed Log cards: Community and Tunes. Each card is a `@container`: the icon
+sits above a smaller label while the card is under 7.5rem wide (the default sidebar width), and
+beside it when the sidebar is wider or on phones. Each card has the category-coloured
+icon tile (solid while you're there) and the name. They are slimmer than those two cards and have
+no second line. Chord Charts has no button of its own: the Tunes card stays lit on `/chord-charts*`
+and `/setlist-charts` (`isChartsPath` in `Sidebar.tsx`), and the collapsed sidebar's library group
+does the same. Chord Charts still shows up as a search result. Checked in nix Chromium.
+
+### Help screenshots retaken signed in (2026-10-17)
+
+`public/help/v3/` (`SHOTS = "v3"` in `components/help/helpParts.tsx`; `v2` was deleted) holds all
+the Help pictures, taken signed in to Jack's account on the **dev** deployment, so they show his real
+tunes, charts, Shed Log, recordings and profile. The account's email is replaced with
+"you@example.com" in the page before each shot, because the Help page is public. New shots:
+`account`, `recordings` and `recorder` (their topics in `lib/helpContent.ts` gained `shot`).
+How they were taken:
+- the nix chromium + playwright-core setup;
+- signing in through `/?auth=login` *inside the same script*, because the session didn't survive
+  between separate CDP connections;
+- intros and the Shed Log tour marked as seen;
+- light then dark;
+- 1280×800 of the content area.
+Retake them into a new folder (`v4`) when the UI changes. Never write the account password into a
+file: pass it in an environment variable.
+
+### Full-width pages on desktop (2026-10-17, web)
+
+From `lg` these pages are full width (`lg:max-w-none lg:px-8`; phones keep their max width):
+- the dashboard (`Home.tsx`);
+- every Tunes / Chord Charts page (`LibraryPage`, which lost its `wide` prop);
+- `shared.tsx`'s `PageShell`: recordings, routines, chart view and editor, import (Community and New post opt out with `fullWidth={false}` and keep `max-w-5xl`/`max-w-4xl`, on request);
+- Account (signed in);
+- post pages and public profiles.
+
+Reading pages (legal, shared setlist / routine links) stay narrow. The playlist and setlist card
+grids add columns on wide screens (5–6 playlists, 3–4 setlists a row). The chart renderer keeps its
+own maximum size. Checked in nix Chromium at 2000 wide, signed in: no horizontal overflow.
+
+### Chart reading redesigned (2026-10-17, web)
+
+New shared pieces live in `components/library/chartView.tsx`:
+- `ChartPaper`: the card a chart sits on, with an optional top row. `fill` makes it fill the height.
+- `ChartMeta`: chips for style, key ("Fm · from Dm" when transposed), time and tempo, plus the
+  composer unless `composer={false}`.
+- `ReaderBar`: the top bar for full-screen reading (round back/close button, key badge, title,
+  controls).
+- `RoundButton`.
+
+The chart itself (`ChordChart`) is untouched everywhere.
+- **Setlist reader** (`/setlist-charts`, `SetlistChartsPage`):
+  - `ReaderBar` with the tune, "Setlist · Tune n of N" and ‹ ›.
+  - A **running order** rail on desktop (`RunningOrder`: numbered, each tune's key and tempo for
+    the set, played ones dimmed; click to jump; a list button hides it). On phones the list button
+    opens it as a bottom sheet.
+  - Each chart sits in a `ChartPaper` with its details on top.
+  - Along the bottom, a segmented progress bar (click a segment to jump) and "Up next: …".
+  - Tunes with no chart get a proper card.
+- **Chart page** (`ChartViewPage`):
+  - A compact header: round back button, key badge, title and composer, the key select (below
+    `xl`), full screen, ⋮.
+  - The chart in a `ChartPaper`.
+  - From `xl`, a side column with a 12-key grid to transpose (key colours; a dot marks the
+    original key; "Back to …"), the chart's playlists (links), and **Your tunes** that use the
+    chart (links).
+  - Full screen uses `ReaderBar` (minimize button, key select) and a filling `ChartPaper`.
+- **Tune page**: the chord chart card is a `ChartPaper` whose top row holds the controls.
+
+Checked signed in to Jack's dev account in nix Chromium: the reader at 1600 wide and 390 wide
+(next with the arrow keys, the phone sheet), the chart page, transposing to Fm from the key grid,
+full screen, the ⋮ menu, and the tune page. No errors.
 
 ## Tools (sidebar order)
 

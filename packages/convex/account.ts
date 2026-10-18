@@ -219,6 +219,7 @@ export const performDelete = internalMutation({
       .unique();
     if (profile) {
       if (profile.avatarStorageId) await ctx.storage.delete(profile.avatarStorageId);
+      if (profile.bannerStorageId) await ctx.storage.delete(profile.bannerStorageId);
       await ctx.db.delete(profile._id);
     }
     const following = await ctx.db
@@ -238,6 +239,11 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of shared) await ctx.db.delete(row._id);
+    const sharedRoutines = await ctx.db
+      .query("sharedRoutines")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of sharedRoutines) await ctx.db.delete(row._id);
 
     // Recordings and their audio files.
     const recordings = await ctx.db

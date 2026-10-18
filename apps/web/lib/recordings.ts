@@ -18,7 +18,7 @@ export type Recording = {
   mimeType: string;
   tuneId: string | null;
   mix: RecordingMix | null;
-  /** The Practice Log day (YYYY-MM-DD) and routine it's attached to, if any. */
+  /** The Shed Log day (YYYY-MM-DD) and routine it's attached to, if any. */
   logDate?: string | null;
   routineId?: string | null;
   createdAt: number;

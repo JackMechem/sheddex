@@ -8,6 +8,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import { Id } from "@jam-practice/convex/_generated/dataModel";
 import UserAvatar from "@/components/UserAvatar";
 import {
+  CalendarIcon,
   ChordChartIcon,
   CheckIcon,
   EyeOffIcon,
@@ -18,6 +19,8 @@ import {
   TrashIcon,
 } from "@/components/tools";
 import { shareLink } from "@/lib/shareLink";
+import { type ProgressCard, type PublicRoutine, formatMinutesShort } from "@/lib/practiceLog";
+import { ProgressCardView } from "@/components/practicelog/ProgressCard";
 
 function formatDate(ms: number) {
   return new Date(ms).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -39,8 +42,10 @@ export type TunePostSummary = {
   chartTitles: string[];
   likeCount: number;
   unlisted: boolean;
-  /** "setlist" for a setlist post (shown numbered, savable, kept in sync with the poster's setlist). */
-  kind?: "setlist" | null;
+  /** "setlist" for a setlist post (shown numbered, savable, kept in sync with the poster's setlist);
+      "routine" / "milestone" for a Shed Log routine or progress card (`payload`). */
+  kind?: "setlist" | "routine" | "milestone" | null;
+  payload?: PublicRoutine | ProgressCard | null;
   createdAt: number;
   authorUsername?: string | null;
   authorAvatarUrl?: string | null;
@@ -85,8 +90,11 @@ export function PostListItem({
   const toggleLike = useMutation(api.communityTunes.toggleLike);
   const [copied, setCopied] = useState(false);
   const isSetlist = post.kind === "setlist";
-  const preview = post.tuneNames.slice(0, 3);
-  const more = post.tuneNames.length - preview.length;
+  const routine = post.kind === "routine" && post.payload && "tasks" in post.payload ? post.payload : null;
+  const card = post.kind === "milestone" && post.payload && "levels" in post.payload ? post.payload : null;
+  const names = routine ? routine.tasks.map((t) => t.title || "Task") : post.tuneNames;
+  const preview = card ? [] : names.slice(0, 3);
+  const more = names.length - preview.length;
 
   function open() {
     router.push(`/post/${post.id}`);
@@ -111,7 +119,7 @@ export function PostListItem({
           open();
         }
       }}
-      className="flex cursor-pointer flex-col gap-2.5 rounded-2xl bg-surface px-4 pb-1.5 pt-3.5 text-left transition-colors hover:bg-surface-hover"
+      className="flex cursor-pointer flex-col gap-3 rounded-3xl border border-transparent bg-surface px-4 pb-2 pt-4 text-left transition-colors hover:border-surface-hover hover:bg-surface-hover/60 sm:px-5"
     >
       <div className="flex items-center gap-2 text-sm">
         {post.authorUsername && (
@@ -120,7 +128,7 @@ export function PostListItem({
             onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2 font-semibold hover:underline"
           >
-            <UserAvatar url={post.authorAvatarUrl ?? null} size="sm" />
+            <UserAvatar url={post.authorAvatarUrl ?? null} />
             {post.authorUsername}
           </Link>
         )}
@@ -136,10 +144,16 @@ export function PostListItem({
             Setlist
           </span>
         )}
+        {(routine || card) && (
+          <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${routine ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/15 text-amber-600 dark:text-amber-400"}`}>
+            <CalendarIcon className="h-3.5 w-3.5" />
+            {routine ? "Routine" : "Milestone"}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
-        <p className="line-clamp-2 text-lg font-bold leading-snug">{post.title}</p>
+        <p className="line-clamp-2 text-lg font-extrabold leading-snug tracking-tight">{post.title}</p>
         {post.description && <p className="line-clamp-2 text-sm text-muted">{post.description}</p>}
       </div>
 
@@ -147,7 +161,7 @@ export function PostListItem({
         <div className="flex flex-col gap-1 rounded-xl bg-background px-3 py-2.5">
           {preview.map((name, i) => (
             <div key={`${name}-${i}`} className="flex items-center gap-2.5 text-sm">
-              {isSetlist ? (
+              {isSetlist || routine ? (
                 <span className="w-4 text-right font-bold tabular-nums text-accent">{i + 1}</span>
               ) : (
                 <NoteIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
@@ -159,11 +173,24 @@ export function PostListItem({
         </div>
       )}
 
+      {card && (
+        <div className="w-full max-w-[17rem]">
+          <ProgressCardView card={card} username={post.authorUsername ?? null} />
+        </div>
+      )}
+
       <div className="flex items-center gap-4 text-xs font-semibold tabular-nums text-muted">
-        <span className="flex items-center gap-1" title={`${post.tuneCount} tune${post.tuneCount === 1 ? "" : "s"}`}>
-          <NoteIcon className="h-4 w-4" />
-          {post.tuneCount}
-        </span>
+        {routine ? (
+          <span className="flex items-center gap-1">
+            <CalendarIcon className="h-4 w-4" />
+            {routine.tasks.length} task{routine.tasks.length === 1 ? "" : "s"} · {formatMinutesShort(routine.tasks.reduce((a, t) => a + t.minutes, 0))}
+          </span>
+        ) : !card && (
+          <span className="flex items-center gap-1" title={`${post.tuneCount} tune${post.tuneCount === 1 ? "" : "s"}`}>
+            <NoteIcon className="h-4 w-4" />
+            {post.tuneCount}
+          </span>
+        )}
         {post.chartCount > 0 && (
           <span className="flex items-center gap-1" title={`${post.chartCount} chord chart${post.chartCount === 1 ? "" : "s"}`}>
             <ChordChartIcon className="h-4 w-4" />

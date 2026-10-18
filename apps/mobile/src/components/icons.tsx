@@ -126,7 +126,7 @@ export const NAV_LINK_ICONS: Record<string, ComponentType<IconProps>> = {
   '/guess-the-chord': ChordIcon,
   '/guess-the-progression': ProgressionIcon,
   '/practice-timer': StopwatchIcon,
-  '/practice-log': CalendarCheckIcon,
+  '/shed-log': CalendarCheckIcon,
   '/metronome': MetronomeIcon,
   '/random-metric-modulation': MetricModulationIcon,
   '/tempo-trainer': TempoTrainerIcon,

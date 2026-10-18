@@ -6,7 +6,8 @@ import { ReactNode, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StandardsPicker from "@/components/StandardsPicker";
 import TuneEditorModal from "@/components/TuneEditorModal";
-import { CheckIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
+import { Hero, HeroSearch, KeyBadge, LibraryTabs, Pill } from "@/components/library/ui";
+import { CheckIcon, ChordChartIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
 
@@ -24,11 +25,7 @@ function blankTune(name = ""): Tune {
 function summary(tune: Tune): string {
   const keys = tune.keys.filter((k) => k.enabled).map((k) => k.value);
   const tempos = tune.tempos.filter((t) => t.enabled).map((t) => t.value);
-  return [
-    keys.length ? keys.join(", ") : "no keys",
-    tempos.length ? `${tempos.join(", ")} BPM` : "no tempos",
-    tune.timeSignature,
-  ].join(" · ");
+  return [keys.length ? keys.join(", ") : "no keys", tempos.length ? `${tempos.join(", ")} BPM` : "no tempos", tune.timeSignature].join(" · ");
 }
 
 type Editing = { tune: Tune; isNew: boolean };
@@ -62,6 +59,7 @@ export default function TuneListManager({
   exportFilenamePrefix,
   infoBlurb,
   listId,
+  variant = "card",
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -74,6 +72,10 @@ export default function TuneListManager({
   infoBlurb?: ReactNode;
   /** Which list this is — each tune's name then links to its own page (`/tune`). */
   listId?: "tunes" | "learn";
+  /** "page": the Tunes page's own full list (`TuneListPage`) — a header card with the search in
+      it, then the list in its own card with each tune's key badge. "card" (default): one card,
+      as on the account page. */
+  variant?: "card" | "page";
 }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -116,11 +118,7 @@ export default function TuneListManager({
   }
 
   function saveTune(tune: Tune) {
-    setTunes((prev) =>
-      prev.some((t) => t.id === tune.id)
-        ? prev.map((t) => (t.id === tune.id ? tune : t))
-        : [...prev, tune],
-    );
+    setTunes((prev) => (prev.some((t) => t.id === tune.id) ? prev.map((t) => (t.id === tune.id ? tune : t)) : [...prev, tune]));
     setEditing(null);
   }
 
@@ -153,161 +151,110 @@ export default function TuneListManager({
     e.target.value = "";
   }
 
-  return (
+  const openAdd = () => (allowStandards ? setPickerOpen(true) : setEditing({ tune: blankTune(), isNew: true }));
+  const chartCount = tunes.filter((t) => t.chordChartId).length;
+  const list = (
     <>
-      <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Icon className="h-5 w-5 text-muted" />
-            {title}
-            {tunes.length ? ` (${tunes.length})` : ""}
-          </h2>
-          <button
-            type="button"
-            onClick={() =>
-              allowStandards ? setPickerOpen(true) : setEditing({ tune: blankTune(), isNew: true })
-            }
-            aria-label={allowStandards ? "Add tune" : "New tune"}
-            title={allowStandards ? "Add tune" : "New tune"}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </button>
-        </div>
-
-        {infoBlurb && <p className="text-xs text-muted">{infoBlurb}</p>}
-
-        <div className="flex items-center gap-3 rounded-xl bg-background px-3 py-2">
-          <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
-          />
-        </div>
-
-        {tunes.length === 0 ? (
-          <p className="text-sm text-muted">{emptyMessage}</p>
-        ) : shown.length === 0 ? (
-          <p className="text-sm text-muted">No tunes match “{trimmedQuery}”.</p>
-        ) : (
-          <ul className="flex max-h-[32rem] flex-col gap-1.5 overflow-y-auto pr-1">
-            {shown.map((tune) => {
-              const isSelected = selected.has(tune.id);
-              return (
-                <li
-                  key={tune.id}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
-                    isSelected ? "bg-background" : "hover:bg-background/60"
+      {tunes.length === 0 ? (
+        <p className={`text-sm text-muted ${variant === "page" ? "px-3 py-10 text-center" : ""}`}>{emptyMessage}</p>
+      ) : shown.length === 0 ? (
+        <p className={`text-sm text-muted ${variant === "page" ? "px-3 py-10 text-center" : ""}`}>No tunes match “{trimmedQuery}”.</p>
+      ) : (
+        <ul className={variant === "page" ? "flex flex-col divide-y divide-foreground/[0.06]" : "flex max-h-[32rem] flex-col gap-1.5 overflow-y-auto pr-1"}>
+          {shown.map((tune) => {
+            const isSelected = selected.has(tune.id);
+            return (
+              <li key={tune.id} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isSelected ? "bg-background" : "hover:bg-background/60"}`}>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={isSelected}
+                  aria-label={`Select ${tune.name}`}
+                  onClick={() => toggleSelected(tune.id)}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                    isSelected ? "border-accent bg-accent text-accent-foreground" : "border-muted/50 text-transparent hover:border-muted"
                   }`}
                 >
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={isSelected}
-                    aria-label={`Select ${tune.name}`}
-                    onClick={() => toggleSelected(tune.id)}
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                      isSelected
-                        ? "border-accent bg-accent text-accent-foreground"
-                        : "border-muted/50 text-transparent hover:border-muted"
-                    }`}
-                  >
-                    <CheckIcon className="h-3.5 w-3.5" />
+                  <CheckIcon className="h-3.5 w-3.5" />
+                </button>
+                {variant === "page" && <KeyBadge label={tune.keys.find((k) => k.enabled)?.value} />}
+                {listId ? (
+                  <Link href={`/tunes/tune?list=${listId}&id=${encodeURIComponent(tune.id)}`} className="min-w-0 flex-1 text-left">
+                    <div className={`truncate hover:text-accent ${variant === "page" ? "font-semibold" : "text-sm font-medium"}`}>
+                      {tune.name}
+                      {variant === "page" && tune.chordChartId && <ChordChartIcon className="ml-1.5 inline h-3.5 w-3.5 align-[-2px] text-accent" />}
+                    </div>
+                    <div className="truncate text-xs text-muted">{summary(tune)}</div>
+                  </Link>
+                ) : (
+                  <button type="button" onClick={() => toggleSelected(tune.id)} className="min-w-0 flex-1 text-left" tabIndex={-1}>
+                    <div className="truncate text-sm font-medium">{tune.name}</div>
+                    <div className="truncate text-xs text-muted">{summary(tune)}</div>
                   </button>
-                  {listId ? (
-                    <Link href={`/tunes/tune?list=${listId}&id=${encodeURIComponent(tune.id)}`} className="min-w-0 flex-1 text-left">
-                      <div className="truncate text-sm font-medium hover:text-accent">{tune.name}</div>
-                      <div className="truncate text-xs text-muted">{summary(tune)}</div>
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => toggleSelected(tune.id)}
-                      className="min-w-0 flex-1 text-left"
-                      tabIndex={-1}
-                    >
-                      <div className="truncate text-sm font-medium">{tune.name}</div>
-                      <div className="truncate text-xs text-muted">{summary(tune)}</div>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setEditing({ tune, isNew: false })}
-                    aria-label={`Edit ${tune.name}`}
-                    title="Edit"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteTune(tune.id)}
-                    aria-label={`Delete ${tune.name}`}
-                    title="Delete"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-danger"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEditing({ tune, isNew: false })}
+                  aria-label={`Edit ${tune.name}`}
+                  title="Edit"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteTune(tune.id)}
+                  aria-label={`Delete ${tune.name}`}
+                  title="Delete"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-danger"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+  const footer = (
+    <div className="flex flex-wrap items-center gap-2 border-t border-background pt-3 text-sm">
+      <button
+        type="button"
+        onClick={toggleAllShown}
+        disabled={shown.length === 0}
+        className="rounded-lg px-2 py-1.5 font-medium text-muted hover:text-foreground disabled:opacity-50"
+      >
+        {allShownSelected ? "Deselect all" : "Select all"}
+      </button>
+      <span className="text-muted">{chosen.length} selected</span>
+      <div className="ml-auto flex gap-2">
+        <button
+          type="button"
+          onClick={() => downloadTunesCsv(chosen.length > 0 ? chosen : tunes, `${exportFilenamePrefix}${chosen.length > 0 ? "-selected" : ""}.csv`)}
+          disabled={tunes.length === 0}
+          className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover disabled:opacity-50"
+        >
+          {chosen.length > 0 ? `Export ${chosen.length}` : "Export all"}
+        </button>
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover">
+          Import CSV
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirmingDelete(true)}
+          disabled={chosen.length === 0}
+          className="rounded-lg bg-background px-3 py-1.5 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
+        >
+          Delete selected
+        </button>
+      </div>
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={importCsv} className="hidden" />
+    </div>
+  );
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-background pt-3 text-sm">
-          <button
-            type="button"
-            onClick={toggleAllShown}
-            disabled={shown.length === 0}
-            className="rounded-lg px-2 py-1.5 font-medium text-muted hover:text-foreground disabled:opacity-50"
-          >
-            {allShownSelected ? "Deselect all" : "Select all"}
-          </button>
-          <span className="text-muted">{chosen.length} selected</span>
-          <div className="ml-auto flex gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                downloadTunesCsv(
-                  chosen.length > 0 ? chosen : tunes,
-                  `${exportFilenamePrefix}${chosen.length > 0 ? "-selected" : ""}.csv`,
-                )
-              }
-              disabled={tunes.length === 0}
-              className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover disabled:opacity-50"
-            >
-              {chosen.length > 0 ? `Export ${chosen.length}` : "Export all"}
-            </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg bg-background px-3 py-1.5 font-medium hover:bg-surface-hover"
-            >
-              Import CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(true)}
-              disabled={chosen.length === 0}
-              className="rounded-lg bg-background px-3 py-1.5 font-medium text-danger hover:bg-surface-hover disabled:opacity-50"
-            >
-              Delete selected
-            </button>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={importCsv}
-            className="hidden"
-          />
-        </div>
-      </section>
-
+  const dialogs = (
+    <>
       {confirmingDelete && (
         <ConfirmDialog
           title={`Delete ${chosen.length} tune${chosen.length === 1 ? "" : "s"}?`}
@@ -330,15 +277,74 @@ export default function TuneListManager({
         />
       )}
 
-      {editing && (
-        <TuneEditorModal
-          key={editing.tune.id}
-          initial={editing.tune}
-          isNew={editing.isNew}
-          onSave={saveTune}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editing && <TuneEditorModal key={editing.tune.id} initial={editing.tune} isNew={editing.isNew} onSave={saveTune} onClose={() => setEditing(null)} />}
+    </>
+  );
+
+  if (variant === "page") {
+    return (
+      <>
+        <Hero
+          title={title}
+          icon={Icon}
+          backHref="/tunes"
+          backLabel="Tunes"
+          tabs={<LibraryTabs active="tunes" />}
+          subtitle={`${tunes.length} tune${tunes.length === 1 ? "" : "s"} · ${chartCount} with a chord chart`}
+          actions={<Pill primary icon={PlusIcon} label="Add tune" onClick={openAdd} iconOnlyOnPhone />}
+        >
+          <HeroSearch value={query} onChange={setQuery} placeholder={searchPlaceholder} />
+        </Hero>
+        <section className="flex flex-col rounded-2xl bg-surface p-2 text-left">
+          <div className="px-1">{list}</div>
+          <div className="px-3 pb-1">{footer}</div>
+        </section>
+
+        {dialogs}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Icon className="h-5 w-5 text-muted" />
+            {title}
+            {tunes.length ? ` (${tunes.length})` : ""}
+          </h2>
+          <button
+            type="button"
+            onClick={openAdd}
+            aria-label={allowStandards ? "Add tune" : "New tune"}
+            title={allowStandards ? "Add tune" : "New tune"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground hover:bg-accent-hover"
+          >
+            <PlusIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        {infoBlurb && <p className="text-xs text-muted">{infoBlurb}</p>}
+
+        <div className="flex items-center gap-3 rounded-xl bg-background px-3 py-2">
+          <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
+          />
+        </div>
+
+        {list}
+
+        {footer}
+      </section>
+
+      {dialogs}
     </>
   );
 }

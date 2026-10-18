@@ -5,6 +5,8 @@ import { Doc, Id } from "./_generated/dataModel";
 import type { PublicTune } from "@jam-practice/core/profileTunes";
 import { resolveLinkedChart } from "./lib/chordCharts";
 import { liveSetlist, type SetlistCache } from "./lib/setlists";
+import { liveRoutine } from "./lib/routines";
+import { cleanProgressCard, cleanPublicRoutine } from "@jam-practice/core/practiceLog";
 
 const MAX_TUNES_PER_POST = 300;
 const MAX_LIST = 60;
@@ -48,6 +50,10 @@ type PostRow = Doc<"communityTunes">;
 /** A setlist post (`setlistId` set) shows the poster's setlist as it is *now*, not as it was when
     posted — swap in the live tunes, falling back to the stored snapshot if the setlist's gone. */
 async function withLive(ctx: QueryCtx, row: PostRow, charts: "full" | "titles", cache?: SetlistCache): Promise<PostRow> {
+  if (row.kind === "routine" && row.routineId) {
+    const live = await liveRoutine(ctx, row.userId, row.routineId);
+    return live ? { ...row, payload: live } : row;
+  }
   if (!row.setlistId) return row;
   const live = await liveSetlist(ctx, row.userId, row.setlistId, charts, cache);
   return live ? { ...row, tunes: live.tunes } : row;
@@ -60,7 +66,8 @@ function summarizePost(row: {
   tunes: unknown;
   likeCount?: number;
   unlisted?: boolean;
-  kind?: "setlist";
+  kind?: "setlist" | "routine" | "milestone";
+  payload?: unknown;
   createdAt: number;
 }) {
   const tuneNames = tuneNamesOf(row.tunes);
@@ -76,8 +83,16 @@ function summarizePost(row: {
     likeCount: row.likeCount ?? 0,
     unlisted: row.unlisted ?? false,
     kind: row.kind ?? null,
+    payload: payloadOf(row.kind, row.payload),
     createdAt: row.createdAt,
   };
+}
+
+/** A routine or milestone post's payload, re-read defensively (it's stored as `v.any()`). */
+function payloadOf(kind: string | undefined, payload: unknown) {
+  if (kind === "routine") return cleanPublicRoutine(payload);
+  if (kind === "milestone") return cleanProgressCard(payload);
+  return null;
 }
 
 /** Posts a tune (one) or a whole tune list (several) to Community — this app's **one and only**
@@ -94,11 +109,15 @@ export const create = mutation({
     description: v.string(),
     tunes: v.array(v.any()),
     unlisted: v.optional(v.boolean()),
-    kind: v.optional(v.literal("setlist")),
+    kind: v.optional(v.union(v.literal("setlist"), v.literal("routine"), v.literal("milestone"))),
     /** The poster's own setlist id — the post then always shows that setlist's current tunes. */
     setlistId: v.optional(v.string()),
+    /** A routine post: the poster's routine id (shown live) and its `PublicRoutine`. A milestone
+        post: its `ProgressCard`. */
+    routineId: v.optional(v.string()),
+    payload: v.optional(v.any()),
   },
-  handler: async (ctx, { title, description, tunes, unlisted, kind, setlistId }) => {
+  handler: async (ctx, { title, description, tunes, unlisted, kind, setlistId, routineId, payload }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not signed in.");
     const profile = await authorProfile(ctx, userId);
@@ -109,7 +128,9 @@ export const create = mutation({
     }
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new Error("Give this post a title.");
-    if (tunes.length === 0) throw new Error("Pick at least one tune to post.");
+    const cleanPayload = kind === "routine" || kind === "milestone" ? payloadOf(kind, payload) : null;
+    if ((kind === "routine" || kind === "milestone") && !cleanPayload) throw new Error("That post couldn't be read.");
+    if (!cleanPayload && tunes.length === 0) throw new Error("Pick at least one tune to post.");
     if (tunes.length > MAX_TUNES_PER_POST) {
       throw new Error(
         `Posts are limited to ${MAX_TUNES_PER_POST} tunes — split a bigger list into more than one post.`,
@@ -134,6 +155,8 @@ export const create = mutation({
       unlisted: unlisted ?? false,
       ...(kind ? { kind } : {}),
       ...(setlistId ? { setlistId } : {}),
+      ...(kind === "routine" && routineId ? { routineId } : {}),
+      ...(cleanPayload ? { payload: cleanPayload } : {}),
       createdAt: Date.now(),
     });
   },
@@ -354,6 +377,8 @@ export const get = query({
       likeCount: row.likeCount ?? 0,
       unlisted: row.unlisted ?? false,
       kind: row.kind ?? null,
+      payload: payloadOf(row.kind, live.payload),
+      routineId: row.userId === userId ? (row.routineId ?? null) : null,
       createdAt: row.createdAt,
       authorUsername: profile.username,
       authorAvatarUrl: avatarUrl,
@@ -374,6 +399,22 @@ export const postForSetlist = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     const match = rows.filter((r) => r.setlistId === setlistId).sort((a, b) => b.createdAt - a.createdAt)[0];
+    return match ? match._id : null;
+  },
+});
+
+/** The caller's newest post of one of their routines, or null — so the routine's page offers
+    "View post" instead of posting it again. */
+export const postForRoutine = query({
+  args: { routineId: v.string() },
+  handler: async (ctx, { routineId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const rows = await ctx.db
+      .query("communityTunes")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const match = rows.filter((r) => r.kind === "routine" && r.routineId === routineId).sort((a, b) => b.createdAt - a.createdAt)[0];
     return match ? match._id : null;
   },
 });

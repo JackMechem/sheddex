@@ -1,20 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import RecordClip from "@/components/practicelog/RecordClip";
 import RoutineCard from "@/components/practicelog/RoutineCard";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
-import { burstAt } from "@/components/practicelog/Celebrations";
+import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
 import TaskDialog from "@/components/practicelog/TaskDialog";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, PlayIcon, PlusIcon, StopwatchIcon } from "@/components/tools";
+import Subtasks from "@/components/practicelog/Subtasks";
+import LogTimeDialog from "@/components/practicelog/LogTimeDialog";
+import DayTimer, { useDayTimerMs } from "@/components/practicelog/DayTimer";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, NAV_LINKS, PlayIcon, PlusIcon, ShareIcon, StopwatchIcon } from "@/components/tools";
 import {
   type DayTask,
   addDays,
+  clearDayTime,
   dayProgress,
   newDayTask,
+  newSubtask,
   parseTime,
   formatLongDate,
   formatMinutesShort,
@@ -45,13 +52,15 @@ export default function DayPanel({
   const { data } = log;
   const day = data.days[date] ?? {};
   const items = routinesOn(data, date);
-  const minutes = minutesOn(data, date);
+  const watch = useDayTimerMs(data, date);
+  const minutes = minutesOn(data, date, watch.liveMs);
   const progress = dayProgress(data, date);
   const isToday = date === todayKey();
   const dayRoutines = items.map((i) => ({ id: i.routine.id, name: i.routine.name || "Untitled routine" }));
   const dayRecordings = recordings?.filter((r) => r.logDate === date) ?? [];
   const loose = dayRecordings.filter((r) => !r.routineId || !items.some((i) => i.routine.id === r.routineId));
   const [addMenu, setAddMenu] = useState<MenuState | null>(null);
+  const [logging, setLogging] = useState(false);
 
   function openAddMenu(e: React.MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -61,8 +70,12 @@ export default function DayPanel({
       x: Math.min(rect.left, window.innerWidth - 216),
       y: rect.bottom + 4,
       items: [
-        { label: "New routine starting this day", onSelect: () => router.push(`/practice-log/routine/edit?date=${date}`) },
-        ...others.map((r) => ({ label: `Add ${r.name || "Untitled routine"} to this day`, onSelect: () => log.addToDay(date, r.id) })),
+        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${date}`) },
+        ...others.map((r) => ({
+          label: `Add ${r.name || "Untitled routine"} to this day`,
+          icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />,
+          onSelect: () => log.addToDay(date, r.id),
+        })),
       ],
     });
   }
@@ -78,6 +91,18 @@ export default function DayPanel({
           <p className="text-xs text-muted">
             {isToday ? "Today · " : ""}
             {minutes > 0 ? `${formatMinutesShort(Math.round(minutes))} practiced` : "Nothing logged yet"}
+            {date <= todayKey() && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: { kind: "day", date } }))}
+                  className="inline-flex items-center gap-1 font-semibold text-accent hover:underline"
+                >
+                  <ShareIcon className="h-3 w-3" /> Day report
+                </button>
+              </>
+            )}
           </p>
         </div>
         <button type="button" onClick={() => onDateChange(addDays(date, 1))} aria-label="Next day" className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
@@ -101,6 +126,8 @@ export default function DayPanel({
           </span>
         </div>
       )}
+
+      <DayTimer data={data} date={date} onClear={() => log.updateDay(date, clearDayTime)} />
 
       <DayTasks date={date} log={log} />
 
@@ -126,40 +153,50 @@ export default function DayPanel({
       {(day.sessions?.length ?? 0) > 0 && (
         <div className="flex flex-col gap-1 rounded-2xl bg-surface p-4">
           <h3 className="flex items-center gap-1.5 text-sm font-bold">
-            <StopwatchIcon className="h-4 w-4 text-accent" /> Practice Timer
+            <StopwatchIcon className="h-4 w-4 text-accent" /> Timed practice
           </h3>
           <ul className="flex flex-col text-sm">
-            {day.sessions!.map((s, i) => (
-              <li key={i} className="flex items-baseline justify-between gap-2 py-0.5">
-                <span className="min-w-0 truncate">
-                  {s.title}
+            {day.sessions!.map((s, i) => {
+              const tool = s.tool ? NAV_LINKS.find((l) => l.href === s.tool) : undefined;
+              const ToolIcon = tool?.icon ?? StopwatchIcon;
+              return (
+              <li key={i} className="flex items-center justify-between gap-2 py-0.5">
+                <span className="flex min-w-0 items-center gap-2 truncate">
+                  <ToolIcon className="h-3.5 w-3.5 shrink-0 text-muted" />
+                  {s.tool ? <Link href={s.tool} className="truncate hover:underline">{s.title}</Link> : s.title}
                   {s.session !== s.title && <span className="text-muted"> · {s.session}</span>}
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-muted">
                   {formatTime(new Date(s.at).getHours() * 60 + new Date(s.at).getMinutes())} · {formatMinutesShort(Math.max(1, Math.round(s.ms / 60000)))}
                 </span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       )}
 
       <div className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-bold">Other practice</h3>
+          <div>
+            <h3 className="text-sm font-bold">Logged by hand</h3>
+            <button type="button" onClick={() => setLogging(true)} className="mt-1 flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground hover:bg-accent-hover">
+              <PlusIcon className="h-3.5 w-3.5" /> Log time
+            </button>
+          </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => log.updateDay(date, (d) => ({ ...d, extraMinutes: Math.max(0, (d.extraMinutes ?? 0) - 5) }))}
+              onClick={() => log.addDayTime(date, -5 * 60000)}
               aria-label="5 minutes less"
               className="flex h-7 w-7 items-center justify-center rounded-full bg-background font-bold hover:bg-surface-hover"
             >
               −
             </button>
-            <span className="w-16 text-center text-sm font-semibold tabular-nums">{formatMinutesShort(day.extraMinutes ?? 0)}</span>
+            <span className="w-16 text-center text-sm font-semibold tabular-nums">5 min</span>
             <button
               type="button"
-              onClick={() => log.updateDay(date, (d) => ({ ...d, extraMinutes: (d.extraMinutes ?? 0) + 5 }))}
+              onClick={() => log.addDayTime(date, 5 * 60000)}
               aria-label="5 minutes more"
               className="flex h-7 w-7 items-center justify-center rounded-full bg-background font-bold hover:bg-surface-hover"
             >
@@ -196,6 +233,7 @@ export default function DayPanel({
         </div>
       </div>
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
+      {logging && <LogTimeDialog date={date} log={log} onClose={() => setLogging(false)} />}
     </section>
   );
 }
@@ -253,15 +291,34 @@ function DayTasks({ date, log }: { date: string; log: Log }) {
                 >
                   {t.done && <CheckIcon className="h-3.5 w-3.5" />}
                 </button>
-                <button type="button" onClick={() => setEditing({ task: t, isNew: false })} className="min-w-0 flex-1 text-left">
+                <div className="min-w-0 flex-1">
+                <button type="button" onClick={() => setEditing({ task: t, isNew: false })} className="w-full text-left">
                   <div className={`font-medium ${t.done ? "text-muted line-through" : ""}`}>{t.title}</div>
                   <div className="flex flex-wrap gap-x-2 text-xs text-muted">
                     {time !== null && <span className="font-semibold">{formatTime(time)}</span>}
                     <span>{formatMinutesShort(t.minutes)}</span>
-                    {t.spentMs ? <span>· {formatMinutesShort(t.spentMs / 60000)} on the timer</span> : null}
+                    {t.spentMs ? <span>· {formatMinutesShort(t.spentMs / 60000)} logged</span> : null}
                   </div>
                   {t.notes && <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted">{t.notes}</p>}
                 </button>
+                {t.done && !t.spentMs && t.minutes > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => log.saveDayTask(date, { ...t, spentMs: t.minutes * 60000 })}
+                    className="mt-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent/25"
+                    title="Checked off without the timer — log its time"
+                  >
+                    + Log {formatMinutesShort(t.minutes)}
+                  </button>
+                )}
+                <Subtasks
+                  items={t.subtasks ?? []}
+                  isDone={(id) => !!t.subtasks?.find((x) => x.id === id)?.done}
+                  onToggle={(id) => log.saveDayTask(date, { ...t, subtasks: (t.subtasks ?? []).map((x) => (x.id === id ? { ...x, done: !x.done } : x)) })}
+                  onAdd={(title) => log.saveDayTask(date, { ...t, subtasks: [...(t.subtasks ?? []), newSubtask(title)] })}
+                  onRemove={(id) => log.saveDayTask(date, { ...t, subtasks: (t.subtasks ?? []).filter((x) => x.id !== id) })}
+                />
+                </div>
                 {isNow && engine ? (
                   <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-foreground">{engine.paused ? "Paused" : "Timing"}</span>
                 ) : (

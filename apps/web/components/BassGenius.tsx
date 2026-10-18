@@ -33,6 +33,7 @@ import { parseTypedProgression } from "@/lib/typedProgression";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
+import { useToolActivity } from "@/lib/toolTime";
 
 type Settings = {
   /** Play along, or manage bass players and their transcriptions. */
@@ -206,6 +207,8 @@ export default function BassGenius() {
 
   const [picking, setPicking] = useState(false);
   const [running, setRunning] = useState(false);
+  // Counts as practice in the Shed Log while it runs.
+  useToolActivity("/bass-genius", running);
   const [download, setDownload] = useState<number | null>(uprightBassReady() ? 1 : null);
   const [loadError, setLoadError] = useState(false);
   const [now, setNow] = useState<{ beat: number; info: PerformedBeat | null } | null>(null);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { type PaneEdge, type PaneTree, splitLeaf } from "@/lib/tilingLayout";
+import { type PaneEdge, type PaneTree, collectLeaves, createLeaf, splitLeaf } from "@/lib/tilingLayout";
 
 /** "Advanced layouts" (tiling panes) state — a device-local preference and arrangement, same
     category as the sidebar's own width/collapsed state (`components/Sidebar.tsx`'s own
@@ -132,4 +132,21 @@ export function applyPendingSplit(href: string): boolean {
   const { tree, newPaneId } = splitLeaf(current.tree, paneId, edge, href);
   write({ tree, activePaneId: newPaneId, pendingSplit: null });
   return true;
+}
+
+/** Opens `href` in split screen next to what's showing — the sidebar's right-click menu. The first
+    split turns split screen on, with the page you're on (`currentHref`) and the new one side by
+    side ("right") or one above the other ("down"); after that it splits whichever pane is active.
+    The new pane becomes the active one. */
+export function openInSplit(href: string, edge: PaneEdge, currentHref: string) {
+  const current = read();
+  if (current.enabled && current.tree && current.activePaneId && collectLeaves(current.tree).some((l) => l.id === current.activePaneId)) {
+    const { tree, newPaneId } = splitLeaf(current.tree, current.activePaneId, edge, href);
+    write({ tree, activePaneId: newPaneId });
+  } else {
+    const root = createLeaf(currentHref);
+    const { tree, newPaneId } = splitLeaf(root, root.id, edge, href);
+    write({ enabled: true, tree, activePaneId: newPaneId });
+  }
+  syncAddressBar(href);
 }

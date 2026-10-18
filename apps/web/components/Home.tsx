@@ -38,6 +38,7 @@ import { usePracticeSessions } from "@/lib/usePracticeSessions";
 import { useSetlists } from "@/lib/useSetlists";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
+import TodayPractice from "@/components/practicelog/TodayPractice";
 import { DEFAULT_LEARNING_PROGRESS, LEARNING_KEY, summarizeLearning } from "@/lib/learningPath";
 
 type ToolLink = (typeof NAV_LINKS)[number];
@@ -170,7 +171,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background text-foreground">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-10">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-10">
         <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium text-muted">{today ? new Date(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }) : " "}</p>
@@ -219,6 +220,8 @@ export default function Home() {
             </Card>
           </div>
         ) : (
+          <>
+          <TodayPractice />
           <div className="grid gap-4 lg:grid-cols-12">
             {/* Where you left off */}
             <section className="flex flex-col gap-4 rounded-3xl bg-accent/10 p-5 ring-1 ring-accent/15 lg:col-span-8">
@@ -415,6 +418,7 @@ export default function Home() {
               </div>
             </section>
           </div>
+          </>
         )}
 
         <section className="mt-6 flex flex-col items-start gap-4 rounded-3xl border border-foreground/[0.06] p-5 sm:flex-row sm:items-center">

@@ -1,0 +1,75 @@
+"use client";
+
+import { useConvexAuth } from "@convex-dev/auth/react";
+import { useState } from "react";
+import { SignInModal } from "@/components/AccountMenu";
+import { DemoProgressCard, RoutineDemo } from "@/components/landing/PracticeLogPreview";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { CalendarIcon } from "@/components/tools";
+
+/** Sign in / Sign up buttons that open the app's sign-in form in place. */
+export function SignInButtons({ size = "md" }: { size?: "sm" | "md" }) {
+  const [flow, setFlow] = useState<"signIn" | "signUp" | null>(null);
+  const pad = size === "sm" ? "px-3 py-1.5 text-xs" : "px-5 py-2.5 text-sm";
+  return (
+    <>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setFlow("signUp")} className={`rounded-full bg-accent font-semibold text-accent-foreground hover:bg-accent-hover ${pad}`}>
+          Sign up free
+        </button>
+        <button type="button" onClick={() => setFlow("signIn")} className={`rounded-full bg-surface font-semibold hover:bg-surface-hover ${pad}`}>
+          Sign in
+        </button>
+      </div>
+      {flow && <SignInModal initialFlow={flow} onClose={() => setFlow(null)} />}
+    </>
+  );
+}
+
+/**
+ * The Shed Log is for account holders. Signed out, its pages show this instead: what it is, a
+ * routine to tick off right here (the landing page's demo) and a sample progress card, and Sign up
+ * / Sign in. `children` render once signed in.
+ */
+export default function ShedLogGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  if (isLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-24">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+  if (isAuthenticated) return <>{children}</>;
+  return (
+    <main className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:grid-cols-2 lg:pt-16">
+      <div className="flex flex-col gap-5">
+        <p className="flex items-center gap-2 text-sm font-semibold text-accent">
+          <CalendarIcon className="h-5 w-5" /> Shed Log
+        </p>
+        <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">Your practice, every day, adding up.</h1>
+        <p className="text-lg leading-relaxed text-muted">
+          Plan routines that repeat, check off tasks, run them on a timer, and watch your streak, your daily goal and a year of green squares fill in. Everything you do in sheddex&apos;s tools counts.
+        </p>
+        <ul className="grid gap-2 text-sm sm:grid-cols-2">
+          {["Routines with tasks, subtasks and times", "A day timer and a daily goal", "Streaks, with confetti for the wins", "Recordings and notes on every day", "Progress cards to share", "Synced to your account, on every device"].map((t) => (
+            <li key={t} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+              {t}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-semibold">The Shed Log is free with an account.</p>
+          <SignInButtons />
+        </div>
+      </div>
+      <div className="flex flex-col gap-4">
+        <RoutineDemo celebrations={false} />
+        <div className="mx-auto w-full max-w-[17rem]">
+          <DemoProgressCard />
+        </div>
+      </div>
+    </main>
+  );
+}

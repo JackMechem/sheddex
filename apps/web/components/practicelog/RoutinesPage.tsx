@@ -5,8 +5,8 @@ import { useSyncExternalStore } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { BackButton, EmptyCard, PageShell } from "@/components/library/shared";
 import { PlusIcon } from "@/components/tools";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import {
-  ROUTINE_COLORS,
   describeRepeat,
   formatMinutesShort,
   formatShortDate,
@@ -20,7 +20,7 @@ import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noopSubscribe = () => () => {};
 
-/** `/practice-log/routines` — every routine, with when it's next on. */
+/** `/shed-log/routines` — every routine, with when it's next on. */
 export default function RoutinesPage() {
   const { data, ready } = usePracticeLog();
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
@@ -38,10 +38,10 @@ export default function RoutinesPage() {
 
   return (
     <PageShell>
-      <BackButton href="/practice-log" label="Practice Log" />
+      <BackButton href="/shed-log" label="Shed Log" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-3xl font-extrabold tracking-tight">Routines</h1>
-        <Link href="/practice-log/routine/edit" className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <Link href="/shed-log/routine/edit" className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
           <PlusIcon className="h-4 w-4" /> New routine
         </Link>
       </div>
@@ -53,8 +53,8 @@ export default function RoutinesPage() {
             const start = parseTime(r.startTime);
             return (
               <li key={r.id}>
-                <Link href={`/practice-log/routine?id=${encodeURIComponent(r.id)}`} className="flex items-center gap-3 p-4 hover:bg-surface-hover/50">
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: ROUTINE_COLORS[r.color % ROUTINE_COLORS.length] }} />
+                <Link href={`/shed-log/routine?id=${encodeURIComponent(r.id)}`} className="flex items-center gap-3 p-4 hover:bg-surface-hover/50">
+                  <RoutineIcon icon={r.icon} color={r.color} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-semibold">{r.name || "Untitled routine"}</div>
                     <div className="truncate text-xs text-muted">

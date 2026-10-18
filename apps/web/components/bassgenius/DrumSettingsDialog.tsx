@@ -157,7 +157,8 @@ export default function DrumSettingsDialog({
                         step={row.step}
                         value={config[row.key]}
                         onChange={(e) => set(row.key, Number(e.target.value))}
-                        className="accent-[var(--accent)]"
+                        style={{ "--progress": `${((config[row.key] - row.min) / (row.max - row.min)) * 100}%` } as React.CSSProperties}
+                        className="slider h-6 w-full cursor-pointer"
                         aria-label={row.label}
                       />
                       {row.hint && <span className="text-xs text-muted">{row.hint}</span>}
