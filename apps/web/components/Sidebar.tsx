@@ -333,6 +333,16 @@ function ToolTile({ link, active, large }: { link: NavLink; active: boolean; lar
   );
 }
 
+/** A sidebar section's heading ("Your shed", "People", "Tools"), with a hairline to the right. */
+function SectionHeading({ children, large = false }: { children: React.ReactNode; large?: boolean }) {
+  return (
+    <h2 className={`flex items-center gap-2 px-3 pt-2 font-extrabold text-foreground ${large ? "text-base" : "text-sm"}`}>
+      {children}
+      <span className="h-px flex-1 bg-foreground/10" />
+    </h2>
+  );
+}
+
 function NavItems({
   collapsed,
   large,
@@ -390,6 +400,9 @@ function NavItems({
   // Tunes and Chord Charts share one entry: the Tunes button covers the chord charts pages too
   // (Chord Charts still turns up as a search result).
   const libraryItems = communityItems.filter((link) => link.href !== "/chord-charts");
+  // "Your shed" holds the Library (with the Shed Log card); "People" holds Community and Lessons.
+  const shedItems = libraryItems.filter((link) => link.href === "/tunes");
+  const peopleItems = libraryItems.filter((link) => link.href !== "/tunes");
   // The Shed Log isn't one tool among the others: it's its own card under Dashboard (and
   // only joins the list while searching, as a normal result).
   const groups = groupByCategory(filtered.filter((link) => link.category !== "Community" && (searching || link.href !== "/shed-log")));
@@ -512,6 +525,33 @@ function NavItems({
     );
   }
 
+  // A main destination (Library, Community, Lessons) as a card; `wide` spans both columns.
+  function renderTile(link: NavLink, wide: boolean) {
+    const { href, label, icon: Icon } = link;
+    const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
+    const color = CATEGORY_COLORS[link.category];
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={onNavigate}
+        className={`@container flex min-w-0 rounded-2xl border px-2 py-2.5 transition-colors ${wide ? "col-span-2" : ""} ${
+          active ? "border-foreground/20 bg-surface-hover shadow-sm" : "border-foreground/5 bg-surface-hover hover:border-foreground/15"
+        }`}
+      >
+        <span className="flex w-full min-w-0 flex-col items-center gap-1 text-center @[7.5rem]:flex-row @[7.5rem]:gap-1.5 @[7.5rem]:text-left">
+          <span
+            className={`flex shrink-0 items-center justify-center rounded-xl ${large ? "h-9 w-9" : "h-8 w-8"}`}
+            style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
+          >
+            <Icon className={large ? "h-[18px] w-[18px]" : "h-4 w-4"} />
+          </span>
+          <span className={`min-w-0 max-w-full truncate font-bold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
+        </span>
+      </Link>
+    );
+  }
+
   // Collapsing is a `!collapsed`-only (not icon-mode) concept, and a search in progress always
   // forces every section open — a collapsed one hiding its own search matches would just look
   // like the search was broken.
@@ -547,15 +587,16 @@ function NavItems({
     );
     return (
       <nav onContextMenu={onNavContextMenu} className="flex h-full flex-col items-center gap-2 overflow-y-auto overflow-x-hidden pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {group("start", "Dashboard", <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />)}
         {group(
-          "start",
-          "Start",
+          "shed",
+          "Your shed",
           <>
-            <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed onNavigate={onNavigate} />
             <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed onNavigate={onNavigate} />
+            {shedItems.map(iconLink)}
           </>,
         )}
-        {group("library", "Your library", libraryItems.map(iconLink))}
+        {peopleItems.length > 0 && group("people", "People", peopleItems.map(iconLink))}
         {favoriteItems.length > 0 && group("favorites", "Favorites", favoriteItems.map(iconLink), true)}
         {groups.map(({ category, items }) => group(category, category, items.map(iconLink)))}
         {contextMenu}
@@ -569,56 +610,29 @@ function NavItems({
         <p className={`px-3 text-muted ${large ? "text-base" : "text-sm"}`}>No tools found</p>
       )}
       {(!searching || communityItems.length > 0) && (
-        <div className="flex flex-col gap-1 pb-2">
-          {/* The dashboard (the app's home); the logo above goes to the landing page. */}
-          {/* The two places to start: the dashboard and the Shed Log, as cards. */}
-          {!searching && (
-            <div className="flex flex-col gap-1.5 pb-1">
-              <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed={collapsed} large={large} onNavigate={onNavigate} />
-              <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />
-            </div>
-          )}
-          {searching || collapsed ? (
-            (searching ? communityItems : libraryItems).map((l) => renderLink(l))
+        <div className="flex flex-col gap-1.5 pb-1">
+          {searching ? (
+            communityItems.map((l) => renderLink(l))
           ) : (
-            // Your library — Community and Tunes (which takes in the chord charts) side by side, and
-            // Lessons under them — as cards under the Dashboard / Shed Log cards, a step quieter.
-            <div className="grid grid-cols-2 gap-1.5">
-              {libraryItems.map((link, i) => {
-                const { href, label, icon: Icon } = link;
-                const active = effectivePathname === href || effectivePathname.startsWith(`${href}/`) || (href === "/tunes" && isLibraryPath(effectivePathname));
-                const color = CATEGORY_COLORS[link.category];
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={onNavigate}
-                    className={`@container flex min-w-0 rounded-2xl border px-2 py-2.5 transition-colors ${i === libraryItems.length - 1 && i % 2 === 0 ? "col-span-2" : ""} ${
-                      active ? "border-foreground/20 bg-surface-hover shadow-sm" : "border-foreground/5 bg-surface-hover hover:border-foreground/15"
-                    }`}
-                  >
-                    <span className="flex w-full min-w-0 flex-col items-center gap-1 text-center @[7.5rem]:flex-row @[7.5rem]:gap-1.5 @[7.5rem]:text-left">
-                      <span
-                        className={`flex shrink-0 items-center justify-center rounded-xl ${large ? "h-9 w-9" : "h-8 w-8"}`}
-                        style={active ? { background: color, color: "var(--accent-foreground)" } : { background: `color-mix(in srgb, ${color} 20%, transparent)`, color }}
-                      >
-                        <Icon className={large ? "h-[18px] w-[18px]" : "h-4 w-4"} />
-                      </span>
-                      <span className={`min-w-0 max-w-full truncate font-bold ${large ? "text-sm @[7.5rem]:text-base" : "text-xs @[7.5rem]:text-sm"}`}>{label}</span>
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+            <>
+              {/* The dashboard (the app's home); the logo above goes to the landing page. */}
+              <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed={collapsed} large={large} onNavigate={onNavigate} />
+              {/* Your shed: your own practice — the Shed Log and your library. */}
+              <SectionHeading large={large}>Your shed</SectionHeading>
+              <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />
+              {shedItems.map((link) => renderTile(link, true))}
+              {/* People: other musicians — Community, and your teachers or students. */}
+              {peopleItems.length > 0 && (
+                <>
+                  <SectionHeading large={large}>People</SectionHeading>
+                  <div className="grid grid-cols-2 gap-1.5">{peopleItems.map((link, i) => renderTile(link, i === peopleItems.length - 1 && i % 2 === 0))}</div>
+                </>
+              )}
+            </>
           )}
         </div>
       )}
-      {!searching && !collapsed && (
-        <h2 className={`flex items-center gap-2 px-3 pt-1 font-extrabold text-foreground ${large ? "text-base" : "text-sm"}`}>
-          Tools
-          <span className="h-px flex-1 bg-foreground/10" />
-        </h2>
-      )}
+      {!searching && <SectionHeading large={large}>Tools</SectionHeading>}
       {favoriteItems.length > 0 && (
         <CategoryBlock
           title="Favorites"

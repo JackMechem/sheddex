@@ -158,3 +158,20 @@ every library page (`isLibraryPath` in `Sidebar.tsx`, which replaced `isChartsPa
 `/files`). Community's "Post a setlist" hint says "make one in your Library first". This was the
 first step of a sidebar rethink Jack is considering (group "Your stuff" vs "Tools", one row style,
 favorites shown once, the streak shown once, a sign-in card where the account features are).
+
+### Sidebar sections: Your shed, People, Tools (2026-10-18, web)
+
+The top of the sidebar is now grouped with headings, so it says what goes together:
+- **Dashboard** on its own at the top.
+- **Your shed**: the Shed Log card and the **Library** card (full width).
+- **People**: **Community** and **Lessons** side by side (other musicians — the community, your
+  teachers or students).
+- **Tools**: favorites and the tool categories, as before.
+Headings are `SectionHeading` in `Sidebar.tsx`; the cards are `renderTile`. The collapsed (icon)
+sidebar has the same groups: Dashboard, Your shed (Shed Log, Library), People (Community,
+Lessons), favorites, then each category. While searching there are no headings, as before.
+"Your shed" was chosen from a few names (My music, Your practice, …) because it echoes sheddex
+and the Shed Log. Still open from the same rethink: favorites shown once (they appear both as cards
+and as starred rows), the streak shown once (Shed Log card and account row), and a sign-in card
+in "Your shed"/"People" when signed out. In the ⌘K palette these four destinations are still
+listed under the "Community" category (that's `navLinks.ts`'s category, unchanged).
