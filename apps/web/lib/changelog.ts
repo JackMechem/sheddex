@@ -33,6 +33,18 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.4",
+    date: "2026-10-19",
+    title: "A better week view",
+    summary: "The Shed Log's week is easier to use, and works properly on phones.",
+    changes: [
+      { kind: "improved", text: "**Tick tasks off from the week:** tap a routine or task in the week view to check off its tasks, start it on the timer, or open the day." },
+      { kind: "new", text: "**Add at a time:** click a free time on the week grid to add a task then, start a routine that day, or add one of your routines to it." },
+      { kind: "improved", text: "**Week view on phones:** the week is now a list of days with each routine as a big button showing how much is done. Swipe sideways for the next or last week." },
+      { kind: "improved", text: "Each day in the week shows its minutes and a small bar toward your daily goal, and routines fill in as you finish tasks." },
+    ],
+  },
+  {
     version: "0.9.3",
     date: "2026-10-18",
     title: "Streaks for every tool",

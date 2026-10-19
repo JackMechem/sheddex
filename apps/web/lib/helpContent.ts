@@ -69,7 +69,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       "Log time by hand if you forgot the timer",
       "Notes, attachments and recordings on every day",
       "Streaks, celebrations and shareable progress cards",
-      "Month and week calendars",
+      "Month, week and day views",
     ],
     options: [
       { name: "Routine", text: "A named list of tasks that repeats: every day, on chosen weekdays, every few days or monthly. Pick an icon and color, an optional start time, and when it ends (never, or on a date)." },
@@ -82,6 +82,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Sounds", text: "Plays a rising note as you check tasks off and a fanfare when you finish a routine or hit your goal." },
       { name: "Attachments and recordings", text: "Link tunes, setlists, chord charts or tools to a day, routine or task, and record clips to a day or routine." },
       { name: "Share", text: "Share a routine by link or post it to Community; share a progress card (streak, hours or days, for a week, month or year)." },
+      { name: "Week view", text: "Tap a routine or task to tick it off or start it without leaving the week. Click a free time on the grid to add a task then. On a phone the week is a list of days; swipe sideways for the next or last week." },
     ],
     tips: ["The ? next to the Shed Log title replays its quick tour.", "Share a routine by link, or post it to Community, from the routine's page."],
     shot: "shed-log",

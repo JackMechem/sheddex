@@ -315,9 +315,14 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
 .log-check { animation: log-check 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .log-toast { animation: log-toast 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 .log-flame { animation: log-flame 1.6s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes log-pop {
+  from { transform: translateY(8px) scale(0.98); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.log-pop { animation: log-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @media (prefers-reduced-motion: reduce) {
   .log-burst { display: none; }
-  .log-check, .log-toast, .log-flame { animation: none; }
+  .log-check, .log-toast, .log-flame, .log-pop { animation: none; }
 }
 
 /* Lesson notes (components/lessons/RichNote.tsx) — rich text written as Markdown. */

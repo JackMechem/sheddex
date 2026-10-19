@@ -123,7 +123,9 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
       : (() => {
           const from = startOfWeek(selected);
           const to = addDays(from, 6);
-          return `${formatShortDate(from)} – ${formatShortDate(to)}${fromDateKey(to).getFullYear() !== new Date().getFullYear() ? `, ${fromDateKey(to).getFullYear()}` : ""}`;
+          // "Oct 18 – 24" within a month, so it fits on a phone.
+          const sameMonth = fromDateKey(from).getMonth() === fromDateKey(to).getMonth();
+          return `${formatShortDate(from)} – ${sameMonth ? fromDateKey(to).getDate() : formatShortDate(to)}${fromDateKey(to).getFullYear() !== new Date().getFullYear() ? `, ${fromDateKey(to).getFullYear()}` : ""}`;
         })();
   const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, 7 * n));
   const viewSwitch = (
@@ -301,7 +303,20 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             {view === "month" ? (
               <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
             ) : (
-              <WeekView data={data} selected={selected} onSelect={setPicked} />
+              <WeekView
+                log={log}
+                selected={selected}
+                onSelect={setPicked}
+                onStep={step}
+                onOpenDay={(date) => {
+                  setPicked(date);
+                  setView({ view: "day" });
+                }}
+                onAddTask={(date, time) => {
+                  setPicked(date);
+                  setNewTask({ ...newDayTask(), time });
+                }}
+              />
             )}
             {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
           </div>
