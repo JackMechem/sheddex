@@ -7,7 +7,7 @@ import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
 import ToolStats from "@/components/toolstats/ToolStats";
-import { LOG_BY_BUTTON } from "@/lib/toolTime";
+import { LOG_BY_BUTTON, PLAIN_OPTIONS } from "@/lib/toolTime";
 
 const LayoutContext = createContext<"split" | "stacked">("split");
 
@@ -59,10 +59,12 @@ export default function ToolLayout({
   const intro = useIntro(topic);
   // The tool's own stats and its "Log to Shed Log" button (tools on the new logging so far).
   const statsHref = link && LOG_BY_BUTTON.has(link.href) ? link.href : null;
+  // ...and the reward look for their options, except the few that keep their own.
+  const rewardOn = !!statsHref && !PLAIN_OPTIONS.has(statsHref);
 
   const page = (
     <LayoutContext.Provider value={layout}>
-      <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
+      <div className={`relative flex min-h-full flex-1 flex-col bg-background text-foreground ${rewardOn ? "reward-scope" : ""}`}>
         <div className="absolute left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 pr-4 sm:pl-[4.5rem] lg:top-3 lg:pl-8">
           <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
             {TitleIcon && <TitleIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" />}
@@ -115,7 +117,7 @@ export default function ToolLayout({
     </LayoutContext.Provider>
   );
   // Tools on the new Shed Log logging also get the reward look for their options.
-  return statsHref ? (
+  return rewardOn && statsHref ? (
     <RewardProvider href={statsHref} color="var(--accent)">
       {page}
     </RewardProvider>

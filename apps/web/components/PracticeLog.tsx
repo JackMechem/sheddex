@@ -16,7 +16,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
-import { CalendarIcon, HelpIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon, StopwatchIcon } from "@/components/tools";
+import { CalendarIcon, HelpIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
 import {
   type DayTask,
@@ -219,11 +219,6 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
                 items: [
                   { label: "Daily goal…", icon: <TargetIcon />, onSelect: () => setGoalOpen(true) },
                   { label: data.prefs.sounds ? "Sounds: on" : "Sounds: off", icon: <SpeakerIcon className={`h-4 w-4 ${data.prefs.sounds ? "text-accent" : "text-muted"}`} />, onSelect: () => log.setPrefs({ sounds: !data.prefs.sounds }) },
-                  {
-                    label: data.prefs.trackTools !== false ? "Count time in tools: on" : "Count time in tools: off",
-                    icon: <StopwatchIcon className={`h-4 w-4 ${data.prefs.trackTools !== false ? "text-accent" : "text-muted"}`} />,
-                    onSelect: () => log.setPrefs({ trackTools: data.prefs.trackTools === false }),
-                  },
                 ],
               });
             }}

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { CloseIcon, SlidersIcon } from "@/components/tools";
+import { CheckIcon, CloseIcon, SlidersIcon } from "@/components/tools";
 import { rewardGradient, usePopKey, useReward } from "@/components/reward/Reward";
 
 /** Set by `ToolLayout` around a tool's `options`: when true, `CollapsiblePanel`, `OptionsCard` and
@@ -110,7 +110,7 @@ export function SettingChip({
     if (openProp === undefined) setOpenState(value);
   };
   const reward = useReward();
-  const valueKey = typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const valueKey = `${typeof value === "string" || typeof value === "number" ? String(value) : ""}|${toggle?.checked ?? ""}`;
   const pop = usePopKey(valueKey);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const chipRef = useRef<HTMLDivElement>(null);
@@ -164,7 +164,7 @@ export function SettingChip({
   const chip = toggle ? (
     <div
       ref={chipRef}
-      className={`flex items-stretch overflow-hidden rounded-2xl bg-surface transition ${open ? "ring-2 ring-accent" : ""} ${toggle.checked ? "" : "opacity-70"}`}
+      className={`flex items-stretch overflow-hidden bg-surface transition ${reward ? "h-14 rounded-full" : "rounded-2xl"} ${open ? "ring-2 ring-accent" : ""} ${toggle.checked ? "" : "opacity-70"}`}
     >
       <button
         type="button"
@@ -173,12 +173,30 @@ export function SettingChip({
         aria-label={label}
         disabled={toggle.disabled}
         onClick={() => toggle.onChange(!toggle.checked)}
-        className="flex items-center gap-3 py-2 pl-3 pr-3 text-left transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
+        className={`flex items-center gap-3 text-left transition hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60 ${reward ? "pl-2 pr-4" : "py-2 pl-3 pr-3"}`}
       >
-        <span className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${toggle.checked ? "bg-accent" : "bg-background"}`}>
-          <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-foreground shadow transition-transform ${toggle.checked ? "translate-x-4" : ""}`} />
-        </span>
-        {labelAndValue(false)}
+        {reward ? (
+          <span className={`relative h-9 w-[3.75rem] shrink-0 rounded-full transition-colors ${toggle.checked ? "" : "bg-background"}`} style={toggle.checked ? { background: rewardGradient(reward.color) } : undefined}>
+            <span
+              key={pop}
+              className={`absolute left-1 top-1 flex h-7 w-7 items-center justify-center rounded-full shadow transition-transform ${toggle.checked ? "translate-x-6 bg-accent-foreground text-accent" : "bg-foreground/80"} ${pop ? "reward-pop" : ""}`}
+            >
+              {toggle.checked && <CheckIcon className="h-4 w-4" />}
+            </span>
+          </span>
+        ) : (
+          <span className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${toggle.checked ? "bg-accent" : "bg-background"}`}>
+            <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-foreground shadow transition-transform ${toggle.checked ? "translate-x-4" : ""}`} />
+          </span>
+        )}
+        {reward && value !== undefined && value !== null && value !== "" ? (
+          <span className="flex min-w-0 flex-col items-start leading-tight">
+            <span className="whitespace-nowrap text-base font-extrabold">{value}</span>
+            <span className="whitespace-nowrap text-[11px] font-semibold text-muted">{label}</span>
+          </span>
+        ) : (
+          labelAndValue(false)
+        )}
       </button>
       <span className="my-2 w-px bg-foreground/10" aria-hidden />
       <button
@@ -188,7 +206,7 @@ export function SettingChip({
         aria-haspopup="dialog"
         aria-label={`${label} settings`}
         title={`${label} settings`}
-        className={`flex items-center px-3 transition ${open ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
+        className={`flex items-center transition ${reward ? "pl-3 pr-4" : "px-3"} ${open ? "bg-accent text-accent-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
       >
         <SlidersIcon className="h-4 w-4" />
       </button>
@@ -266,7 +284,7 @@ export function SettingChip({
               role="dialog"
               aria-label={title ?? label}
               style={placement?.style}
-              className={`settings-pop z-50 flex flex-col overflow-hidden rounded-3xl bg-surface text-left text-foreground shadow-[0_24px_60px_-16px_rgba(0,0,0,0.45)] ring-1 ring-foreground/[0.06] ${
+              className={`settings-pop ${reward ? "reward-scope" : ""} z-50 flex flex-col overflow-hidden rounded-3xl bg-surface text-left text-foreground shadow-[0_24px_60px_-16px_rgba(0,0,0,0.45)] ring-1 ring-foreground/[0.06] ${
                 sheet ? "fixed inset-x-3 bottom-3 max-h-[80dvh]" : placement.below ? "origin-top" : "origin-bottom"
               }`}
             >

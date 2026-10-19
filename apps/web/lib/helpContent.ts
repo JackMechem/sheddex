@@ -78,7 +78,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Day timer", text: "A stopwatch for the whole day. It starts when you start a routine and keeps running after; its total is your practice time for the day." },
       { name: "Daily goal", text: "How many minutes count as a full day. Hitting it keeps your streak, fills the ring and turns the day green." },
       { name: "Log time", text: "Forgot the timer? Add minutes to the day or to one task by hand. Checking a task off logs its planned minutes; unchecking takes them back." },
-      { name: "Count time in tools", text: "On by default: while a tool is actually running (a round going, a tune playing), that time is added to today. The Metronome is the exception: it has its own Log button, so its time is added only when you press it." },
+      { name: "Time in tools", text: "Each tool counts the time it actually runs (a metronome playing, a round going) and shows it by its title with its own streak. Press the tool's Log button to add today's time to your Shed Log." },
       { name: "Sounds", text: "Plays a rising note as you check tasks off and a fanfare when you finish a routine or hit your goal." },
       { name: "Attachments and recordings", text: "Link tunes, setlists, chord charts or tools to a day, routine or task, and record clips to a day or routine." },
       { name: "Share", text: "Share a routine by link or post it to Community; share a progress card (streak, hours or days, for a week, month or year)." },

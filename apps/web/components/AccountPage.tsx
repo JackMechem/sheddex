@@ -845,7 +845,6 @@ function PracticeSettings() {
       </SettingsCard>
       <SettingsCard title="While you practice">
         <SwitchRow label="Sounds when you check things off" checked={data.prefs.sounds} onChange={(sounds) => log.setPrefs({ sounds })} />
-        <SwitchRow label="Count time spent in tools as practice" checked={data.prefs.trackTools !== false} onChange={(trackTools) => log.setPrefs({ trackTools })} />
         <Link href="/shed-log" className="self-start text-sm font-semibold text-accent hover:underline">
           Open the Shed Log →
         </Link>

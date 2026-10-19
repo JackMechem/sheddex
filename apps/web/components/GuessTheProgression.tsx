@@ -58,6 +58,7 @@ import LevelComplete from "@/components/learning/LevelComplete";
 import { levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const MIN_ROUND_SECONDS = 10;
 const MAX_ROUND_SECONDS = 90;
@@ -878,21 +879,9 @@ export default function GuessTheProgression() {
                   {PROGRESSIONS.filter((p) => p.category === category).map((p) => {
                     const selected = settings.progressionIds.includes(p.id);
                     return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        aria-pressed={selected}
-                        title={p.chords.map((c) => prettyNumeral(c.numeral)).join(" ")}
-                        onClick={() => toggleProgression(p.id)}
-                        disabled={running}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
-                          selected
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-background text-foreground hover:bg-surface-hover"
-                        }`}
-                      >
+                      <PoolPill key={p.id} on={selected} onClick={() => toggleProgression(p.id)} disabled={running} title={p.chords.map((c) => prettyNumeral(c.numeral)).join(" ")} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
                         {p.name}
-                      </button>
+                      </PoolPill>
                     );
                   })}
                 </div>

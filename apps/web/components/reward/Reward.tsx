@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { burstAt } from "@/components/practicelog/Celebrations";
+import { CheckIcon } from "@/components/tools";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 
 /**
@@ -131,5 +132,56 @@ export function Sparkle({ show, at, color }: { show: boolean; at: string | numbe
     <span key={String(at)} aria-hidden className="star-pop inline-block text-base leading-none" style={{ color: color ?? "var(--accent)" }}>
       ✦
     </span>
+  );
+}
+
+/** One choice in a pool you pick several from (which intervals, which chords, which ratios):
+    with the reward look it's a chunky pill that lights up with a check; otherwise the plain
+    accent pill the tools always had (`plainClassName` keeps each tool's own sizing). */
+export function PoolPill({
+  on,
+  onClick,
+  disabled,
+  title,
+  plainClassName = "rounded-full px-3 py-1.5 text-xs font-medium",
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  plainClassName?: string;
+  children: ReactNode;
+}) {
+  const reward = useReward();
+  if (!reward) {
+    return (
+      <button
+        type="button"
+        aria-pressed={on}
+        title={title}
+        onClick={onClick}
+        disabled={disabled}
+        className={`${plainClassName} transition-colors disabled:opacity-60 ${on ? "bg-accent text-accent-foreground" : "bg-background text-foreground hover:bg-surface-hover"}`}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      className={`relative flex items-center gap-1 rounded-full py-2 text-sm font-bold tabular-nums transition active:scale-95 disabled:opacity-60 ${
+        on ? "pl-2.5 pr-3.5 text-accent-foreground shadow-sm" : "bg-background px-3.5 text-muted hover:-translate-y-0.5 hover:bg-surface-hover hover:text-foreground"
+      }`}
+      style={on ? { background: rewardGradient(reward.color) } : undefined}
+    >
+      {on && <CheckIcon key="on" className="reward-pop h-3.5 w-3.5" />}
+      {children}
+    </button>
   );
 }

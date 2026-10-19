@@ -363,3 +363,20 @@ verified:** pressing Log signed in (needs an account), audio, hover effects. No 
 (synced setting `jam-practice-tool-stats`, `{ hidden }`, one switch for every tool). Hidden, it
 shows a compact "🔥 N · Show stats" pill like the Shed Log's, and the Log button stays, since it's
 the only way those tools' time reaches the Shed Log. Checked hide → reload → show at 1440 and 390.
+
+**Rolled out to every tool (same day):** `LOG_BY_BUTTON` now lists all 17 tools that report
+running time (everything but the Practice Timer, which logs itself), so every tool page shows the
+stats pills and the Log button, and no tool adds time to the Shed Log automatically any more.
+`PLAIN_OPTIONS` (Bass Genius, Drum Generator, Syncopation, Random Sticking Warmup) get the stats
+but keep their options look. The reward look now also covers: every slider on a reward tool
+(`.reward-scope` on the ToolLayout root and on SettingChip popovers styles `input.slider`
+there), `SwitchRow` (the row is a tappable card; the switch lights up with a check), split
+toggle chips (`SettingChip` `toggle`), `AdvancedSlider` (value in a pill that pops, ✦ on round
+numbers or the max), and pools via the new `PoolPill` (Interval Trainer, Guess the
+Interval/Chord/Progression, Scale Trainer, Metric Modulation ratios, Slow Downer speed presets).
+`SteppedField` deliberately doesn't pop: re-keying it would drop focus while typing. The Log button
+is third in the row at every width (long titles like Metric Modulation pushed it off screen).
+"Count time in tools" was removed from the Shed Log menu and the account page (it no longer does
+anything; the `trackTools` pref stays in the data). Checked all 16 tool pages at 1440 and 390
+(stats present, a popover open, no overflow, no page errors), tsc (web + mobile), lint, build.
+Not checked: Log signed in, every popover of every tool, audio.

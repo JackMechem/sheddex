@@ -25,8 +25,29 @@ import { trackToolStart, trackToolTime } from "@/lib/usage";
  */
 
 /** Tools whose time reaches the Shed Log only through their "Log" button (and that show the
-    stats pills). The Metronome is the pilot; the rest follow once its design is settled. */
-export const LOG_BY_BUTTON = new Set<string>(["/metronome"]);
+    stats pills): every tool that reports running time. (The Practice Timer logs itself.) */
+export const LOG_BY_BUTTON = new Set<string>([
+  "/jam-practice",
+  "/bass-genius",
+  "/note-trainer",
+  "/scale-trainer",
+  "/interval-trainer",
+  "/guess-the-interval",
+  "/guess-the-chord",
+  "/guess-the-progression",
+  "/metronome",
+  "/random-metric-modulation",
+  "/tempo-trainer",
+  "/tuner",
+  "/slow-downer",
+  "/recorder",
+  "/random-sticking-warmup",
+  "/drum-generator",
+  "/syncopation",
+]);
+
+/** Tools that keep their own options look (stats and Log button, but not the reward look). */
+export const PLAIN_OPTIONS = new Set<string>(["/bass-genius", "/drum-generator", "/syncopation", "/random-sticking-warmup"]);
 
 type Active = { since: number; visibleOnly: boolean };
 
@@ -71,7 +92,7 @@ function flushLog(href?: string) {
 }
 
 /** Whether running time goes into the Shed Log automatically (signed in, "Count time in tools"
-    on) — for the tools that don't have a Log button yet. */
+    on) — only for a tool not in `LOG_BY_BUTTON` (none today; kept for new tools). */
 let autoLog = false;
 
 /** Marks a tool as running (or not). Call from the tool's component with its running state. */

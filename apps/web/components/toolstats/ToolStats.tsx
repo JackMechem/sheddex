@@ -203,13 +203,13 @@ export default function ToolStats({ href }: { href: string }) {
       </>
       )}
 
-      {/* Log today's time into the Shed Log (third on phones, so it's in view; last on desktop). */}
+      {/* Log today's time into the Shed Log (third, so it's in view even when the row scrolls). */}
       {unlogged >= 1000 ? (
         <button
           ref={logRef}
           type="button"
           onClick={log}
-          className="order-3 flex h-11 shrink-0 snap-start items-center gap-2 rounded-full bg-accent pl-1.5 lg:order-6 pr-4 text-accent-foreground shadow-sm transition hover:bg-accent-hover active:scale-[0.97] sm:h-12"
+          className="order-3 flex h-11 shrink-0 snap-start items-center gap-2 rounded-full bg-accent pl-1.5 pr-4 text-accent-foreground shadow-sm transition hover:bg-accent-hover active:scale-[0.97] sm:h-12"
           title="Add today's time in this tool to your Shed Log"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-foreground/15 sm:h-9 sm:w-9">
@@ -222,7 +222,7 @@ export default function ToolStats({ href }: { href: string }) {
         </button>
       ) : (
         <span
-          className={`order-3 flex h-11 shrink-0 snap-start items-center gap-2 rounded-full pl-1.5 pr-4 sm:h-12 lg:order-6 ${todayMs >= 1000 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-surface text-muted"}`}
+          className={`order-3 flex h-11 shrink-0 snap-start items-center gap-2 rounded-full pl-1.5 pr-4 sm:h-12 ${todayMs >= 1000 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-surface text-muted"}`}
           title={todayMs >= 1000 ? "Today's time is in your Shed Log" : "Start the tool, then log your time"}
         >
           <span className={`flex h-8 w-8 items-center justify-center rounded-full sm:h-9 sm:w-9 ${todayMs >= 1000 ? "bg-emerald-500 text-white" : "bg-background"}`}>

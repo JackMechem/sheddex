@@ -70,6 +70,7 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const MIN_INTERVAL_SECONDS = 1;
 const MAX_INTERVAL_SECONDS = 20;
@@ -1115,21 +1116,9 @@ export default function ScaleTrainer() {
                     (mode) => {
                       const selected = settings.scaleModes.includes(mode.id);
                       return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          aria-pressed={selected}
-                          title={mode.aka}
-                          onClick={() => toggleScaleMode(mode.id)}
-                          disabled={running}
-                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
-                            selected
-                              ? "bg-accent text-accent-foreground"
-                              : "bg-background text-foreground hover:bg-surface-hover"
-                          }`}
-                        >
+                        <PoolPill key={mode.id} on={selected} onClick={() => toggleScaleMode(mode.id)} disabled={running} title={mode.aka} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
                           {mode.label}
-                        </button>
+                        </PoolPill>
                       );
                     },
                   )}

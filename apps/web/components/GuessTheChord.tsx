@@ -62,6 +62,7 @@ import { Segmented } from "@/components/metronome/MetronomeOptions";
 import { cumulativeItems, levelQueue } from "@/lib/learningPath";
 import { useLearnSession } from "@/lib/useLearnSession";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const MIN_ROUND_SECONDS = 5;
 const MAX_ROUND_SECONDS = 45;
@@ -918,21 +919,9 @@ export default function GuessTheChord() {
                     (quality) => {
                       const selected = settings.chordIds.includes(quality.id);
                       return (
-                        <button
-                          key={quality.id}
-                          type="button"
-                          aria-pressed={selected}
-                          title={quality.name}
-                          onClick={() => toggleChord(quality.id)}
-                          disabled={running}
-                          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
-                            selected
-                              ? "bg-accent text-accent-foreground"
-                              : "bg-background text-foreground hover:bg-surface-hover"
-                          }`}
-                        >
+                        <PoolPill key={quality.id} on={selected} onClick={() => toggleChord(quality.id)} disabled={running} title={quality.name} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
                           C{prettyQuality(quality.suffix)}
-                        </button>
+                        </PoolPill>
                       );
                     },
                   )}
