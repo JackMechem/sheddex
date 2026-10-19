@@ -5,10 +5,15 @@ import { useRef, useState } from "react";
 import { SignInModal } from "@/components/AccountMenu";
 import { FlameIcon, burstAt, toastNow } from "@/components/practicelog/Celebrations";
 import { SettingChip } from "@/components/SettingsBar";
-import { CheckIcon, NAV_LINKS, PlusIcon, StopwatchIcon } from "@/components/tools";
+import { CheckIcon, EyeIcon, EyeOffIcon, NAV_LINKS, PlusIcon, StopwatchIcon } from "@/components/tools";
+import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { formatMinutesShort, formatShortDate, hourMilestone, weekdayOf } from "@jam-practice/core/practiceLog";
 import { logToolToday, unloggedToday, useLiveToolTime } from "@/lib/toolTime";
 import { bestStreak, historyOf, todayKey, toolStreak, totalMs, useToolUsage, usedMs, weekOf } from "@/lib/toolUsage";
+
+/** Whether the stats pills are hidden (one switch for every tool, like the Shed Log's). */
+const VIEW_KEY = "jam-practice-tool-stats";
+const VIEW_DEFAULTS = { hidden: false };
 
 const WEEKDAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
 const PILL = "flex h-11 shrink-0 snap-start items-center gap-2 rounded-full bg-surface pl-1.5 pr-3.5 transition-colors hover:bg-surface-hover sm:h-12 sm:gap-2.5 sm:pr-4";
@@ -29,8 +34,9 @@ export default function ToolStats({ href }: { href: string }) {
   const [usage, ready] = useToolUsage();
   const { liveMs, running } = useLiveToolTime(href);
   const [signIn, setSignIn] = useState(false);
+  const [{ hidden }, setView, viewReady] = useSyncedSettings(VIEW_KEY, VIEW_DEFAULTS);
   const logRef = useRef<HTMLButtonElement>(null);
-  if (!ready) return null;
+  if (!ready || !viewReady) return null;
 
   const link = NAV_LINKS.find((l) => l.href === href);
   const color = "var(--accent)";
@@ -60,6 +66,21 @@ export default function ToolStats({ href }: { href: string }) {
 
   return (
     <div className="-mx-4 flex snap-x scroll-px-4 items-center gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+      {hidden && (
+        <button
+          type="button"
+          onClick={() => setView({ hidden: false })}
+          className="order-1 flex h-11 shrink-0 snap-start items-center gap-2 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover sm:h-12"
+          title="Show stats"
+        >
+          <FlameIcon className="h-4 w-4 text-orange-500" /> {s}
+          <span className="flex items-center gap-1 text-muted">
+            <EyeIcon className="h-4 w-4" /> Show stats
+          </span>
+        </button>
+      )}
+      {!hidden && (
+      <>
       {/* Streak */}
       <div
         className={`${PILL} order-1 cursor-default hover:bg-surface`}
@@ -170,6 +191,17 @@ export default function ToolStats({ href }: { href: string }) {
         )}
       </SettingChip>
       </div>
+      <button
+        type="button"
+        onClick={() => setView({ hidden: true })}
+        aria-label="Hide stats"
+        title="Hide stats"
+        className="order-7 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-foreground"
+      >
+        <EyeOffIcon className="h-4 w-4" />
+      </button>
+      </>
+      )}
 
       {/* Log today's time into the Shed Log (third on phones, so it's in view; last on desktop). */}
       {unlogged >= 1000 ? (

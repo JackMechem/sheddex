@@ -358,3 +358,8 @@ seeded 3-day streak, the History popover, Time/Subdivision/Sound popovers (light
 no overflow, no console errors); a Node script showed a logged entry lands as one Metronome
 session that counts toward the day's minutes and the streak, and a second log merges. **Not
 verified:** pressing Log signed in (needs an account), audio, hover effects. No version bump yet.
+
+**Hiding the tool stats (same day):** an eye-off button at the end of the pills hides them
+(synced setting `jam-practice-tool-stats`, `{ hidden }`, one switch for every tool). Hidden, it
+shows a compact "🔥 N · Show stats" pill like the Shed Log's, and the Log button stays, since it's
+the only way those tools' time reaches the Shed Log. Checked hide → reload → show at 1440 and 390.
