@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DONATE_URL, SUPPORT_PATH, SupportCard } from "@/components/support/SupportParts";
 import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useConvexAuth } from "@convex-dev/auth/react";
@@ -223,6 +224,7 @@ export default function Home() {
         ) : (
           <>
           <TodayPractice />
+          <SupportCard />
           <LessonsDashboard />
           <div className="grid gap-4 lg:grid-cols-12">
             {/* Where you left off */}
@@ -425,16 +427,21 @@ export default function Home() {
 
         <section className="mt-6 flex flex-col items-start gap-4 rounded-3xl border border-foreground/[0.06] p-5 sm:flex-row sm:items-center">
           <p className="flex-1 text-sm text-muted">
-            sheddex is free, with no ads, popups or paywalls, and it&apos;ll stay that way. Servers aren&apos;t free, so if you&apos;re feeling generous, consider chipping in.
+            soniroll is free, with no ads, popups or paywalled tools. Servers aren&apos;t free, so if you&apos;re feeling generous, consider chipping in.
           </p>
-          <a
-            href="https://buymeacoffee.com/jackmechem"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover"
-          >
-            Buy me a coffee
-          </a>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <a
+              href={DONATE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover"
+            >
+              Buy me a coffee
+            </a>
+            <Link href={SUPPORT_PATH} className="inline-flex items-center rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+              Why it helps
+            </Link>
+          </div>
         </section>
       </main>
 
@@ -445,7 +452,7 @@ export default function Home() {
             Jack Mechem
           </a>
         </span>
-        <a href="https://github.com/JackMechem/sheddex.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
+        <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
         <Link href="/" className="hover:text-foreground">About</Link>
         <Link href="/feedback" className="hover:text-foreground">Send feedback</Link>
         <Link href="/changelog" className="hover:text-foreground">What&apos;s new</Link>

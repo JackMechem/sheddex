@@ -142,7 +142,7 @@ export default function LessonsPage() {
               <div className="rounded-2xl bg-surface">
                 <EmptyState
                   icon={CapIcon}
-                  title="Teach with sheddex"
+                  title="Teach with soniroll"
                   body="Add a student to get their invite link. Give them lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — and see how their practice goes."
                   action={<Pill primary icon={PlusIcon} label="Add your first student" onClick={() => setAdding(true)} />}
                 />

@@ -19,8 +19,8 @@ export const ResendOTP = Email({
   async sendVerificationRequest({ identifier: email, token }) {
     await sendEmail({
       to: email,
-      subject: "Verify your sheddex email",
-      text: `Your verification code is ${token}\n\nIt expires in 15 minutes. If you didn't try to create a sheddex account, you can ignore this email.`,
+      subject: "Verify your soniroll email",
+      text: `Your verification code is ${token}\n\nIt expires in 15 minutes. If you didn't try to create a soniroll account, you can ignore this email.`,
     });
   },
 });

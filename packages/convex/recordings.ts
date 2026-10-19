@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { assertUploadsOpen } from "./lib/site";
+import { assertFits, assertHasRoom } from "./lib/storage";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query, type QueryCtx } from "./_generated/server";
@@ -49,6 +50,7 @@ export const generateUploadUrl = mutation({
     await assertUploadsOpen(ctx);
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save recordings.");
+    await assertHasRoom(ctx, userId);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -68,6 +70,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Sign in to save recordings.");
+    await assertFits(ctx, userId, args.storageId);
     const now = Date.now();
     return await ctx.db.insert("recordings", {
       userId,

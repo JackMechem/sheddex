@@ -519,7 +519,7 @@ export function ItemDialog({
       }
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't save that.");
+      setError(errorText(e, "Couldn't save that."));
       setBusy(false);
     }
   }
@@ -674,7 +674,7 @@ export function RoutineReportView({ itemId }: { itemId: Id<"lessonItems"> }) {
   if (!data.joined) return <p className="rounded-xl bg-background p-3 text-sm text-muted">Once your student joins, you&apos;ll see how each day of this routine goes.</p>;
   const report = data.report as RoutineReport | null;
   if (!report)
-    return <p className="rounded-xl bg-background p-3 text-sm text-muted">It&apos;s on its way to their Shed Log — it appears the next time they open sheddex.</p>;
+    return <p className="rounded-xl bg-background p-3 text-sm text-muted">It&apos;s on its way to their Shed Log — it appears the next time they open soniroll.</p>;
   const t = report.totals;
   const days = showAll ? report.days : report.days.slice(0, 7);
   const rate = t.tasksTotal ? Math.round((t.tasksDone / t.tasksTotal) * 100) : null;

@@ -36,7 +36,7 @@ function NotAvailable() {
           <UsersIcon className="h-7 w-7" />
         </div>
         <h1 className="text-2xl font-extrabold tracking-tight">Sign in to see this post</h1>
-        <p className="text-sm text-muted">Community posts — tunes, setlists, routines and milestones — are for sheddex members. It&apos;s free.</p>
+        <p className="text-sm text-muted">Community posts — tunes, setlists, routines and milestones — are for soniroll members. It&apos;s free.</p>
         <SignInButtons />
       </main>
     );

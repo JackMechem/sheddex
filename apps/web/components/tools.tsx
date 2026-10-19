@@ -107,6 +107,17 @@ export function DotsVerticalIcon({ className }: { className?: string }) {
   );
 }
 
+/** Books on a shelf — the Library (tunes, setlists, charts, files). */
+export function LibraryIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M4 4h3v16H4zM9 4h3v16H9z" />
+      <path d="M14.5 5.2l2.9-.8 3.9 14.8-2.9.8z" />
+      <path d="M3 20h18" />
+    </svg>
+  );
+}
+
 export function BookIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -404,6 +415,53 @@ export function DownloadIcon({ className }: { className?: string }) {
   );
 }
 
+export function UploadIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+    </svg>
+  );
+}
+
+/** A page with a folded corner — any file. */
+export function FileIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  );
+}
+
+/** A page with lines — a PDF or document. */
+export function DocumentIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h4" />
+    </svg>
+  );
+}
+
+export function ImageIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path d="M21 16l-5-5-9 9" />
+    </svg>
+  );
+}
+
+export function VideoIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="3" y="6" width="13" height="12" rx="2" />
+      <path d="M16 10l5-3v10l-5-3" />
+    </svg>
+  );
+}
+
 export function HelpIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -606,7 +664,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/tuner": TunerIcon,
   "/slow-downer": WaveIcon,
   "/chord-charts": ChordChartIcon,
-  "/tunes": NoteIcon,
+  "/tunes": LibraryIcon,
   "/recorder": RecordIcon,
   "/random-sticking-warmup": DrumIcon,
   "/drum-generator": DrumIcon,

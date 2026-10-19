@@ -50,7 +50,7 @@ export default function TodayPractice() {
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-extrabold">Start your Shed Log</h2>
-          <p className="text-sm text-muted">Routines, a day timer, a daily goal and a streak — and every minute in sheddex&apos;s tools counts. Free with an account.</p>
+          <p className="text-sm text-muted">Routines, a day timer, a daily goal and a streak — and every minute in soniroll&apos;s tools counts. Free with an account.</p>
         </div>
         <SignInButtons />
       </section>

@@ -33,7 +33,7 @@ export default function FeedbackDialog() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-extrabold">{report ? "Report" : "Send feedback"}</h2>
-            {!report && <p className="text-sm text-muted">Bugs, ideas, complaints — it all goes straight to the person who builds sheddex.</p>}
+            {!report && <p className="text-sm text-muted">Bugs, ideas, complaints — it all goes straight to the person who builds soniroll.</p>}
           </div>
           <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background text-muted hover:text-foreground">
             <CloseIcon className="h-4 w-4" />

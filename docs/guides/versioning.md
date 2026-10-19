@@ -35,6 +35,9 @@ version current. Don't bump for docs-only or internal changes.
 4. Restart the dev server if it's running (it reads `next.config.ts` only at startup).
 5. Tell Jack it's a good point to commit.
 
+Bumps happen on `preview`. A release is `preview` merged into `main` (see "Branches" in the
+README).
+
 ## Corrections
 
 Admin → Changelog edits an entry without touching the file. A correction is a `changelogEdits` row

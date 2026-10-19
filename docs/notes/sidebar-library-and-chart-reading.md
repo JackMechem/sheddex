@@ -147,3 +147,31 @@ Checked signed in to Jack's dev account in nix Chromium: the reader at 1600 wide
 (next with the arrow keys, the phone sheet), the chart page, transposing to Fm from the key grid,
 full screen, the ⋮ menu, and the tune page. No errors.
 
+
+### Tunes → Library in the sidebar (2026-10-18, web)
+
+The sidebar's "Tunes" card is now **Library** (new `LibraryIcon`, books on a shelf), since it leads
+to tunes, setlists, chord charts and files. Only the name changed: `navLinks.ts`'s `/tunes` entry is
+labelled "Library" (its description lists all four, so searching "tunes" still finds it), the
+route is still `/tunes`, and the Tunes page keeps its own title and tabs. The card stays lit on
+every library page (`isLibraryPath` in `Sidebar.tsx`, which replaced `isChartsPath` and adds
+`/files`). Community's "Post a setlist" hint says "make one in your Library first". This was the
+first step of a sidebar rethink Jack is considering (group "Your stuff" vs "Tools", one row style,
+favorites shown once, the streak shown once, a sign-in card where the account features are).
+
+### Sidebar sections: Your shed, People, Tools (2026-10-18, web)
+
+The top of the sidebar is now grouped with headings, so it says what goes together:
+- **Dashboard** on its own at the top.
+- **Your shed**: the Shed Log card and the **Library** card (full width).
+- **People**: **Community** and **Lessons** side by side (other musicians — the community, your
+  teachers or students).
+- **Tools**: favorites and the tool categories, as before.
+Headings are `SectionHeading` in `Sidebar.tsx`; the cards are `renderTile`. The collapsed (icon)
+sidebar has the same groups: Dashboard, Your shed (Shed Log, Library), People (Community,
+Lessons), favorites, then each category. While searching there are no headings, as before.
+"Your shed" was chosen from a few names (My music, Your practice, …) because it echoes sheddex
+and the Shed Log. Still open from the same rethink: favorites shown once (they appear both as cards
+and as starred rows), the streak shown once (Shed Log card and account row), and a sign-in card
+in "Your shed"/"People" when signed out. In the ⌘K palette these four destinations are still
+listed under the "Community" category (that's `navLinks.ts`'s category, unchanged).

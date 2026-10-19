@@ -22,7 +22,7 @@ export default function FeedbackPage() {
   const mine = useQuery(api.feedback.mine, isAuthenticated ? {} : "skip");
   return (
     <LibraryPage>
-      <Hero title="Feedback" icon={FeedbackIcon} subtitle="sheddex is in beta and built by one person — bugs, ideas and complaints all help." />
+      <Hero title="Feedback" icon={FeedbackIcon} subtitle="soniroll is in beta and built by one person — bugs, ideas and complaints all help." />
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section className="rounded-3xl bg-surface p-5 sm:p-6">
           <FeedbackForm />

@@ -19,7 +19,7 @@ export function openFeedback(detail?: { kind?: FeedbackKind; target?: FeedbackTa
 
 const KINDS: { id: Exclude<FeedbackKind, "report">; label: string; hint: string; Icon: (p: { className?: string }) => React.ReactNode; placeholder: string }[] = [
   { id: "bug", label: "Something's broken", hint: "A bug or something not working", Icon: BugIcon, placeholder: "What happened, and what did you expect? Which tool, and on what device?" },
-  { id: "feature", label: "An idea", hint: "A feature or tool you'd like", Icon: SparkIcon, placeholder: "What would you like sheddex to do?" },
+  { id: "feature", label: "An idea", hint: "A feature or tool you'd like", Icon: SparkIcon, placeholder: "What would you like soniroll to do?" },
   { id: "other", label: "Something else", hint: "A question, a complaint, a thank-you", Icon: FeedbackIcon, placeholder: "What's on your mind?" },
 ];
 
@@ -101,10 +101,10 @@ export default function FeedbackForm({
         <p className="text-lg font-extrabold">{report ? "Thanks — we'll take a look" : "Thanks for telling us!"}</p>
         <p className="max-w-sm text-sm text-muted">
           {report
-            ? "Reports go straight to the person who runs sheddex."
+            ? "Reports go straight to the person who runs soniroll."
             : isAuthenticated
-              ? "It went straight to the person who builds sheddex. You can see where it's at on the Feedback page."
-              : "It went straight to the person who builds sheddex."}
+              ? "It went straight to the person who builds soniroll. You can see where it's at on the Feedback page."
+              : "It went straight to the person who builds soniroll."}
         </p>
         <div className="flex gap-2">
           <button

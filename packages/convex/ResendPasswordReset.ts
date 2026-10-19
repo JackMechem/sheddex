@@ -21,15 +21,15 @@ export const ResendPasswordReset = Email({
     return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
   },
   async sendVerificationRequest({ identifier: email, token }) {
-    const site = (process.env.SITE_URL ?? "https://sheddex.com").replace(/\/$/, "");
+    const site = (process.env.SITE_URL ?? "https://www.soniroll.com").replace(/\/$/, "");
     const url = `${site}/reset-password?${new URLSearchParams({ email, token })}`;
     await sendEmail({
       to: email,
-      subject: "Reset your sheddex password",
-      text: `Someone (hopefully you) asked to reset the password for your sheddex account.\n\nChoose a new password here:\n${url}\n\nThe link works once and expires in ${MAX_AGE_MINUTES} minutes. If you didn't ask for this, you can ignore this email; your password won't change.`,
+      subject: "Reset your soniroll password",
+      text: `Someone (hopefully you) asked to reset the password for your soniroll account.\n\nChoose a new password here:\n${url}\n\nThe link works once and expires in ${MAX_AGE_MINUTES} minutes. If you didn't ask for this, you can ignore this email; your password won't change.`,
       html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#1e2833">
-  <p style="font-size:22px;font-weight:700;margin:0 0 16px">sheddex</p>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 24px">Someone (hopefully you) asked to reset the password for your sheddex account.</p>
+  <p style="font-size:22px;font-weight:700;margin:0 0 16px">soniroll</p>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 24px">Someone (hopefully you) asked to reset the password for your soniroll account.</p>
   <a href="${url}" style="display:inline-block;background:#3870b2;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Reset password</a>
   <p style="font-size:13px;line-height:1.5;color:#5c6878;margin:24px 0 0">The link works once and expires in ${MAX_AGE_MINUTES} minutes. If you didn't ask for this, you can ignore this email; your password won't change.</p>
   <p style="font-size:12px;line-height:1.5;color:#5c6878;margin:16px 0 0;word-break:break-all">Button not working? Paste this into your browser:<br>${url}</p>

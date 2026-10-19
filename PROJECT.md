@@ -38,9 +38,12 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
   components. The real product. Live at sheddex.com.
-- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app, **mobile only**: it is
-  not going to replace the website (a decision reversed once; see
-  `docs/notes/mobile-tool-screens-and-sync.md`). Shares the backend and pure logic with web.
+- **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. **Development is paused
+  as of 2026-10-18** — Jack may pick it up again later. Until he does, don't build or port features
+  to it, don't make builds for his phone, and don't say "mobile isn't done yet" as a to-do in your
+  replies. Do keep it from breaking: a change to `packages/core` or a Convex function it calls
+  should still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
+  `docs/notes/mobile-tool-screens-and-sync.md`) and shares the backend and pure logic with web.
 - **Backend** (`packages/convex`): Convex — accounts (email + password with emailed codes, and
   Google), synced settings, the chart library, Community, recordings, Lessons, admin, analytics.
 - **Shared logic** (`packages/core`): pure TypeScript used by web, mobile and Convex.
@@ -48,11 +51,15 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   IndexedDB). Signed in, it lives in the account. There is **no merge** between the two: signing in
   simply switches which store is read. Some things need an account (Community posting, the Shed
   Log, Lessons, recordings, favorites, Tunes to Learn).
-- The display name is "sheddex", all lowercase (renamed many times before; see
-  `docs/notes/overview.md`). Don't reuse old names (jackshed, shed.io, Barn Tools). The repo
+- **The website is called "soniroll"** (lowercase) since 2026-10-18, with the goal-ring logo
+  (`components/Logo.tsx`, drawn from theme colours). Only what people see changed: web addresses
+  (still sheddex.com), the `sheddex://` chart links, event names, storage keys, the backend, emails
+  and the paused mobile app still say sheddex — see `docs/notes/rename-soniroll.md` for the full
+  list and what to change when soniroll.com goes live. Don't reuse older names (sheddex in new
+  UI text, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
-- GitHub: `git@github.com:JackMechem/sheddex.com.git`.
+- GitHub: `git@github.com:JackMechem/sheddex.git` (the in-app GitHub links in `Home.tsx`, `Landing.tsx` and `app/terms` point at it).
 
 ## Working with Jack
 
@@ -63,8 +70,17 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   screenshot his phone** (details in `docs/guides/testing.md`).
 - He watches `localhost:3000` while you work: don't add temporary pages under `apps/web/app/`
   (see testing).
-- Commits: he commits himself unless he asks. After a version bump, tell him it's a good point to
-  commit. Pushing needs his hardware key, so you can't push.
+- **Branches:** never work on `main` (it's the live site). Day-to-day work is on `preview`;
+  bigger work goes on `<type>/<short-name>` branches off `preview` (naming rules in `README.md`
+  under "Branches"). Check `git branch --show-current` at the start of a session, and if you're
+  on `main`, ask before changing anything.
+- **Commits: you make them.** When a piece of work is finished and checked, commit it on the
+  current branch (never on `main`) with `git commit --no-gpg-sign`. His global git config signs
+  every commit with his security key, which you can't touch; don't change that config — the flag
+  keeps his own commits signed. Write detailed messages: a short first line (what changed, in
+  plain words), a blank line, then what and why, and anything not verified. End with the
+  `Co-Authored-By` line. One commit per coherent change; don't commit half-done work, secrets or
+  `.env*` files. Never push (that needs his key) — tell him when there's something to push.
 
 ## Repo layout
 
@@ -98,6 +114,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   function. That's why the chart library uses one row per song (bars in their own table), imports
   go in chunks of 150, big deletes are batched by the scheduler, and the `library` query will need
   paging at around 4,000 charts.
+- Vercel preview builds get their own empty Convex backend per branch, seeded with demo data by
+  `packages/convex/previewSeed.ts` (setup in `docs/guides/deploying.md`). When the schema or data
+  shapes it writes change (tunes, charts, setlists, Shed Log, profiles, posts), update the seed.
 - New backend code is on **dev** only until a Vercel production build runs `convex deploy`. The
   prod mobile app and sheddex.com don't have new functions until then.
 - Convex Auth's Next.js middleware treats any `?code=` URL parameter as an OAuth callback (it
@@ -157,6 +176,10 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   the book its patterns were transcribed from.
 - **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — fine for a free site with credit,
   not for anything commercial. Every bundled sample/font is credited on `/credits`.
+- **Storage:** every account has 100 MB in total (`packages/convex/lib/storage.ts`; every upload
+  path must call `assertHasRoom` / `assertFits`). Paid plans for more storage are planned, not
+  built — and the Rhodes license has to be sorted out before sheddex charges for anything
+  (`docs/notes/files-and-tune-sharing.md`).
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
 - **Be honest about verification:** say what was checked and how, and what wasn't (especially
@@ -220,6 +243,9 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
+| Files (uploads, the `/files` browser, storage quota) and sharing a tune by link (`/tune/<id>`) | `files-and-tune-sharing.md` |
+| Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
+| The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |
@@ -239,11 +265,12 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 
 - **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
-  `/recordings*`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
-  shared links `/setlist/[id]`, `/routine/[id]`, plus `/privacy`, `/terms`, `/credits`.
-- **Mobile:** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and native
-  screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]` placeholder.
-  Bass Genius, Drum Generator, Syncopation, the Shed Log and Lessons are **web only** so far.
+  `/recordings*`, `/files`, `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
+  shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, plus `/privacy`, `/terms`, `/credits`.
+- **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
+  native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
+  placeholder. Web-only so far: Bass Genius, Drum Generator, Syncopation, the Shed Log, Lessons and
+  Files / tune share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

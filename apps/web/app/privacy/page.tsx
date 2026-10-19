@@ -6,25 +6,25 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 17, 2026">
+    <LegalPage title="Privacy Policy" updated="October 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        sheddex (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
+        soniroll (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
       </p>
 
       <LegalSection title="The short version">
         <ul className="list-disc space-y-1 pl-5">
           <li>Every tool works without an account. Signed out, your stuff stays in your browser.</li>
-          <li>With an account, your stuff is saved to sheddex&apos;s servers so it follows you between devices.</li>
+          <li>With an account, your stuff is saved to soniroll&apos;s servers so it follows you between devices.</li>
           <li>Only what you choose to make public (a public profile, a post, a shared link) is seen by anyone else.</li>
-          <li>sheddex counts which pages and tools get used, anonymously. No ads, no third-party trackers, nothing sold.</li>
+          <li>soniroll counts which pages and tools get used, anonymously. No ads, no third-party trackers, nothing sold.</li>
         </ul>
       </LegalSection>
 
       <LegalSection title="Signed out">
         <p>
           Your settings, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage. They aren&apos;t
-          sent to sheddex. Clearing your browser&apos;s data for sheddex.com deletes them.
+          sent to soniroll. Clearing your browser&apos;s data for sheddex.com deletes them.
         </p>
       </LegalSection>
 
@@ -34,8 +34,9 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and other files you upload.
-            When you sign in, sheddex uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
+            <strong>Your stuff:</strong> tool settings, tune lists, chord charts, setlists, your Shed Log, recordings and any files you upload (PDFs,
+            images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
+            When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
           <li>
             <strong>Profile:</strong> your username, and if you add them, a picture, banner and instruments.
@@ -54,8 +55,10 @@ export default function PrivacyPage() {
             account. Make it private again at any time.
           </li>
           <li>
-            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist or routine you share by link, can be seen by
-            whoever has it. Recordings attached to a shared setlist can be played by them too.
+            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist, routine or tune you share by link, can be seen by
+            whoever has it. Recordings attached to a shared setlist can be played by them too. A shared tune shows its keys, tempos, chord chart, the
+            files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. Stop sharing
+            at any time and the link stops working.
           </li>
           <li>
             <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you
@@ -67,17 +70,17 @@ export default function PrivacyPage() {
 
       <LegalSection title="Usage counts">
         <p>
-          To see what&apos;s useful, sheddex counts, per day: visits, page views, which tools are started and how long they run, and whether a visit
+          To see what&apos;s useful, soniroll counts, per day: visits, page views, which tools are started and how long they run, and whether a visit
           was signed in. Only daily totals are kept (for example, &quot;the Metronome was started 40 times on Tuesday&quot;). They aren&apos;t tied to
           you, your account or your device, and no IP address or advertising ID is stored. Nothing is counted if your browser sends Do Not Track or
-          Global Privacy Control. Account activity sheddex already has (like when an account was created) is also summed into charts for the
+          Global Privacy Control. Account activity soniroll already has (like when an account was created) is also summed into charts for the
           administrator.
         </p>
       </LegalSection>
 
       <LegalSection title="Feedback and reports">
         <p>
-          When you send feedback or report a post or profile, sheddex keeps your message, the page you were on, your browser and device type, any
+          When you send feedback or report a post or profile, soniroll keeps your message, the page you were on, your browser and device type, any
           screenshot you attach, and your account (or the email you typed if you&apos;re signed out), so it can be fixed and answered.
         </p>
       </LegalSection>
@@ -94,14 +97,14 @@ export default function PrivacyPage() {
         <p>Only what the site needs to work: keeping you signed in, your theme, tool settings and similar preferences. No ad or tracking cookies.</p>
       </LegalSection>
 
-      <LegalSection title="Services sheddex uses">
+      <LegalSection title="Services soniroll uses">
         <ul className="list-disc space-y-1 pl-5">
           <li>
             <LegalLink href="https://www.convex.dev/legal/privacy">Convex</LegalLink> stores account data, synced data and uploaded files, and runs the
             server code.
           </li>
           <li>
-            <LegalLink href="https://resend.com/legal/privacy-policy">Resend</LegalLink> sends sheddex&apos;s emails (sign-in codes, password resets,
+            <LegalLink href="https://resend.com/legal/privacy-policy">Resend</LegalLink> sends soniroll&apos;s emails (sign-in codes, password resets,
             lesson emails).
           </li>
           <li>
@@ -116,7 +119,7 @@ export default function PrivacyPage() {
             piano and Rhodes samples straight to your browser (see <LegalLink href="/credits">Credits</LegalLink>).
           </li>
         </ul>
-        <p>These may process data outside your country, including in the United States. sheddex doesn&apos;t sell or share data for advertising.</p>
+        <p>These may process data outside your country, including in the United States. soniroll doesn&apos;t sell or share data for advertising.</p>
       </LegalSection>
 
       <LegalSection title="Keeping and deleting">
@@ -128,11 +131,11 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="Security">
-        <p>Passwords are stored hashed and traffic is encrypted (HTTPS). Nothing online is perfectly secure, so sheddex keeps only what it needs.</p>
+        <p>Passwords are stored hashed and traffic is encrypted (HTTPS). Nothing online is perfectly secure, so soniroll keeps only what it needs.</p>
       </LegalSection>
 
       <LegalSection title="Children">
-        <p>sheddex isn&apos;t aimed at children under 13. If you think a child has made an account, get in touch and it will be removed.</p>
+        <p>soniroll isn&apos;t aimed at children under 13. If you think a child has made an account, get in touch and it will be removed.</p>
       </LegalSection>
 
       <LegalSection title="Changes and contact">

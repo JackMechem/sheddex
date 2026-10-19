@@ -50,7 +50,7 @@ export const RELEASES: Release[] = [
     version: "0.9.0",
     date: "2026-10-17",
     title: "The first public beta",
-    summary: "Everything sheddex does, out in the open for the first time.",
+    summary: "Everything soniroll does, out in the open for the first time.",
     changes: [
       { kind: "new", text: "**Practice tools:** Metronome (with changing meters), Polyrhythm Metric Modulation metronome, Tempo Trainer, Tuner, Note / Scale / Interval Trainers with mic listen modes, Practice Timer, Recorder (with a tune's song and a mixer), Slow Downer." },
       { kind: "new", text: "**Play along:** Jam Practice, Bass Genius (walking bass, chords and drums over your charts, and bass players learned from transcriptions), Drum Generator (32 styles), Random Sticking Warmup, Syncopation." },
@@ -60,7 +60,7 @@ export const RELEASES: Release[] = [
       { kind: "new", text: "**Community:** profiles, follows, and posts (tunes, setlists, routines, milestones)." },
       { kind: "new", text: "**Lessons:** teachers and students, a page per lesson, assignments with hand-ins and feedback, lesson notes, booking with calendar invites." },
       { kind: "new", text: "**Feedback:** a Report a bug button on every page, plus /feedback for ideas and anything else. Report posts or profiles, and see what you've sent and its status." },
-      { kind: "improved", text: "Shared sheddex links show a preview card with the logo." },
+      { kind: "improved", text: "Shared soniroll links show a preview card with the logo." },
       { kind: "fixed", text: "On iPhone and iPad, sound plays with silent mode on." },
     ],
   },

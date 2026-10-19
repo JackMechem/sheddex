@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useLayoutEffect, useRef } from "react";
 import TilingLayout from "@/components/TilingLayout";
 import PracticeLogGlobal from "@/components/practicelog/PracticeLogGlobal";
-import { prefersReducedMotion } from "@/lib/stickStrike";
+import { prefersReducedMotion } from "@/lib/logoAnimation";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useRecordToolVisits } from "@/lib/toolRecents";
 import { useTilingState } from "@/lib/useTilingLayout";

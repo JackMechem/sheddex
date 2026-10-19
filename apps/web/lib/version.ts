@@ -1,5 +1,5 @@
 /**
- * sheddex's version: semantic versioning (MAJOR.MINOR.PATCH), set in this app's package.json and
+ * soniroll's version: semantic versioning (MAJOR.MINOR.PATCH), set in this app's package.json and
  * passed in at build time (next.config.ts). Bump PATCH for fixes, MINOR for new features, MAJOR
  * for 1.0 and breaking changes. `CHANNEL` says how finished it is ("beta" until 1.0) — see
  * CHANGELOG.md at the repo root.

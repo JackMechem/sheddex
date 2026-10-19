@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { createElement } from "react";
-import { CalendarIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
+import { CalendarIcon, FileIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
 import { HELP_TOPICS, type HelpTopic } from "@/lib/helpContent";
 
 /** Pieces shared by the Help page and the first-visit intros (`ToolIntro`). */
@@ -16,6 +16,7 @@ const EXTRA_ICONS: Record<string, IconType> = {
   account: UserIcon,
   tunes: SetlistIcon,
   recordings: MicIcon,
+  files: FileIcon,
   lessons: GraduationCapIcon,
 };
 

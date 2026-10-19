@@ -94,7 +94,7 @@ function drawMilestone(ctx: CanvasRenderingContext2D, card: ProgressCard, userna
   // Top: wordmark, who, and the range.
   ctx.fillStyle = "#ffffff";
   ctx.font = f(800, 44);
-  ctx.fillText("sheddex", P, 112);
+  ctx.fillText("soniroll", P, 112);
   if (username) {
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(255,255,255,0.75)";
@@ -309,7 +309,7 @@ function drawDayReport(ctx: CanvasRenderingContext2D, card: ProgressCard, userna
   // Top: the wordmark and the date; who, on the right.
   ctx.fillStyle = "#ffffff";
   ctx.font = f(800, 44);
-  ctx.fillText("sheddex", P, 112);
+  ctx.fillText("soniroll", P, 112);
   if (username) {
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(255,255,255,0.75)";
@@ -468,5 +468,5 @@ export async function progressCardFile(card: ProgressCard, username: string | nu
   drawProgressCard(canvas, card, username);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Couldn't make the image.");
-  return new File([blob], `sheddex-${card.kind}-${card.range}-${card.end}.png`, { type: "image/png" });
+  return new File([blob], `soniroll-${card.kind}-${card.range}-${card.end}.png`, { type: "image/png" });
 }

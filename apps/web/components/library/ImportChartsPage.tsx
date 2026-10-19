@@ -9,14 +9,14 @@ import { decodeChartString, looksLikeChartString } from "@/lib/chartString";
 import { parseIrealPlaylist } from "@/lib/iRealPro";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 
-/** A sheddex chart link first, quietly falling back to an iReal Pro playlist link — never naming
+/** A soniroll chart link first, quietly falling back to an iReal Pro playlist link — never naming
     iReal Pro anywhere a user can see. */
 function parsePlaylistInput(text: string) {
   if (looksLikeChartString(text)) return decodeChartString(text);
   try {
     return parseIrealPlaylist(text);
   } catch {
-    throw new Error("Couldn't read that — paste a sheddex chord chart link.");
+    throw new Error("Couldn't read that — paste a soniroll chord chart link.");
   }
 }
 
