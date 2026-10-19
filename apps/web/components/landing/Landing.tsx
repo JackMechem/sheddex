@@ -30,7 +30,7 @@ type AuthMode = "signIn" | "signUp" | null;
 /**
  * The marketing landing page at "/" (the app itself starts at `/dashboard`). A standalone page
  * with its own nav, no app chrome (`AppChrome`). Its calls to action are an account (the app's own
- * sign-in form, in a modal; `?auth=login` opens it on arrival) or opening sheddex without one;
+ * sign-in form, in a modal; `?auth=login` opens it on arrival) or opening soniroll without one;
  * signed in, they become a link to the dashboard. The visuals are the app's real components
  * running live, plus real screenshots of the interface (`public/landing/`, one per light/dark).
  */
@@ -145,8 +145,8 @@ function Nav({ signedIn, onLogIn, onSignUp }: { signedIn: boolean; onLogIn: () =
   return (
     <div className="sticky top-0 z-30 px-4 pt-4">
       <nav className="mx-auto flex h-14 max-w-5xl items-center gap-2 rounded-full border border-foreground/[0.07] bg-surface/75 pl-5 pr-2 shadow-[0_8px_30px_-12px_color-mix(in_srgb,var(--foreground)_25%,transparent)] backdrop-blur-xl">
-        <Link href="/" aria-label="sheddex home" className="shrink-0">
-          <Logo height={22} />
+        <Link href="/" aria-label="soniroll home" className="shrink-0">
+          <Logo height={34} />
         </Link>
         <div className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium text-muted md:flex">
           <a href="#practice-log" className="rounded-full px-3 py-1.5 transition hover:bg-background hover:text-foreground">Shed Log</a>
@@ -347,13 +347,13 @@ function TeachingSection() {
         <div className="relative mt-12 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
           <Reveal className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_40px_100px_-30px_color-mix(in_srgb,var(--foreground)_45%,transparent)]">
             <div className="overflow-hidden rounded-[18px]">
-              <Shot name="lessons" alt="A student's page in sheddex: their lessons, practice stats and booking" width={2560} height={1600} />
+              <Shot name="lessons" alt="A student's page in soniroll: their lessons, practice stats and booking" width={2560} height={1600} />
             </div>
           </Reveal>
           <Reveal delay={120}>
             <div className="overflow-hidden rounded-[24px] border border-foreground/[0.08] bg-surface p-2 shadow-[0_30px_80px_-30px_color-mix(in_srgb,var(--foreground)_40%,transparent)] lg:-ml-16 lg:mt-16">
               <div className="overflow-hidden rounded-[18px]">
-                <Shot name="lesson" alt="One lesson in sheddex, with an assignment, a chord chart and notes" width={2560} height={1600} />
+                <Shot name="lesson" alt="One lesson in soniroll, with an assignment, a chord chart and notes" width={2560} height={1600} />
               </div>
             </div>
           </Reveal>
@@ -405,7 +405,7 @@ function Showcase() {
             <span className="mx-auto rounded-full bg-background px-10 py-1 text-xs text-muted">sheddex.com</span>
           </div>
           <div className="overflow-hidden rounded-[20px]">
-            <Shot name="app" alt="The sheddex interface: a sidebar of tools next to the Home dashboard" width={2880} height={1800} priority />
+            <Shot name="app" alt="The soniroll interface: a sidebar of tools next to the Home dashboard" width={2880} height={1800} priority />
           </div>
         </div>
       </Reveal>
@@ -481,7 +481,7 @@ function FeaturePreview({ id }: { id: string }) {
     default:
       return (
         <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-foreground/[0.06] shadow-[0_24px_60px_-24px_color-mix(in_srgb,var(--foreground)_40%,transparent)]">
-          <Shot name="setlist" alt="A setlist in sheddex, with each tune's key and tempo" width={2048} height={1280} />
+          <Shot name="setlist" alt="A setlist in soniroll, with each tune's key and tempo" width={2048} height={1280} />
         </div>
       );
   }
@@ -556,7 +556,7 @@ function ThemeDemo() {
     <div className="flex h-full flex-col gap-5">
       <div style={vars} className="flex flex-1 overflow-hidden rounded-2xl bg-background text-foreground shadow-[0_20px_50px_-24px_rgba(0,0,0,0.45)] transition-colors duration-500">
         <div className="hidden w-40 shrink-0 flex-col gap-1 bg-surface p-3 sm:flex">
-          <Logo height={14} className="mb-3" />
+          <Logo height={22} className="mb-3" />
           {TOOL_LINKS.slice(3, 9).map((l, n) => (
             <span key={l.href} className={`flex items-center gap-2 truncate rounded-lg px-2 py-1.5 text-[11px] font-medium ${n === 1 ? "bg-accent text-accent-foreground" : "text-muted"}`}>
               <l.icon className="h-3 w-3 shrink-0" />
@@ -648,7 +648,7 @@ function Bento() {
                 <p className="mt-1.5 max-w-xs text-sm text-muted">Every tool works the moment you open it. Sign up only if you want your stuff to follow you.</p>
               </div>
               <div className="ml-auto w-36 shrink-0 translate-y-4 overflow-hidden rounded-t-[22px] border-x-4 border-t-4 border-foreground/10 sm:w-44">
-                <Shot name="phone" alt="sheddex on a phone" width={780} height={1400} />
+                <Shot name="phone" alt="soniroll on a phone" width={780} height={1400} />
               </div>
             </div>
           </Reveal>
@@ -660,7 +660,7 @@ function Bento() {
                 <p className="mt-1.5 text-sm text-muted">Tile the metronome next to a warmup or a chord chart. Each pane keeps playing while you work in another.</p>
               </div>
               <div className="-mr-6 mt-auto overflow-hidden rounded-tl-2xl border-l border-t border-foreground/10 sm:-mr-8">
-                <Shot name="split" alt="Two tools side by side in sheddex's split view" width={2100} height={1100} />
+                <Shot name="split" alt="Two tools side by side in soniroll's split view" width={2100} height={1100} />
               </div>
             </div>
           </Reveal>
@@ -670,13 +670,13 @@ function Bento() {
   );
 }
 
-/** Jack's own note on why sheddex is free. */
+/** Jack's own note on why soniroll is free. */
 function Note() {
   return (
     <section className="px-4 pb-28">
       <Reveal className="mx-auto max-w-3xl text-center">
         <p className="text-2xl font-medium leading-snug tracking-[-0.02em] sm:text-3xl">
-          “I built sheddex to be the practice kit I wanted: everything in one place, and nothing in the way. There will never be ads, popups or paywalls.”
+          “I built soniroll to be the practice kit I wanted: everything in one place, and nothing in the way. There will never be ads, popups or paywalls.”
         </p>
         <p className="mt-6 text-sm text-muted">
           Jack Mechem, musician and developer
@@ -722,7 +722,7 @@ function Footer() {
   return (
     <footer className="px-4 pb-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-foreground/10 pt-8 text-sm text-muted sm:flex-row">
-        <Logo height={18} />
+        <Logo height={28} />
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           <a href="https://github.com/JackMechem/sheddex" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">GitHub</a>
           <Link href="/feedback" className="hover:text-foreground">Feedback</Link>

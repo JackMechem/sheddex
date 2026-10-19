@@ -752,10 +752,10 @@ export default function Sidebar() {
               <Link
                 href={LANDING_PATH}
                 onClick={() => setMobileOpen(false)}
-                aria-label="About sheddex"
+                aria-label="About soniroll"
                 className="block w-fit rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <AnimatedLogo height={24} />
+                <AnimatedLogo height={36} />
               </Link>
               <VersionTag onNavigate={() => setMobileOpen(false)} />
             </div>
@@ -796,7 +796,7 @@ export default function Sidebar() {
                     )}
                     <FlyoutItem
                       icon={HeartIcon}
-                      label="Support sheddex"
+                      label="Support soniroll"
                       onSelect={() => {
                         setMobileOpen(false);
                         router.push(SUPPORT_PATH);
@@ -872,13 +872,13 @@ export default function Sidebar() {
           }
         >
           {collapsed ? (
-            <Link href={LANDING_PATH} aria-label="About sheddex" title={`sheddex ${VERSION_LABEL}`} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
+            <Link href={LANDING_PATH} aria-label="About soniroll" title={`soniroll ${VERSION_LABEL}`} className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-hover">
               <LogoMark size={30} />
             </Link>
           ) : (
             <div className="min-w-0 flex-1">
-              <Link href={LANDING_PATH} aria-label="About sheddex" className="block w-fit rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                <AnimatedLogo height={22} />
+              <Link href={LANDING_PATH} aria-label="About soniroll" className="block w-fit rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                <AnimatedLogo height={34} />
               </Link>
               <VersionTag />
             </div>
@@ -918,7 +918,7 @@ export default function Sidebar() {
                 />
                 <FlyoutItem
                   icon={HeartIcon}
-                  label="Support sheddex"
+                  label="Support soniroll"
                   onSelect={() => {
                     router.push(SUPPORT_PATH);
                     close();
@@ -1030,7 +1030,7 @@ export default function Sidebar() {
                     />
                     <FlyoutItem
                       icon={HeartIcon}
-                      label="Support sheddex"
+                      label="Support soniroll"
                       onSelect={() => {
                         router.push(SUPPORT_PATH);
                         close();

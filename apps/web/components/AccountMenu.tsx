@@ -213,7 +213,7 @@ export function AuthForm({
 
         {flow === "signUp" && (
           <p className="text-xs text-muted">
-            By creating an account, you agree to sheddex&apos;s{" "}
+            By creating an account, you agree to soniroll&apos;s{" "}
             <Link href="/terms" className="underline hover:text-foreground">
               Terms
             </Link>{" "}

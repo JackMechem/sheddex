@@ -72,7 +72,7 @@ export default function StudentPage({ id }: { id: string }) {
 
 
   async function copyInvite() {
-    const res = await shareLink(`Lessons with me on sheddex`, inviteUrl);
+    const res = await shareLink(`Lessons with me on soniroll`, inviteUrl);
     setLinkNote(res === "copied" ? "Link copied." : res === "failed" ? "Couldn't copy — select it and copy it yourself." : null);
   }
 

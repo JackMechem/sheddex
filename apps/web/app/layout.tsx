@@ -18,11 +18,11 @@ const DESCRIPTION =
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sheddex.com"),
-  title: { default: "sheddex", template: "%s · sheddex" },
+  title: { default: "soniroll", template: "%s · soniroll" },
   description: DESCRIPTION,
-  applicationName: "sheddex",
-  openGraph: { type: "website", siteName: "sheddex", title: "sheddex — practice tools for musicians", description: DESCRIPTION, url: "/" },
-  twitter: { card: "summary_large_image", title: "sheddex — practice tools for musicians", description: DESCRIPTION },
+  applicationName: "soniroll",
+  openGraph: { type: "website", siteName: "soniroll", title: "soniroll — practice tools for musicians", description: DESCRIPTION, url: "/" },
+  twitter: { card: "summary_large_image", title: "soniroll — practice tools for musicians", description: DESCRIPTION },
 };
 
 export const viewport: Viewport = {

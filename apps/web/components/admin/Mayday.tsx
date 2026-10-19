@@ -183,7 +183,7 @@ export default function Mayday() {
             disabled={!owner}
             rows={2}
             maxLength={500}
-            placeholder="sheddex is down for a little maintenance. Your stuff is safe — check back in a bit."
+            placeholder="soniroll is down for a little maintenance. Your stuff is safe — check back in a bit."
             className={`w-full resize-y rounded-2xl px-4 py-3 text-sm outline-none ring-1 focus:ring-2 focus:ring-rose-500 ${
               f.maintenance ? "bg-white/10 text-white ring-white/15 placeholder:text-white/40" : "bg-background ring-foreground/5"
             }`}

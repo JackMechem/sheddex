@@ -2,7 +2,7 @@ import { getAudioContext } from "@/lib/metronome";
 import { roomImpulse } from "@/lib/uprightBass";
 import type { DrumKit, DrumVoice } from "@/lib/drums";
 
-// The drum kit for Bass Genius, served by sheddex itself (`public/samples/drums/`, converted to mono
+// The drum kit for Bass Genius, served by soniroll itself (`public/samples/drums/`, converted to mono
 // mp3s; mic pairs mixed; see LICENSE.txt there):
 //   - sticks: Virtuosity Drums (Versilian Studios & Karoryfer Samples, CC0) — a contemporary jazz
 //     kit: ride (3 layers × 4 round robins), ride bell, hi-hat foot, snare (10 layers, close + overhead),

@@ -49,7 +49,7 @@ export default function ShedLogGate({ children }: { children: React.ReactNode })
         </p>
         <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">Your practice, every day, adding up.</h1>
         <p className="text-lg leading-relaxed text-muted">
-          Plan routines that repeat, check off tasks, run them on a timer, and watch your streak, your daily goal and a year of green squares fill in. Everything you do in sheddex&apos;s tools counts.
+          Plan routines that repeat, check off tasks, run them on a timer, and watch your streak, your daily goal and a year of green squares fill in. Everything you do in soniroll&apos;s tools counts.
         </p>
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
           {["Routines with tasks, subtasks and times", "A day timer and a daily goal", "Streaks, with confetti for the wins", "Recordings and notes on every day", "Progress cards to share", "Synced to your account, on every device"].map((t) => (

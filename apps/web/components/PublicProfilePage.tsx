@@ -92,7 +92,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
   ];
 
   async function share() {
-    if ((await shareLink(`@${profile!.username} on sheddex`, `https://sheddex.com/u/${profile!.username}`)) === "copied") {
+    if ((await shareLink(`@${profile!.username} on soniroll`, `https://sheddex.com/u/${profile!.username}`)) === "copied") {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }
@@ -147,7 +147,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">Musician on sheddex</p>
+              <p className="text-sm text-muted">Musician on soniroll</p>
             )}
           </div>
           <div className="grid grid-cols-4 gap-2">

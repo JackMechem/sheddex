@@ -14,14 +14,14 @@ const PRIMARY = "rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-a
 export default function ResetPassword({ email, token }: { email: string; token: string }) {
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-10 text-foreground">
-      <Link href={LANDING_PATH} aria-label="sheddex" className="mb-8">
-        <Logo height={30} />
+      <Link href={LANDING_PATH} aria-label="soniroll" className="mb-8">
+        <Logo height={46} />
       </Link>
       <div className="flex w-full max-w-sm flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.35)]">
         {token && email ? <NewPassword email={email} token={token} /> : <RequestLink initialEmail={email} />}
       </div>
       <Link href={DASHBOARD_PATH} className="mt-6 text-sm font-medium text-muted hover:text-foreground">
-        Back to sheddex
+        Back to soniroll
       </Link>
     </div>
   );
@@ -49,7 +49,7 @@ function RequestLink({ initialEmail }: { initialEmail: string }) {
       await signIn("password", { email: email.trim(), flow: "reset" });
     } catch {
       // Deliberately the same outcome either way: telling someone "no account with that email"
-      // would let anyone check which emails have sheddex accounts. (It also fails for an account
+      // would let anyone check which emails have soniroll accounts. (It also fails for an account
       // that only signs in with Google, which has no password to reset.)
     } finally {
       setSubmitting(false);
@@ -61,7 +61,7 @@ function RequestLink({ initialEmail }: { initialEmail: string }) {
     return (
       <>
         <Heading title="Check your email">
-          If there&apos;s a sheddex account with a password for <span className="font-semibold text-foreground">{email.trim()}</span>, we&apos;ve sent it a link to reset the password. It expires in an hour.
+          If there&apos;s a soniroll account with a password for <span className="font-semibold text-foreground">{email.trim()}</span>, we&apos;ve sent it a link to reset the password. It expires in an hour.
         </Heading>
         <p className="text-sm text-muted">
           Signed up with Google? Use “Continue with Google” instead; there&apos;s no password to reset.

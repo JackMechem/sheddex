@@ -5,9 +5,9 @@ import { useSyncExternalStore } from "react";
 import { CloseIcon, HeartIcon } from "@/components/tools";
 
 /**
- * Asking for support (donations), in a few places: the `/support` page, a "Support sheddex" row
+ * Asking for support (donations), in a few places: the `/support` page, a "Support soniroll" row
  * that's always in the sidebar, items in the sidebar's ⋮ menus, and a card on the dashboard you can
- * put away for a while. sheddex has no ads; donations are what pay for hosting.
+ * put away for a while. soniroll has no ads; donations are what pay for hosting.
  */
 
 /** Where donations go. */
@@ -17,14 +17,14 @@ export const SUPPORT_PATH = "/support";
 /** The heart: the theme's warm red (its `--danger`), so it reads as a heart in every theme. */
 const HEART = "var(--danger)";
 
-/** The sidebar's "Support sheddex" row (or, collapsed, just the heart). */
+/** The sidebar's "Support soniroll" row (or, collapsed, just the heart). */
 export function SupportRow({ collapsed = false, large = false, active = false, onNavigate }: { collapsed?: boolean; large?: boolean; active?: boolean; onNavigate?: () => void }) {
   if (collapsed) {
     return (
       <Link
         href={SUPPORT_PATH}
-        aria-label="Support sheddex"
-        title="Support sheddex"
+        aria-label="Support soniroll"
+        title="Support soniroll"
         className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl transition-transform hover:scale-105"
         style={{ background: `color-mix(in srgb, ${HEART} 16%, transparent)`, color: HEART }}
       >
@@ -46,7 +46,7 @@ export function SupportRow({ collapsed = false, large = false, active = false, o
       >
         <HeartIcon className={`${large ? "h-[18px] w-[18px]" : "h-4 w-4"} transition-transform group-hover:scale-110`} filled />
       </span>
-      <span className="min-w-0 flex-1 truncate font-semibold">Support sheddex</span>
+      <span className="min-w-0 flex-1 truncate font-semibold">Support soniroll</span>
       {large && <span className="shrink-0 text-xs text-muted">Keep it free</span>}
     </Link>
   );
@@ -88,7 +88,7 @@ function useCardHidden() {
   );
 }
 
-/** "Keep sheddex free" — the dashboard's ask. "Not now" puts it away on this device for 30 days. */
+/** "Keep soniroll free" — the dashboard's ask. "Not now" puts it away on this device for 30 days. */
 export function SupportCard() {
   const hidden = useCardHidden();
   if (hidden) return null;
@@ -101,9 +101,9 @@ export function SupportCard() {
         <HeartIcon className="h-6 w-6" filled />
       </span>
       <div className="min-w-0 flex-1">
-        <h2 className="text-lg font-bold">Keep sheddex free</h2>
+        <h2 className="text-lg font-bold">Keep soniroll free</h2>
         <p className="text-sm text-muted">
-          No ads, no paywalled tools, made by one musician. If sheddex helps your practice, a coffee helps pay for the servers.
+          No ads, no paywalled tools, made by one musician. If soniroll helps your practice, a coffee helps pay for the servers.
         </p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">

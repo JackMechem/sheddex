@@ -69,7 +69,7 @@ export default function UsernamePrompt() {
         <div className="flex flex-col gap-1.5">
           <h2 className="text-lg font-semibold">Choose a username</h2>
           <p className="text-sm text-muted">
-            Every sheddex account needs a username — it&apos;s how you&apos;ll show up if you ever
+            Every soniroll account needs a username — it&apos;s how you&apos;ll show up if you ever
             make your profile public, and it&apos;s separate from your email.
           </p>
         </div>

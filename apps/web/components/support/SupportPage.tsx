@@ -18,7 +18,7 @@ const COSTS = [
 ];
 
 /**
- * `/support` — why and how to support sheddex: it's free with no ads, run by one person, and
+ * `/support` — why and how to support soniroll: it's free with no ads, run by one person, and
  * donations (Buy me a coffee) pay for hosting. Also other ways to help: tell a friend, send
  * feedback.
  */
@@ -26,7 +26,7 @@ export default function SupportPage() {
   const [shared, setShared] = useState<string | null>(null);
 
   async function tellAFriend() {
-    const result = await shareLink("sheddex — free practice tools for musicians", "https://sheddex.com");
+    const result = await shareLink("soniroll — free practice tools for musicians", "https://sheddex.com");
     setShared(result === "copied" ? "Link copied" : result === "failed" ? null : "Thanks for sharing!");
   }
 
@@ -39,10 +39,10 @@ export default function SupportPage() {
         <span className="flex h-16 w-16 items-center justify-center rounded-3xl" style={{ background: `color-mix(in srgb, ${HEART} 18%, transparent)`, color: HEART }}>
           <HeartIcon className="h-8 w-8" filled />
         </span>
-        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Support sheddex</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Support soniroll</h1>
         <p className="max-w-xl text-base text-muted">
-          sheddex is free, with no ads and no tool behind a paywall. It&apos;s made by one person, Jack Mechem, a musician and developer. Keeping it
-          running costs money every month — if sheddex helps your practice, chipping in keeps it going.
+          soniroll is free, with no ads and no tool behind a paywall. It&apos;s made by one person, Jack Mechem, a musician and developer. Keeping it
+          running costs money every month — if soniroll helps your practice, chipping in keeps it going.
         </p>
         <a
           href={DONATE_URL}
@@ -77,7 +77,7 @@ export default function SupportPage() {
           <button type="button" onClick={() => void tellAFriend()} className="flex flex-col items-start gap-2 rounded-2xl bg-background p-4 text-left hover:bg-surface-hover">
             <ShareIcon className="h-5 w-5 text-accent" />
             <span className="font-semibold">Tell a friend</span>
-            <span className="text-sm text-muted">{shared ?? "Share sheddex with your band, students or teacher."}</span>
+            <span className="text-sm text-muted">{shared ?? "Share soniroll with your band, students or teacher."}</span>
           </button>
           <button type="button" onClick={() => openFeedback()} className="flex flex-col items-start gap-2 rounded-2xl bg-background p-4 text-left hover:bg-surface-hover">
             <FeedbackIcon className="h-5 w-5 text-accent" />

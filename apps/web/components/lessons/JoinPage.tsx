@@ -53,7 +53,7 @@ export default function JoinPage({ code }: { code: string }) {
           <div className="flex flex-col items-center gap-3">
             <PersonBadge url={invite.teacher.avatarUrl} name={invite.teacher.name} size="lg" />
             <div>
-              <p className="text-sm font-semibold text-accent">Lessons on sheddex</p>
+              <p className="text-sm font-semibold text-accent">Lessons on soniroll</p>
               <h1 className="text-2xl font-extrabold tracking-tight">{invite.teacher.name} invited you to their lessons</h1>
               <p className="mt-1 text-sm text-muted">
                 For {invite.studentName}

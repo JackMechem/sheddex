@@ -3,10 +3,10 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import Logo from "@/components/Logo";
-import { strikeSticks } from "@/lib/stickStrike";
+import { playLogo } from "@/lib/logoAnimation";
 
-/** The sidebar's logo: the sticks strike every time the page changes, in time with the page
-    transition (`AppShell`). */
+/** The sidebar's logo: the goal ring sweeps closed every time the page changes, in time with the
+    page transition (`AppShell`). */
 export default function AnimatedLogo({ height }: { height: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const pathname = usePathname();
@@ -16,7 +16,7 @@ export default function AnimatedLogo({ height }: { height: number }) {
       first.current = false;
       return;
     }
-    strikeSticks(ref.current);
+    playLogo(ref.current);
   }, [pathname]);
   return (
     <span ref={ref} className="inline-flex">

@@ -56,7 +56,7 @@ export function MaintenanceScreen({ message }: { message: string }) {
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-5 bg-background px-6 text-center">
       <LogoMark size={56} />
       <h1 className="text-3xl font-extrabold tracking-tight">Back soon</h1>
-      <p className="max-w-md whitespace-pre-wrap text-muted">{message.trim() || "sheddex is down for a little maintenance. Your stuff is safe — check back in a bit."}</p>
+      <p className="max-w-md whitespace-pre-wrap text-muted">{message.trim() || "soniroll is down for a little maintenance. Your stuff is safe — check back in a bit."}</p>
       <div className="mt-6 flex flex-col items-center gap-2">
         {isAuthenticated ? (
           <>

@@ -89,7 +89,7 @@ export default function AdminPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Admin</h1>
             <p className="text-sm text-white/60">
-              sheddex {VERSION_LABEL} · {role === "owner" ? "Owner" : "Admin"}
+              soniroll {VERSION_LABEL} · {role === "owner" ? "Owner" : "Admin"}
             </p>
           </div>
           {stats && stats.newFeedback > 0 && (
@@ -407,7 +407,7 @@ function Inbox() {
                 <span className="ml-auto flex items-center gap-1">
                   {f.email && (
                     <a
-                      href={`mailto:${f.email}?subject=${encodeURIComponent(`Re: your ${KIND_META[f.kind].label.toLowerCase()} on sheddex`)}&body=${encodeURIComponent(`\n\n> ${f.message.split("\n").join("\n> ")}`)}`}
+                      href={`mailto:${f.email}?subject=${encodeURIComponent(`Re: your ${KIND_META[f.kind].label.toLowerCase()} on soniroll`)}&body=${encodeURIComponent(`\n\n> ${f.message.split("\n").join("\n> ")}`)}`}
                       className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover"
                     >
                       Reply

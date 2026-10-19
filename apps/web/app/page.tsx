@@ -3,7 +3,7 @@ import { isAuthenticatedNextjs } from "@convex-dev/auth/nextjs/server";
 import Landing from "@/components/landing/Landing";
 
 export const metadata: Metadata = {
-  title: "sheddex: every practice tool, in one shed",
+  title: "soniroll: every practice tool, in one place",
   description: "Free practice tools for musicians: metronome, tuner, ear training, chord charts, sticking warmups and your tune library. No ads, no paywalls.",
 };
 

@@ -427,7 +427,7 @@ export default function Home() {
 
         <section className="mt-6 flex flex-col items-start gap-4 rounded-3xl border border-foreground/[0.06] p-5 sm:flex-row sm:items-center">
           <p className="flex-1 text-sm text-muted">
-            sheddex is free, with no ads, popups or paywalled tools. Servers aren&apos;t free, so if you&apos;re feeling generous, consider chipping in.
+            soniroll is free, with no ads, popups or paywalled tools. Servers aren&apos;t free, so if you&apos;re feeling generous, consider chipping in.
           </p>
           <div className="flex shrink-0 flex-wrap gap-2">
             <a

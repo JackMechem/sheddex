@@ -69,7 +69,7 @@ export default function ChangelogPage() {
           </div>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">What&apos;s new</h1>
-            <p className="mt-2 max-w-xl text-muted">Every update to sheddex: new things, improvements and fixes, newest first.</p>
+            <p className="mt-2 max-w-xl text-muted">Every update to soniroll: new things, improvements and fixes, newest first.</p>
           </div>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Show">
             {([{ kind: "all" as const, label: "Everything" }, ...CHANGE_KINDS]).map((k) => {

@@ -51,8 +51,12 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   IndexedDB). Signed in, it lives in the account. There is **no merge** between the two: signing in
   simply switches which store is read. Some things need an account (Community posting, the Shed
   Log, Lessons, recordings, favorites, Tunes to Learn).
-- The display name is "sheddex", all lowercase (renamed many times before; see
-  `docs/notes/overview.md`). Don't reuse old names (jackshed, shed.io, Barn Tools). The repo
+- **The website is called "soniroll"** (lowercase) since 2026-10-18, with the goal-ring logo
+  (`components/Logo.tsx`, drawn from theme colours). Only what people see changed: web addresses
+  (still sheddex.com), the `sheddex://` chart links, event names, storage keys, the backend, emails
+  and the paused mobile app still say sheddex — see `docs/notes/rename-soniroll.md` for the full
+  list and what to change when soniroll.com goes live. Don't reuse older names (sheddex in new
+  UI text, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
 - GitHub: `git@github.com:JackMechem/sheddex.git` (the in-app GitHub links in `Home.tsx`, `Landing.tsx` and `app/terms` point at it).
@@ -241,6 +245,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser, storage quota) and sharing a tune by link (`/tune/<id>`) | `files-and-tune-sharing.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
+| The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
 | Versioning and the changelog (history) | `versioning-and-changelog.md` (rules: `docs/guides/versioning.md`) |
 | Jam Practice, Metronome (structures, tempo note value) | `tools-jam-practice-and-metronome.md` |

@@ -83,7 +83,7 @@ export default function BookPage({ token }: { token: string }) {
         </div>
         {!offer.isTeacher && (
           <Link href={lessonsHref} className="self-start rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
-            {offer.joined ? `Open ${offer.teacher.name}'s lessons` : "See your lessons on sheddex"}
+            {offer.joined ? `Open ${offer.teacher.name}'s lessons` : "See your lessons on soniroll"}
           </Link>
         )}
       </div>,
@@ -95,7 +95,7 @@ export default function BookPage({ token }: { token: string }) {
       <div className="flex items-center gap-3">
         <PersonBadge url={offer.teacher.avatarUrl} name={offer.teacher.name} size="lg" />
         <div className="min-w-0">
-          <p className="text-xs font-bold text-accent">Lessons on sheddex</p>
+          <p className="text-xs font-bold text-accent">Lessons on soniroll</p>
           <h1 className="text-2xl font-extrabold tracking-tight">Pick a lesson time</h1>
           <p className="text-sm text-muted">
             {offer.teacher.name} offered {offer.studentName} {offer.slots.length === 1 ? "this time" : "these times"}

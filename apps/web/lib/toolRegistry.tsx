@@ -10,7 +10,7 @@ import { NAV_LINKS } from "@/components/tools";
 function PaneLoading() {
   return (
     <div className="flex h-full items-center justify-center p-4">
-      <Logo height={30} className="max-w-full animate-pulse" />
+      <Logo height={46} className="max-w-full animate-pulse" />
     </div>
   );
 }

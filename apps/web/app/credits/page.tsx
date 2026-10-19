@@ -8,7 +8,7 @@ export default function CreditsPage() {
   return (
     <LegalPage title="Credits" updated="September 30, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        sheddex&apos;s sounds are almost entirely synthesized in the browser (see the Tone menu in
+        soniroll&apos;s sounds are almost entirely synthesized in the browser (see the Tone menu in
         the trainers, the metronome, and Guess the Interval/Guess the Chord for the full list) —
         with two exceptions: the <strong>Piano</strong> and <strong>Rhodes</strong> tones are real
         recordings, fetched from their original hosts the first time you pick them. Both are
@@ -57,7 +57,7 @@ export default function CreditsPage() {
           <LegalLink href="https://github.com/sfzinstruments/jlearman.jRhodes3d">jRhodes3d</LegalLink> by Jeff Learman — a 1977 Rhodes Mark I
           Stage 73 — used under{" "}
           <LegalLink href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</LegalLink> (non-commercial use, with credit) and
-          served by sheddex itself as trimmed mono mp3s.
+          served by soniroll itself as trimmed mono mp3s.
         </p>
       </LegalSection>
 
@@ -66,14 +66,14 @@ export default function CreditsPage() {
           The drummer plays{" "}
           <LegalLink href="https://github.com/sfzinstruments/virtuosity_drums">Virtuosity Drums</LegalLink> by Versilian Studios and Karoryfer
           Samples (<LegalLink href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</LegalLink>), a contemporary jazz kit recorded at
-          Virtuosity Musical Instruments in Boston, served by sheddex itself as mono mp3s (mic pairs mixed) — Drum Generator also uses
+          Virtuosity Musical Instruments in Boston, served by soniroll itself as mono mp3s (mic pairs mixed) — Drum Generator also uses
           its hi-hat, cross-stick, rimshot and toms, and the same release&apos;s cowbell and woodblock.
         </p>
       </LegalSection>
 
       <LegalSection title="How this works">
         <p>
-          Neither sample set ships with sheddex itself — your browser fetches the specific notes a
+          Neither sample set ships with soniroll itself — your browser fetches the specific notes a
           tool actually plays directly from the hosts above (both GitHub Pages), the first time
           each one comes up, and keeps them for the rest of that browser tab so repeats are
           instant. See the{" "}
@@ -90,7 +90,7 @@ export default function CreditsPage() {
           Smolken, recorded by Ludwik Zamenhof. It&apos;s released under{" "}
           <LegalLink href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</LegalLink>, so
           no credit is required, but it&apos;s too good not to name. Unlike the piano and Rhodes,
-          these samples are served by sheddex itself (converted to mp3).
+          these samples are served by soniroll itself (converted to mp3).
         </p>
       </LegalSection>
 
@@ -102,7 +102,7 @@ export default function CreditsPage() {
           <strong> Petaluma Script</strong> (a hand-inked text face) for the letters and numbers,
           paired with <strong>Petaluma</strong> itself for the major-seventh and diminished chord
           symbols, which it draws as real engraved marks rather than a stand-in character from an
-          ordinary font. Unlike the audio above, both are bundled with sheddex itself rather than
+          ordinary font. Unlike the audio above, both are bundled with soniroll itself rather than
           fetched from elsewhere, under Steinberg&apos;s own{" "}
           <LegalLink href="https://scripts.sil.org/OFL">SIL Open Font License 1.1</LegalLink>.
         </p>

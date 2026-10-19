@@ -37,7 +37,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     title: "Dashboard",
     group: "Getting started",
     href: "/dashboard",
-    tagline: "Your starting place every time you open sheddex.",
+    tagline: "Your starting place every time you open soniroll.",
     purpose: "Today's practice at a glance, where you left off, and every tool one click away.",
     steps: [
       { title: "Check today", text: "Your goal ring, streak, this week and total hours sit at the top." },

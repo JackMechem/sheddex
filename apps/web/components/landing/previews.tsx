@@ -74,7 +74,7 @@ function bar(text: string, extra: Partial<Bar> = {}): Bar {
 /** A 12-bar jazz blues in F, rendered by the real chart renderer. */
 export const SAMPLE_CHART: IRealSong = {
   title: "Shed Blues",
-  composer: "sheddex",
+  composer: "soniroll",
   style: "Medium Swing",
   key: "F",
   timeSignature: { top: 4, bottom: 4 },

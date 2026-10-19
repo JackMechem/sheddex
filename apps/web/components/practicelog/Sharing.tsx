@@ -134,7 +134,7 @@ export function ProgressShareDialog({
     try {
       const file = await progressCardFile(card, gate.username);
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: head.title, text: `${head.title} on sheddex` });
+        await navigator.share({ files: [file], title: head.title, text: `${head.title} on soniroll` });
       } else if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": file })]);
         setNote("Image copied — paste it anywhere.");

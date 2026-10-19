@@ -142,7 +142,7 @@ export function AddToCalendar({ ev, compact = false }: { ev: LessonEvent; compac
 }
 
 export function lessonEvent(b: { id: string; start: number; end: number }, other: string, url?: string): LessonEvent {
-  return { uid: `${b.id}@sheddex.com`, slot: { start: b.start, end: b.end }, title: `Lesson with ${other}`, description: `Lesson with ${other} (sheddex).`, url };
+  return { uid: `${b.id}@sheddex.com`, slot: { start: b.start, end: b.end }, title: `Lesson with ${other}`, description: `Lesson with ${other} (soniroll).`, url };
 }
 
 /** The date tile at the start of a lesson row. */
