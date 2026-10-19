@@ -96,3 +96,18 @@ signed-in gate (reverted). The Recorder page is now `layout="stacked"` (vertical
 the Metronome card on the left and the recorder (timer, record button, auto gain) above recent
 recordings on the right; on phones recorder, then metronome, then recordings.
 
+
+## One title style for every page (2026-10-18)
+
+Jack asked for consistent page titles. The plain row the tools and the Shed Log use (accent icon,
+`text-2xl sm:text-3xl font-extrabold`, the `?` next to it, buttons on the right, no card) is now
+the style everywhere. `Hero` (`components/library/ui.tsx`) no longer draws a tinted gradient card
+with an icon tile; it renders that row, so Tunes, Setlists, Chord Charts, Files, Lessons (and its
+sub-pages), tune pages and Feedback all changed at once. Because Hero's buttons now sit on the page
+background, its actions wrapper turns any `bg-background` button into `bg-surface`
+(`[&_.bg-background]:bg-surface`); `HeroSearch`, `LibraryTabs` and the Setlists sort toggle moved to
+`bg-surface` for the same reason. Admin (which used hardcoded zinc/indigo colours), What's new and
+Support were restyled by hand to the same row. Left alone on purpose: Dashboard, Community and the
+Shed Log (and its routine pages). Public profiles (`/u/[name]`) are no longer full width on
+desktop (`max-w-4xl`). Checked at 1440 and 390 in light mode, signed out; signed-in Lessons pages,
+tune pages and dark mode were not screenshotted.

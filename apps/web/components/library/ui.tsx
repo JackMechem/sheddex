@@ -131,14 +131,14 @@ export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts
     { id: "files", label: "Files", href: "/files", icon: FileIcon },
   ] as const;
   return (
-    <nav className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-background/70 p-1 [scrollbar-width:none] sm:gap-1" aria-label="Library">
+    <nav className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-surface p-1 [scrollbar-width:none] sm:gap-1" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href}
           aria-current={active === t.id ? "page" : undefined}
           className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-            active === t.id ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+            active === t.id ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"
           }`}
         >
           <t.icon className="hidden h-3.5 w-3.5 sm:block" />
@@ -167,9 +167,10 @@ export function LibraryPage({ children }: { children: ReactNode }) {
 }
 
 /**
- * The header card every library page starts with: optional tabs or back button, an icon tile (or
- * any `leading` element, e.g. a key badge), the title and a line under it, the page's buttons, and
- * `children` (usually its search box) at the bottom. `color` tints the card.
+ * The title row every library page starts with, styled like the tool and Shed Log titles: optional
+ * tabs or back button, the accent icon (or any `leading` element, e.g. a key badge), the title and
+ * a line under it, the page's buttons, and `children` (usually its search box) below. `color`
+ * colors the icon.
  */
 export function Hero({
   title,
@@ -203,38 +204,35 @@ export function Hero({
   const TopicIcon = topic ? ICON_BY_ID[topic.id] : undefined;
   const ShownIcon = Icon ?? TopicIcon;
   return (
-    <header
-      className="relative flex flex-col gap-5 overflow-hidden rounded-3xl p-5 sm:p-7"
-      style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, ${color} 16%, var(--surface)) 0%, var(--surface) 70%)`,
-      }}
-    >
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full blur-3xl" style={{ background: tint(color, 22) }} />
+    <header className="flex flex-col gap-4">
       {(tabs || back || backHref) && (
-        <div className="relative flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           {back || backHref ? <BackButton onClick={back} href={backHref} label={backLabel} /> : <span />}
           {tabs}
         </div>
       )}
-      <div className="relative flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-[min(100%,16rem)] flex-1 basis-72 items-center gap-3 sm:gap-4">
-          {leading ??
-            (ShownIcon && (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14" style={{ background: tint(color, 18), color }}>
-                <ShownIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-              </span>
-            ))}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex min-w-[min(100%,16rem)] flex-1 basis-72 items-center gap-3">
+          {leading}
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              <h1 className="line-clamp-2 break-words text-3xl font-extrabold tracking-tight sm:text-4xl">{title}</h1>
+              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                {!leading && ShownIcon && (
+                  <span className="shrink-0" style={{ color }}>
+                    <ShownIcon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  </span>
+                )}
+                <span className="line-clamp-2 break-words">{title}</span>
+              </h1>
               {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
             </div>
-            {subtitle && <div className="mt-0.5 text-sm text-muted">{subtitle}</div>}
+            {subtitle && <div className="text-sm text-muted">{subtitle}</div>}
           </div>
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
+        {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
       </div>
-      {children && <div className="relative">{children}</div>}
+      {children && <div>{children}</div>}
       {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
     </header>
   );
@@ -242,7 +240,7 @@ export function Hero({
 
 export function HeroSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex items-center gap-2.5 rounded-2xl bg-background px-4 py-3 shadow-sm ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
+    <label className="flex items-center gap-2.5 rounded-2xl bg-surface px-4 py-3 shadow-sm ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
       <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
       <input
         type="search"

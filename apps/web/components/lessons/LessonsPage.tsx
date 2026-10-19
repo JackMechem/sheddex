@@ -43,13 +43,13 @@ export default function LessonsPage() {
       <LibraryPage>
         <Hero title="Lessons" icon={CapIcon} subtitle="For teachers and their students.">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2 rounded-2xl bg-background p-4 text-sm">
+            <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-sm">
               <p className="font-bold">Teach</p>
               <p className="text-muted">
                 Give each student lesson notes, PDFs and images, chord charts, assignments and Shed Log routines — then see how their practice goes, day by day.
               </p>
             </div>
-            <div className="flex flex-col gap-2 rounded-2xl bg-background p-4 text-sm">
+            <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4 text-sm">
               <p className="font-bold">Learn</p>
               <p className="text-muted">
                 Open the link your teacher sent you, and everything they&apos;ve given you is here — with their routines already in your Shed Log.

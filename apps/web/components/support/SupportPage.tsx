@@ -32,14 +32,16 @@ export default function SupportPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
-      <header
-        className="relative flex flex-col items-center gap-4 overflow-hidden rounded-3xl px-6 py-10 text-center sm:py-12"
+      <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+        <span className="shrink-0" style={{ color: HEART }}>
+          <HeartIcon className="h-6 w-6 sm:h-7 sm:w-7" filled />
+        </span>
+        Support soniroll
+      </h1>
+      <section
+        className="relative flex flex-col items-center gap-4 overflow-hidden rounded-3xl px-6 py-8 text-center sm:py-10"
         style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${HEART} 16%, var(--surface)) 0%, var(--surface) 80%)` }}
       >
-        <span className="flex h-16 w-16 items-center justify-center rounded-3xl" style={{ background: `color-mix(in srgb, ${HEART} 18%, transparent)`, color: HEART }}>
-          <HeartIcon className="h-8 w-8" filled />
-        </span>
-        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Support soniroll</h1>
         <p className="max-w-xl text-base text-muted">
           soniroll is free, with no ads and no tool behind a paywall. It&apos;s made by one person, Jack Mechem, a musician and developer. Keeping it
           running costs money every month — if soniroll helps your practice, chipping in keeps it going.
@@ -53,7 +55,7 @@ export default function SupportPage() {
           <HeartIcon className="h-5 w-5" filled /> Buy me a coffee
         </a>
         <p className="text-xs text-muted">One-off, any amount, through Buy Me a Coffee. You don&apos;t need an account.</p>
-      </header>
+      </section>
 
       <section className="flex flex-col gap-3 rounded-3xl bg-surface p-5 sm:p-6">
         <h2 className="text-lg font-bold">What it pays for</h2>

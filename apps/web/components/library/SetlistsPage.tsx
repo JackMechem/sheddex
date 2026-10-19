@@ -51,7 +51,7 @@ export default function SetlistsPage() {
           <div className="min-w-0 flex-1">
             <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists, or a tune in one…`} />
           </div>
-          <div className="flex shrink-0 gap-1 self-start rounded-full bg-background p-1 sm:self-auto">
+          <div className="flex shrink-0 gap-1 self-start rounded-full bg-surface p-1 sm:self-auto">
             {(["recent", "name"] as Sort[]).map((key) => (
               <button
                 key={key}

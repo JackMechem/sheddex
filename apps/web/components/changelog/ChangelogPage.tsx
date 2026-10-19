@@ -14,7 +14,7 @@ import {
   releaseAnchor,
   type ShownRelease,
 } from "@/lib/changelog";
-import { LinkIcon } from "@/components/tools";
+import { LinkIcon, SparkIcon } from "@/components/tools";
 
 /** How each kind of change looks: a tinted chip with its own icon. */
 export const KIND_STYLE: Record<ChangeKind, { label: string; chip: string; dot: string }> = {
@@ -59,17 +59,17 @@ export default function ChangelogPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 pb-20 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-10">
-      <header className="relative overflow-hidden rounded-3xl bg-surface p-6 sm:p-8">
-        <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 right-32 h-48 w-48 rounded-full bg-violet-500/15 blur-3xl" />
-        <div className="relative flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground">v{APP_VERSION}</span>
-            {CHANNEL === "beta" && <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-bold text-accent">Beta</span>}
-          </div>
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">What&apos;s new</h1>
-            <p className="mt-2 max-w-xl text-muted">Every update to soniroll: new things, improvements and fixes, newest first.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                <SparkIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> What&apos;s new
+              </h1>
+              <span className="rounded-full bg-accent px-3 py-1 text-sm font-bold text-accent-foreground">v{APP_VERSION}</span>
+              {CHANNEL === "beta" && <span className="rounded-full bg-accent/15 px-2.5 py-1 text-xs font-bold text-accent">Beta</span>}
+            </div>
+            <p className="max-w-xl text-sm text-muted">Every update to soniroll: new things, improvements and fixes, newest first.</p>
           </div>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Show">
             {([{ kind: "all" as const, label: "Everything" }, ...CHANGE_KINDS]).map((k) => {
@@ -82,7 +82,7 @@ export default function ChangelogPage() {
                   aria-checked={on}
                   onClick={() => setFilter(k.kind)}
                   className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
-                    on ? "bg-foreground text-background" : "bg-background text-muted hover:text-foreground"
+                    on ? "bg-foreground text-background" : "bg-surface text-muted hover:text-foreground"
                   }`}
                 >
                   {k.kind !== "all" && <KindIcon kind={k.kind} />}
