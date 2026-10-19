@@ -380,3 +380,40 @@ is third in the row at every width (long titles like Metric Modulation pushed it
 anything; the `trackTools` pref stays in the data). Checked all 16 tool pages at 1440 and 390
 (stats present, a popover open, no overflow, no page errors), tsc (web + mobile), lint, build.
 Not checked: Log signed in, every popover of every tool, audio.
+
+
+## Week view: popover, click-to-add, a phone layout (2026-10-19, v0.9.4)
+
+Jack asked for the week view to be more interactive, look better and be easier on phones.
+- **Popover** (`components/practicelog/WeekPopover.tsx`, `WeekTarget` = a routine on a day, or some
+  of a day's own tasks): tapping a block, an "Any time" chip or a phone pill opens it beside what was
+  tapped (right if there's room, else left; its top is fitted on screen in a layout effect by setting
+  the element's style, so no setState in an effect), and as a bottom sheet below `sm` (the `max-sm:!…`
+  classes beat the inline position). It reads live data, so ticking a task there (burst, then
+  `log.toggleTask` / `toggleDayTask`, so the celebration notes still play) updates the week behind it.
+  Footer: Start / Continue (today only, not skipped), "Don't skip this day" when skipped, Open day
+  (switches to Day view). Escape, ×, a click outside and resizing close it. CSS `log-pop`.
+- **Grid** (`sm` and up): the day header has minutes and a small bar toward that day's goal
+  (`goalOn`, green when met, none for days to come); double-click a day header for Day view. Any-time
+  chips fill from the left as tasks are done (`RoutineChip`'s `fill`, which drops the "1/3" text to
+  give the name room; the month view doesn't use it). Blocks carry `done/total` and show a thin
+  progress line. On a mouse, a dashed "+ 3:00 PM" slot follows the pointer over free time (hour lines
+  are `pointer-events-none` so the column is the target); clicking it opens a menu: Task at that time
+  (`onAddTask` → the page's `TaskDialog` with `time` filled in), New routine starting this day, Add
+  <routine> to this day. A hint shows when nothing in the week has a set time.
+- **Phones** (below `sm`): the time grid is hidden (CSS, not unmounted) and the week is a list of
+  days: the date (status colours, today in the accent), minutes and goal bar on the left; each routine
+  as a two-column pill (icon, name, time if set, a small progress ring / check / red X), the day's
+  tasks as one pill, and "Add a task" on empty days.
+- **Swipe** left/right on the week (> 60 px, mostly sideways) steps a week (`onStep`). The week title
+  is "Oct 18 – 24" within a month, so it fits on a phone (it used to be cut off).
+- `WeekView` now takes `log` (not `data`) plus `onStep`, `onOpenDay`, `onAddTask` from `PracticeLog`.
+Verified in headless Google Chrome (the Shed Log gate briefly bypassed, then restored; data seeded
+in localStorage) at 1440 and 390, dark and light: no horizontal overflow, no page errors other than
+the hydration warning the bypass causes; opening the popover and ticking a task (1/3, the day's
+minutes went up), the slot ghost and menu, the phone list, the bottom sheet for a routine and for
+extra tasks, swiping forward and back, Escape closing it. `tsc`, `pnpm lint`. **Not checked:**
+signed in, hover styles, a real phone's touch, sounds, starting a routine from the popover.
+Testing note: `/Applications/Chromium.app` here is v100 and can't render Tailwind v4's `bg-x/10`
+colours (they come out solid); use Google Chrome (`executablePath`) with playwright-core's `launch`.
+Playwright's `reload` hung on this page; seed with `addInitScript` before `goto` instead.

@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, CloseIcon, MicIcon, StarIcon } from "@/components/tools";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { CheckIcon, CloseIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import WeekPopover, { type WeekTarget } from "@/components/practicelog/WeekPopover";
 import {
   type DayRoutine,
   type PracticeLogData,
@@ -19,12 +22,18 @@ import {
   monthGrid,
   parseTime,
   progressOf,
+  routineSpan,
   routinesOn,
   scheduleTasks,
   startOfWeek,
+  timeString,
   todayKey,
-  weekdayOf, goalOn
+  weekdayOf,
+  goalOn,
 } from "@/lib/practiceLog";
+import type { usePracticeLog } from "@/lib/usePracticeLog";
+
+type Log = ReturnType<typeof usePracticeLog>;
 
 const colorOf = (i: number) => ROUTINE_COLORS[i % ROUTINE_COLORS.length];
 /** One-off tasks (not part of a routine) on the calendar. */
@@ -162,14 +171,21 @@ function RoutineDot({ item, status = null }: { item: DayRoutine; status?: DaySta
   );
 }
 
-function RoutineChip({ item, status = null }: { item: DayRoutine; status?: DayStatus | null }) {
+/** `fill`: the chip fills from the left as its tasks are done. */
+function RoutineChip({ item, status = null, fill = false }: { item: DayRoutine; status?: DayStatus | null; fill?: boolean }) {
   const { done, total } = progressOf(item.routine, item.occurrence);
   const complete = total > 0 && done === total;
   const color = colorOf(item.routine.color);
+  const pct = total > 0 ? (done / total) * 100 : 0;
   return (
     <span
       className={`flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium leading-tight ${item.occurrence.skipped ? "line-through opacity-50" : ""}`}
-      style={{ background: `color-mix(in srgb, ${color} ${complete ? 30 : 14}%, transparent)` }}
+      style={{
+        background:
+          fill && !complete && pct > 0
+            ? `linear-gradient(90deg, color-mix(in srgb, ${color} 32%, transparent) ${pct}%, color-mix(in srgb, ${color} 14%, transparent) ${pct}%)`
+            : `color-mix(in srgb, ${color} ${complete ? 30 : 14}%, transparent)`,
+      }}
     >
       <RoutineIcon icon={item.routine.icon} color={item.routine.color} size="xs" />
       <span className="truncate">{item.routine.name || "Untitled routine"}</span>
@@ -181,11 +197,11 @@ function RoutineChip({ item, status = null }: { item: DayRoutine; status?: DaySt
         </span>
       ) : status === "partial" ? (
         <span className="ml-auto flex shrink-0 items-center gap-0.5 font-semibold text-amber-600 dark:text-amber-400" title="Partly done">
-          <span className="tabular-nums">{done}/{total}</span>
+          {!fill && <span className="tabular-nums">{done}/{total}</span>}
           <span className="h-0.5 w-2 rounded-full bg-current" />
         </span>
       ) : (
-        done > 0 && <span className="ml-auto shrink-0 tabular-nums text-muted">{done}/{total}</span>
+        !fill && done > 0 && <span className="ml-auto shrink-0 tabular-nums text-muted">{done}/{total}</span>
       )}
     </span>
   );
@@ -193,24 +209,37 @@ function RoutineChip({ item, status = null }: { item: DayRoutine; status?: DaySt
 
 const HOUR_PX = 48;
 
-type Block = { routineId: string; color: string; icon?: string; colorIdx?: number; title: string; tasks: string[]; start: number; end: number; complete: boolean; skipped: boolean; lane: number; lanes: number };
+type BlockBase = {
+  id: string;
+  target: WeekTarget;
+  color: string;
+  icon?: string;
+  colorIdx?: number;
+  title: string;
+  tasks: string[];
+  start: number;
+  end: number;
+  done: number;
+  total: number;
+  skipped: boolean;
+};
+type Block = BlockBase & { lane: number; lanes: number };
 
 /** A routine's timed tasks as blocks — tasks back to back are one block. */
-function blocksFor(item: DayRoutine): Omit<Block, "lane" | "lanes">[] {
+function blocksFor(item: DayRoutine, key: string): BlockBase[] {
   const { routine, occurrence } = item;
-  const doneSet = new Set(occurrence.done ?? []);
-  const out: Omit<Block, "lane" | "lanes">[] = [];
-  let cur: Omit<Block, "lane" | "lanes"> | null = null;
-  let allDone = true;
+  const { done, total } = progressOf(routine, occurrence);
+  const out: BlockBase[] = [];
+  let cur: BlockBase | null = null;
   for (const s of scheduleTasks(routine, occurrence)) {
     if (s.start === null || s.end === null) continue;
-    if (!doneSet.has(s.task.id)) allDone = false;
     if (cur && Math.abs(cur.end - s.start) < 0.5) {
       cur.end = s.end;
       cur.tasks.push(s.task.title || "Task");
     } else {
       cur = {
-        routineId: routine.id,
+        id: `${routine.id}-${s.start}`,
+        target: { kind: "routine", date: key, routineId: routine.id },
         color: colorOf(routine.color),
         icon: routine.icon ?? "note",
         colorIdx: routine.color,
@@ -218,18 +247,18 @@ function blocksFor(item: DayRoutine): Omit<Block, "lane" | "lanes">[] {
         tasks: [s.task.title || "Task"],
         start: s.start,
         end: Math.max(s.end, s.start + 10),
-        complete: false,
+        done,
+        total,
         skipped: !!occurrence.skipped,
       };
       out.push(cur);
     }
   }
-  for (const b of out) b.complete = allDone && routine.tasks.length > 0;
   return out;
 }
 
 /** Side-by-side lanes for blocks that overlap. */
-function layoutLanes(blocks: Omit<Block, "lane" | "lanes">[]): Block[] {
+function layoutLanes(blocks: BlockBase[]): Block[] {
   const sorted = [...blocks].sort((a, b) => a.start - b.start || b.end - a.end);
   const out: Block[] = [];
   let cluster: Block[] = [];
@@ -256,17 +285,40 @@ function layoutLanes(blocks: Omit<Block, "lane" | "lanes">[]): Block[] {
   return out;
 }
 
-/** A week on a time grid: each routine's timed tasks where they fall in the day, untimed routines
-    in the "Any time" row above. Tap a day (or a block) to open that day. */
+/** Where a pointer is in a day's column, as minutes into the day (snapped to half hours). */
+function slotAt(e: React.MouseEvent, firstHour: number): number {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const half = Math.floor(((e.clientY - r.top) / HOUR_PX) * 2);
+  return Math.min(24 * 60 - 30, firstHour * 60 + Math.max(0, half) * 30);
+}
+
+/**
+ * A week. On wider screens a time grid: each routine's timed tasks where they fall in the day,
+ * untimed ones in the "Any time" row above; click a free time to add a task there. On phones a
+ * list of the seven days with each one's routines as big buttons. Either way, tapping a routine
+ * (or a day's tasks) opens it in a popover to tick tasks off or start it, and swiping sideways
+ * changes the week.
+ */
 export function WeekView({
-  data,
+  log,
   selected,
   onSelect,
+  onStep,
+  onOpenDay,
+  onAddTask,
 }: {
-  data: PracticeLogData;
+  log: Log;
   selected: string;
   onSelect: (date: string) => void;
+  /** -1 / +1: the week before / after. */
+  onStep: (n: number) => void;
+  /** Opens the day on its own (day view). */
+  onOpenDay: (date: string) => void;
+  /** A new one-off task on a day, at a time ("HH:MM") or any time. */
+  onAddTask: (date: string, time: string | null) => void;
 }) {
+  const { data } = log;
+  const router = useRouter();
   const start = startOfWeek(selected);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
   const today = todayKey();
@@ -275,22 +327,39 @@ export function WeekView({
       days.map((key) => {
         const items = routinesOn(data, key);
         const tasks = data.days[key]?.tasks ?? [];
-        const taskBlocks = tasks
+        const taskBlocks: BlockBase[] = tasks
           .filter((t) => parseTime(t.time) !== null)
           .map((t) => {
             const start = parseTime(t.time)!;
-            return { routineId: `task-${t.id}`, color: TASK_COLOR, title: t.title, tasks: [], start, end: start + Math.max(10, t.minutes), complete: t.done, skipped: false };
+            return {
+              id: `task-${t.id}`,
+              target: { kind: "tasks", date: key, ids: [t.id] },
+              color: TASK_COLOR,
+              title: t.title || "Task",
+              tasks: [],
+              start,
+              end: start + Math.max(10, t.minutes),
+              done: t.done ? 1 : 0,
+              total: 1,
+              skipped: false,
+            };
           });
+        const minutes = minutesOn(data, key);
+        const goal = goalOn(data, key);
         return {
           key,
+          items,
+          tasks,
           untimed: items.filter((it) => !scheduleTasks(it.routine, it.occurrence).some((s) => s.start !== null)),
           untimedTasks: tasks.filter((t) => parseTime(t.time) === null),
-          blocks: layoutLanes([...items.flatMap(blocksFor), ...taskBlocks]),
-          status: dayStatus(data, key, todayKey()),
-          minutes: minutesOn(data, key),
+          blocks: layoutLanes([...items.flatMap((it) => blocksFor(it, key)), ...taskBlocks]),
+          status: dayStatus(data, key, today),
+          minutes,
+          goal,
+          goalPct: goal > 0 ? Math.min(1, minutes / goal) : minutes > 0 ? 1 : 0,
         };
       }),
-    [days, data],
+    [days, data, today],
   );
   const allBlocks = perDay.flatMap((d) => d.blocks);
   const firstHour = Math.max(0, Math.min(6, ...allBlocks.map((b) => Math.floor(b.start / 60))));
@@ -313,54 +382,125 @@ export function WeekView({
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const hasUntimed = perDay.some((d) => d.untimed.length > 0 || d.untimedTasks.length > 0);
 
+  const [pop, setPop] = useState<{ target: WeekTarget; anchor: DOMRect } | null>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  // The free half hour under the mouse, shown as a "+ 3:00 PM" slot.
+  const [ghost, setGhost] = useState<{ key: string; min: number } | null>(null);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+
+  function openPop(e: React.MouseEvent, target: WeekTarget) {
+    e.stopPropagation();
+    onSelect(target.date);
+    setPop({ target, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() });
+  }
+
+  function openSlotMenu(e: React.MouseEvent, key: string, min: number) {
+    onSelect(key);
+    const onDay = new Set(routinesOn(data, key).map((i) => i.routine.id));
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: `Task at ${formatTime(min)}`, icon: <PlusIcon className="h-4 w-4 text-accent" />, onSelect: () => onAddTask(key, timeString(min)) },
+        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${key}`) },
+        ...data.routines
+          .filter((r) => !onDay.has(r.id))
+          .map((r) => ({ label: `Add ${r.name || "Untitled routine"} to this day`, icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />, onSelect: () => log.addToDay(key, r.id) })),
+      ],
+    });
+  }
+
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
-      <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover">
+    <div
+      className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1"
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        touch.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+      }}
+      onTouchEnd={(e) => {
+        const s = touch.current;
+        touch.current = null;
+        if (!s) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - s.x;
+        const dy = t.clientY - s.y;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) onStep(dx < 0 ? 1 : -1);
+      }}
+    >
+      {/* Phones: the seven days as a list. */}
+      <ul className="flex flex-col divide-y divide-surface-hover sm:hidden">
+        {perDay.map(({ key, items, tasks, minutes, status, goalPct }) => {
+          const isSel = key === selected;
+          return (
+            <li key={key} className={`flex gap-3 px-2.5 py-2.5 transition-colors ${isSel ? "bg-accent/10" : ""}`}>
+              <button type="button" onClick={() => onSelect(key)} aria-pressed={isSel} aria-label={fromDateKey(key).toDateString()} className="flex w-11 shrink-0 flex-col items-center gap-1 pt-0.5">
+                <span className={`text-[11px] font-semibold ${isSel ? "text-accent" : "text-muted"}`}>{WEEKDAY_SHORT[weekdayOf(key)]}</span>
+                <DayNumber dayKey={key} today={today} status={status} />
+                <DayGoal dayKey={key} today={today} minutes={minutes} pct={goalPct} status={status} />
+              </button>
+              <div className="grid min-w-0 flex-1 grid-cols-2 content-start gap-1.5">
+                {items.map((it) => (
+                  <AgendaPill key={it.routine.id} item={it} dayKey={key} today={today} onOpen={openPop} />
+                ))}
+                {tasks.length > 0 && <AgendaTasksPill tasks={tasks} dayKey={key} onOpen={openPop} />}
+                {items.length === 0 && tasks.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onAddTask(key, null)}
+                    className="col-span-2 flex min-h-10 items-center gap-1.5 rounded-xl border border-dashed border-surface-hover px-3 text-xs font-semibold text-muted active:bg-surface-hover"
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" /> {key < today ? "Nothing planned" : "Add a task"}
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Wider screens: the time grid. */}
+      <div className="hidden grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover sm:grid">
         <div />
-        {perDay.map(({ key, minutes, status }) => {
-          const d = fromDateKey(key);
+        {perDay.map(({ key, minutes, status, goalPct }) => {
+          const isSel = key === selected;
           return (
             <button
               key={key}
               type="button"
               onClick={() => onSelect(key)}
-              className={`flex flex-col items-center gap-0.5 py-2 ${key === selected ? "bg-accent/10" : "hover:bg-surface-hover/50"}`}
+              onDoubleClick={() => onOpenDay(key)}
+              title="Click to open the day · double-click for day view"
+              aria-pressed={isSel}
+              className={`flex flex-col items-center gap-1 py-2 transition-colors ${isSel ? "bg-accent/10" : "hover:bg-surface-hover/50"}`}
             >
-              <span className="text-xs font-semibold text-muted">{WEEKDAY_SHORT[weekdayOf(key)]}</span>
-              <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold ${key === today ? "bg-accent text-accent-foreground" : status ? "text-white" : ""}`}
-                style={key !== today && status ? { background: STATUS_COLOR[status] } : undefined}
-                title={status ? STATUS_LABEL[status] : undefined}
-              >
-                {d.getDate()}
-              </span>
-              <span className={`flex h-3 items-center gap-0.5 text-[10px] tabular-nums ${status === "missed" ? "font-bold text-red-500" : "text-muted"}`}>
-                {status === "missed" ? (
-                  <>
-                    <CloseIcon className="h-2.5 w-2.5" /> Missed
-                  </>
-                ) : minutes > 0 ? (
-                  formatMinutesShort(Math.round(minutes))
-                ) : (
-                  ""
-                )}
-              </span>
+              <span className={`text-xs font-semibold ${isSel ? "text-accent" : "text-muted"}`}>{WEEKDAY_SHORT[weekdayOf(key)]}</span>
+              <DayNumber dayKey={key} today={today} status={status} />
+              <DayGoal dayKey={key} today={today} minutes={minutes} pct={goalPct} status={status} />
             </button>
           );
         })}
       </div>
       {hasUntimed && (
-        <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover">
+        <div className="hidden grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover sm:grid">
           <div className="px-1 py-1.5 text-right text-[10px] font-semibold leading-tight text-muted">Any time</div>
           {perDay.map(({ key, untimed, untimedTasks }) => (
-            <div key={key} className="flex min-w-0 flex-col gap-0.5 border-l border-surface-hover p-0.5">
+            <div key={key} className={`flex min-w-0 flex-col gap-0.5 border-l border-surface-hover p-0.5 ${key === selected ? "bg-accent/5" : ""}`}>
               {untimed.map((it) => (
-                <button key={it.routine.id} type="button" onClick={() => onSelect(key)} className="min-w-0 text-left">
-                  <RoutineChip item={it} status={routineStatus(it, key, today)} />
+                <button
+                  key={it.routine.id}
+                  type="button"
+                  onClick={(e) => openPop(e, { kind: "routine", date: key, routineId: it.routine.id })}
+                  className="min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                  <RoutineChip item={it} status={routineStatus(it, key, today)} fill />
                 </button>
               ))}
               {untimedTasks.length > 0 && (
-                <button type="button" onClick={() => onSelect(key)} className="min-w-0 text-left">
+                <button
+                  type="button"
+                  onClick={(e) => openPop(e, { kind: "tasks", date: key, ids: untimedTasks.map((t) => t.id) })}
+                  className="min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent"
+                >
                   <TasksChip tasks={untimedTasks} />
                 </button>
               )}
@@ -368,7 +508,12 @@ export function WeekView({
           ))}
         </div>
       )}
-      <div ref={scroller} className="max-h-[32rem] overflow-y-auto lg:h-0 lg:max-h-none lg:min-h-[20rem] lg:flex-1">
+      <div ref={scroller} className="hidden max-h-[32rem] overflow-y-auto sm:block lg:h-0 lg:max-h-none lg:min-h-[20rem] lg:flex-1">
+        {allBlocks.length === 0 && (
+          <div className="pointer-events-none sticky top-2 z-20 h-0">
+            <p className="mx-auto w-fit rounded-full bg-background/90 px-3 py-1 text-xs text-muted shadow-sm">Nothing at a set time this week. Click a time to add a task there.</p>
+          </div>
+        )}
         <div className="relative grid grid-cols-[3rem_repeat(7,minmax(0,1fr))]" style={{ height: hours.length * HOUR_PX }}>
           <div className="relative">
             {hours.map((h, i) => (
@@ -378,39 +523,69 @@ export function WeekView({
             ))}
           </div>
           {perDay.map(({ key, blocks }) => (
-            <div key={key} className={`relative border-l border-surface-hover ${key === selected ? "bg-accent/5" : ""}`} onClick={() => onSelect(key)}>
+            <div
+              key={key}
+              className={`relative cursor-cell border-l border-surface-hover ${key === selected ? "bg-accent/5" : ""}`}
+              onPointerMove={(e) => {
+                if (e.pointerType !== "mouse") return;
+                if (e.target !== e.currentTarget) {
+                  if (ghost) setGhost(null);
+                  return;
+                }
+                const min = slotAt(e, firstHour);
+                if (ghost?.key !== key || ghost.min !== min) setGhost({ key, min });
+              }}
+              onPointerLeave={() => setGhost(null)}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) openSlotMenu(e, key, slotAt(e, firstHour));
+              }}
+            >
               {hours.map((h, i) => (
-                <div key={h} className="absolute inset-x-0 border-t border-surface-hover/60" style={{ top: i * HOUR_PX }} />
+                <div key={h} className="pointer-events-none absolute inset-x-0 border-t border-surface-hover/60" style={{ top: i * HOUR_PX }} />
               ))}
-              {blocks.map((b, i) => {
+              {ghost?.key === key && (
+                <div
+                  className="pointer-events-none absolute inset-x-0.5 flex items-start gap-1 rounded-md border border-dashed border-accent/60 bg-accent/10 px-1 py-0.5 text-[11px] font-semibold text-accent"
+                  style={{ top: ((ghost.min - firstHour * 60) / 60) * HOUR_PX + 1, height: HOUR_PX / 2 - 2 }}
+                >
+                  <PlusIcon className="mt-px h-3 w-3 shrink-0" /> <span className="truncate">{formatTime(ghost.min)}</span>
+                </div>
+              )}
+              {blocks.map((b) => {
                 const top = ((b.start - firstHour * 60) / 60) * HOUR_PX;
                 const height = Math.max(18, ((b.end - b.start) / 60) * HOUR_PX - 2);
+                const complete = b.total > 0 && b.done === b.total;
                 return (
                   <button
-                    key={`${b.routineId}-${i}`}
+                    key={b.id}
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(key);
-                    }}
+                    onClick={(e) => openPop(e, b.target)}
                     title={`${b.title}: ${formatTime(b.start)} – ${formatTime(b.end)}${b.tasks.length ? `\n${b.tasks.join(", ")}` : ""}`}
-                    className={`absolute overflow-hidden rounded-md px-1 py-0.5 text-left text-[11px] leading-tight ${b.skipped ? "opacity-40 line-through" : ""}`}
+                    className={`absolute z-[1] overflow-hidden rounded-md px-1 py-0.5 text-left text-[11px] leading-tight transition-[filter,box-shadow] hover:z-[2] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${b.skipped ? "opacity-40 line-through" : ""}`}
                     style={{
                       top,
                       height,
                       left: `calc(${(b.lane / b.lanes) * 100}% + 1px)`,
                       width: `calc(${100 / b.lanes}% - 2px)`,
-                      background: `color-mix(in srgb, ${b.color} ${b.complete ? 45 : 22}%, var(--surface))`,
+                      background: `color-mix(in srgb, ${b.color} ${complete ? 45 : 22}%, var(--surface))`,
                       boxShadow: `inset 3px 0 0 ${b.color}`,
                     }}
                   >
                     <span className="flex items-center gap-1 font-semibold">
                       {b.icon !== undefined && <RoutineIcon icon={b.icon} color={b.colorIdx ?? 0} size="xs" />}
-                      {b.complete && <CheckIcon className="h-3 w-3 shrink-0" />}
+                      {complete && <CheckIcon className="h-3 w-3 shrink-0" />}
                       <span className="truncate">{b.title}</span>
                     </span>
-                    {height > 34 && <span className="block truncate text-muted">{formatTime(b.start)}</span>}
+                    {height > 34 && (
+                      <span className="block truncate text-muted">
+                        {formatTime(b.start)}
+                        {b.total > 1 && b.done > 0 && !complete && ` · ${b.done}/${b.total}`}
+                      </span>
+                    )}
                     {height > 52 && b.tasks.length > 0 && <span className="block truncate">{b.tasks.join(" · ")}</span>}
+                    {b.total > 1 && b.done > 0 && (
+                      <span className="absolute inset-x-0 bottom-0 h-0.5" style={{ background: `linear-gradient(90deg, ${b.color} ${(b.done / b.total) * 100}%, transparent 0)` }} />
+                    )}
                   </button>
                 );
               })}
@@ -423,7 +598,115 @@ export function WeekView({
           ))}
         </div>
       </div>
+      {pop && <WeekPopover target={pop.target} anchor={pop.anchor} log={log} onClose={() => setPop(null)} onOpenDay={onOpenDay} />}
+      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
+  );
+}
+
+/** The date in a circle: the accent for today, the day's status colour for a past day. */
+function DayNumber({ dayKey, today, status }: { dayKey: string; today: string; status: DayStatus | null }) {
+  const isToday = dayKey === today;
+  return (
+    <span
+      className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold tabular-nums ${isToday ? "bg-accent text-accent-foreground shadow-md shadow-accent/30" : status ? "text-white" : ""}`}
+      style={!isToday && status ? { background: STATUS_COLOR[status] } : undefined}
+      title={status ? STATUS_LABEL[status] : undefined}
+    >
+      {fromDateKey(dayKey).getDate()}
+    </span>
+  );
+}
+
+/** Under the date: minutes practiced and a small bar toward that day's goal (none for days to come). */
+function DayGoal({ dayKey, today, minutes, pct, status }: { dayKey: string; today: string; minutes: number; pct: number; status: DayStatus | null }) {
+  if (dayKey > today) return <span className="h-[1.375rem]" />;
+  const met = pct >= 1;
+  return (
+    <span className="flex flex-col items-center gap-1">
+      <span className={`flex h-3 items-center gap-0.5 whitespace-nowrap text-[10px] tabular-nums ${status === "missed" && minutes === 0 ? "font-bold text-red-500" : met ? "font-bold text-green-600 dark:text-green-400" : "text-muted"}`}>
+        {minutes > 0 ? (
+          formatMinutesShort(Math.round(minutes))
+        ) : status === "missed" ? (
+          <>
+            <CloseIcon className="h-2.5 w-2.5" /> Missed
+          </>
+        ) : (
+          "0 min"
+        )}
+      </span>
+      <span className="h-1 w-9 overflow-hidden rounded-full bg-background" title={met ? "Daily goal met" : undefined}>
+        <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${pct * 100}%`, background: met ? STATUS_COLOR.done : "var(--accent)" }} />
+      </span>
+    </span>
+  );
+}
+
+/** A routine on the phone list: its icon, name, time and how much is done. Opens the popover. */
+function AgendaPill({ item, dayKey, today, onOpen }: { item: DayRoutine; dayKey: string; today: string; onOpen: (e: React.MouseEvent, target: WeekTarget) => void }) {
+  const { routine, occurrence } = item;
+  const color = colorOf(routine.color);
+  const span = routineSpan(routine, occurrence);
+  const { done, total } = progressOf(routine, occurrence);
+  const status = routineStatus(item, dayKey, today);
+  const skipped = !!occurrence.skipped;
+  return (
+    <button
+      type="button"
+      onClick={(e) => onOpen(e, { kind: "routine", date: dayKey, routineId: routine.id })}
+      className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98] ${skipped ? "opacity-50" : ""}`}
+      style={{ background: `color-mix(in srgb, ${color} ${total > 0 && done === total ? 30 : 15}%, transparent)` }}
+    >
+      <RoutineIcon icon={routine.icon} color={routine.color} size="sm" />
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate text-xs font-semibold ${skipped ? "line-through" : ""}`}>{routine.name || "Untitled routine"}</span>
+        {span && <span className="block truncate text-[10px] text-muted">{formatTime(span.start)}</span>}
+      </span>
+      <ProgressMark done={done} total={total} color={color} status={skipped ? null : status} />
+    </button>
+  );
+}
+
+/** A day's own tasks on the phone list, as one pill. */
+function AgendaTasksPill({ tasks, dayKey, onOpen }: { tasks: { id: string; title: string; done: boolean }[]; dayKey: string; onOpen: (e: React.MouseEvent, target: WeekTarget) => void }) {
+  const done = tasks.filter((t) => t.done).length;
+  return (
+    <button
+      type="button"
+      onClick={(e) => onOpen(e, { kind: "tasks", date: dayKey, ids: tasks.map((t) => t.id) })}
+      className="flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98]"
+      style={{ background: `color-mix(in srgb, ${TASK_COLOR} ${done === tasks.length ? 30 : 15}%, transparent)` }}
+    >
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={{ background: TASK_COLOR }}>
+        <CheckIcon className="h-3.5 w-3.5" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs font-semibold">{tasks.length === 1 ? tasks[0].title || "Task" : `${tasks.length} tasks`}</span>
+      <ProgressMark done={done} total={tasks.length} color={TASK_COLOR} status={null} />
+    </button>
+  );
+}
+
+/** A small ring filling up as tasks are done: a check when all are, an X when the day was missed. */
+function ProgressMark({ done, total, color, status }: { done: number; total: number; color: string; status: DayStatus | null }) {
+  if (total > 0 && done === total)
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white" style={{ background: color }}>
+        <CheckIcon className="h-3 w-3" />
+      </span>
+    );
+  if (status === "missed")
+    return (
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white" style={{ background: STATUS_COLOR.missed }}>
+        <CloseIcon className="h-3 w-3" />
+      </span>
+    );
+  const r = 8;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 -rotate-90" aria-label={`${done} of ${total} done`}>
+      <circle cx="10" cy="10" r={r} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-foreground/15" />
+      {done > 0 && <circle cx="10" cy="10" r={r} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={`${(done / total) * c} ${c}`} />}
+    </svg>
   );
 }
 

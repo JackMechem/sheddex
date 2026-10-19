@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.9.3 beta** (see versioning).
+**v0.9.4 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -246,7 +246,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
-| Shed Log (practice log, routines, goals, streaks, sharing, cards); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
+| Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
