@@ -12,7 +12,7 @@ export type FeedbackKind = "bug" | "feature" | "other" | "report";
 export type FeedbackTarget = { type: "post" | "profile"; id: string; label: string };
 
 /** Open the feedback dialog from anywhere: `openFeedback()` or `openFeedback({ kind: "report", target })`. */
-export const OPEN_FEEDBACK_EVENT = "sheddex:open-feedback";
+export const OPEN_FEEDBACK_EVENT = "soniroll:open-feedback";
 export function openFeedback(detail?: { kind?: FeedbackKind; target?: FeedbackTarget }) {
   window.dispatchEvent(new CustomEvent(OPEN_FEEDBACK_EVENT, { detail }));
 }

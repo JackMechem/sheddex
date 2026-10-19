@@ -1,12 +1,12 @@
-# sheddex — project notes for AI agents
+# soniroll — project notes for AI agents
 
 This file loads at the start of every session (through `CLAUDE.md`), so it's kept short: what
-sheddex is, where things live, the traps that break things, and an index into the detailed notes.
+soniroll is, where things live, the traps that break things, and an index into the detailed notes.
 It's hand-maintained, separate from the auto-generated Next.js warning in `apps/web/AGENTS.md`.
 
 ## How these docs work (read this first)
 
-- **Always loaded:** this file, [`docs/guides/style.md`](docs/guides/style.md) (how sheddex
+- **Always loaded:** this file, [`docs/guides/style.md`](docs/guides/style.md) (how soniroll
   looks and reads), [`docs/guides/versioning.md`](docs/guides/versioning.md) (version bumps and
   the changelog) and [`docs/guides/testing.md`](docs/guides/testing.md) (how to check work).
 - **Read before you touch an area:** the matching file in [`docs/notes/`](docs/notes/), listed
@@ -28,7 +28,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
   "Standing rules" if it's something every session must know. Keep this file under ~40k
   characters.
 
-## What sheddex is
+## What soniroll is
 
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, a practice
@@ -37,7 +37,7 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
-  components. The real product. Live at sheddex.com.
+  components. The real product. Live at soniroll.com.
 - **Mobile** (`apps/mobile`): Expo (SDK 57, Expo Router) iOS/Android app. **Development is paused
   as of 2026-10-18** — Jack may pick it up again later. Until he does, don't build or port features
   to it, don't make builds for his phone, and don't say "mobile isn't done yet" as a to-do in your
@@ -51,12 +51,14 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   IndexedDB). Signed in, it lives in the account. There is **no merge** between the two: signing in
   simply switches which store is read. Some things need an account (Community posting, the Shed
   Log, Lessons, recordings, favorites, Tunes to Learn).
-- **The website is called "soniroll"** (lowercase) since 2026-10-18, with the goal-ring logo
-  (`components/Logo.tsx`, drawn from theme colours). Only what people see changed: web addresses
-  (still sheddex.com), the `sheddex://` chart links, event names, storage keys, the backend, emails
-  and the paused mobile app still say sheddex — see `docs/notes/rename-soniroll.md` for the full
-  list and what to change when soniroll.com goes live. Don't reuse older names (sheddex in new
-  UI text, jackshed, shed.io, Barn Tools). The repo
+- **It's called "soniroll"** (lowercase) since 2026-10-18 (it was sheddex), with the goal-ring
+  logo (`components/Logo.tsx`, drawn from theme colours). The site lives at
+  `https://www.soniroll.com` (`soniroll.com` and `sheddex.com` redirect there); emails come from
+  `noreply@soniroll.com`. New chart links start with `soniroll://`, and old `sheddex://` links still
+  import. On purpose still sheddex: the GitHub repo, lesson calendar UIDs, bass-file format IDs,
+  storage keys, the preview demo emails and the paused mobile app — see
+  `docs/notes/rename-soniroll.md`. Keep "Shed Log" and "Your shed" (Jack's choice). Don't use
+  older names in UI text (sheddex, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
 - GitHub: `git@github.com:JackMechem/sheddex.git` (the in-app GitHub links in `Home.tsx`, `Landing.tsx` and `app/terms` point at it).
@@ -118,7 +120,7 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   `packages/convex/previewSeed.ts` (setup in `docs/guides/deploying.md`). When the schema or data
   shapes it writes change (tunes, charts, setlists, Shed Log, profiles, posts), update the seed.
 - New backend code is on **dev** only until a Vercel production build runs `convex deploy`. The
-  prod mobile app and sheddex.com don't have new functions until then.
+  prod mobile app and soniroll.com don't have new functions until then.
 - Convex Auth's Next.js middleware treats any `?code=` URL parameter as an OAuth callback (it
   signed people out). Use other names: `?token=` (password reset), `?invite=` (lessons).
 - Cross-user reads must re-check privacy (`isPublic`, hidden lessons, Mayday flags) on the server;
@@ -178,7 +180,7 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
   not for anything commercial. Every bundled sample/font is credited on `/credits`.
 - **Storage:** every account has 100 MB in total (`packages/convex/lib/storage.ts`; every upload
   path must call `assertHasRoom` / `assertFits`). Paid plans for more storage are planned, not
-  built — and the Rhodes license has to be sorted out before sheddex charges for anything
+  built — and the Rhodes license has to be sorted out before soniroll charges for anything
   (`docs/notes/files-and-tune-sharing.md`).
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
   `app/terms` if it changes the rules).
@@ -274,6 +276,5 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.
-- **Not yet done before launch** (only Jack can do these): deploy the backend to prod, fix the
-  prod email sender (still says "jackshed"), publish the Google OAuth consent screen, turn on
+- **Not yet done before launch** (only Jack can do these): deploy the backend to prod, publish the Google OAuth consent screen, turn on
   Convex backups — see `docs/guides/deploying.md`.

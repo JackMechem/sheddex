@@ -92,7 +92,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
   ];
 
   async function share() {
-    if ((await shareLink(`@${profile!.username} on soniroll`, `https://sheddex.com/u/${profile!.username}`)) === "copied") {
+    if ((await shareLink(`@${profile!.username} on soniroll`, `https://www.soniroll.com/u/${profile!.username}`)) === "copied") {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }

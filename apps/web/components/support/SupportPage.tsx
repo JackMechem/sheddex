@@ -12,9 +12,9 @@ const HEART = "var(--danger)";
 /** What donations pay for — the services named in the privacy policy. */
 const COSTS = [
   { title: "Your account and files", text: "The database and storage that keep your library, Shed Log, recordings and files in sync between devices." },
-  { title: "The website", text: "Hosting sheddex.com so it's fast wherever you open it." },
+  { title: "The website", text: "Hosting soniroll.com so it's fast wherever you open it." },
   { title: "Email", text: "Sign-up codes, password resets, lesson invites and booking emails." },
-  { title: "The domain", text: "sheddex.com itself." },
+  { title: "The domain", text: "soniroll.com itself." },
 ];
 
 /**
@@ -26,7 +26,7 @@ export default function SupportPage() {
   const [shared, setShared] = useState<string | null>(null);
 
   async function tellAFriend() {
-    const result = await shareLink("soniroll — free practice tools for musicians", "https://sheddex.com");
+    const result = await shareLink("soniroll — free practice tools for musicians", "https://www.soniroll.com");
     setShared(result === "copied" ? "Link copied" : result === "failed" ? null : "Thanks for sharing!");
   }
 

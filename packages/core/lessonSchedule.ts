@@ -265,7 +265,7 @@ export function lessonIcs(ev: LessonEvent): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//sheddex//Lessons//EN",
+    "PRODID:-//soniroll//Lessons//EN",
     "CALSCALE:GREGORIAN",
     `METHOD:${ev.cancelled ? "CANCEL" : "PUBLISH"}`,
     "BEGIN:VEVENT",

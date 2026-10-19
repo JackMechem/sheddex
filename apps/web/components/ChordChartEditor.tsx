@@ -163,7 +163,7 @@ function toRealBar(eb: EditableBar): Bar {
     no room for five extra per-cell toggles inside a single `COL_WIDTH`-wide bar, so none of this
     is on the cells themselves. A song built here can be saved straight into the library (the same
     `importSongs` "Import a playlist" itself calls, in a playlist named after the chart's own
-    title) or exported as a `sheddex://` chart link (`lib/chartString.ts`) to share or re-import
+    title) or exported as a `soniroll://` chart link (`lib/chartString.ts`) to share or re-import
     elsewhere. */
 const NO_PLAYLIST = "\u0000none";
 

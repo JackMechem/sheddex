@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated="October 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
+        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
       </p>
 
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <LegalSection title="Signed out">
         <p>
           Your settings, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage. They aren&apos;t
-          sent to soniroll. Clearing your browser&apos;s data for sheddex.com deletes them.
+          sent to soniroll. Clearing your browser&apos;s data for soniroll.com deletes them.
         </p>
       </LegalSection>
 

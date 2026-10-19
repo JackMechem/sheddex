@@ -1,6 +1,6 @@
-# sheddex
+# soniroll
 
-**Current version: v0.9.1 (beta)** · [What's new](https://sheddex.com/changelog)
+**Current version: v0.9.1 (beta)** · [What's new](https://www.soniroll.com/changelog)
 
 Free practice tools for musicians, in the browser: a metronome (odd and changing meters,
 polyrhythm modulation), a tuner, ear training with levelled learning paths, note, scale and
@@ -11,9 +11,9 @@ streaks and goals, setlists, a community, and tools for teachers and students.
 No ads, no paywalls. Every tool works without an account; signing in syncs your stuff between
 devices.
 
-**Use it:** [sheddex.com](https://sheddex.com)
+**Use it:** [soniroll.com](https://www.soniroll.com)
 
-**Found a bug, or want a feature?** Use [sheddex.com/feedback](https://sheddex.com/feedback)
+**Found a bug, or want a feature?** Use [soniroll.com/feedback](https://www.soniroll.com/feedback)
 (also in the sidebar's ⋮ menu), or open a GitHub issue.
 
 ## Running it locally
@@ -46,7 +46,7 @@ Nobody works directly on `main` any more.
 
 | Branch | What it's for |
 | --- | --- |
-| `main` | What's live on sheddex.com. Only changes from `preview` are merged in, when a version is ready to release. |
+| `main` | What's live on soniroll.com. Only changes from `preview` are merged in, when a version is ready to release. |
 | `preview` | Where day-to-day work happens and gets tested before release. |
 | `<type>/<short-name>` | Optional, for a bigger or riskier piece of work. Branch off `preview`, merge back into `preview` when done, then delete it. |
 
@@ -70,11 +70,11 @@ data; see [docs/guides/deploying.md](docs/guides/deploying.md#preview-deployment
 
 ## Versioning
 
-sheddex uses semantic versioning and is in beta until 1.0. The version is set in
-`apps/web/package.json`, and every release is listed at [sheddex.com/changelog](https://sheddex.com/changelog)
+soniroll uses semantic versioning and is in beta until 1.0. The version is set in
+`apps/web/package.json`, and every release is listed at [soniroll.com/changelog](https://www.soniroll.com/changelog)
 (entries live in `apps/web/lib/changelog.ts`). See [docs/guides/versioning.md](docs/guides/versioning.md).
 
 ## Credits
 
 Samples and fonts are by their authors under their own licenses; see
-[sheddex.com/credits](https://sheddex.com/credits).
+[soniroll.com/credits](https://www.soniroll.com/credits).

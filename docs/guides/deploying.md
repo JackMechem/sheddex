@@ -1,6 +1,6 @@
 # Deploying
 
-sheddex has two separate things to deploy: the website (Vercel) and the backend (Convex). Only
+soniroll has two separate things to deploy: the website (Vercel) and the backend (Convex). Only
 Jack can deploy to production (it needs his accounts and his push).
 
 ## Convex deployments
@@ -9,7 +9,7 @@ Jack can deploy to production (it needs his accounts and his push).
 | --- | --- | --- |
 | Dev | `befitting-cobra-264` | `localhost`, the "sheddex" Android app |
 | Preview | a new one per branch | Vercel preview builds (e.g. of `preview`) |
-| Prod | `grandiose-dolphin-564` | sheddex.com, the "sheddex prod" Android app |
+| Prod | `grandiose-dolphin-564` | soniroll.com, the "sheddex prod" Android app |
 
 - Day-to-day work pushes to **dev**: `npx convex dev --once` from `packages/convex`.
 - Prod updates only through a Vercel production build (below). Until then, new functions don't
@@ -86,9 +86,9 @@ real accounts).
 Set with `npx convex env set NAME value` (add `--prod` for prod):
 - `AUTH_RESEND_KEY` — Resend API key for all email (sign-up codes, password resets, invites,
   booking emails).
-- `AUTH_EMAIL_FROM` — the sender. Should be `sheddex <noreply@sheddex.com>`; prod and dev still
-  say "jackshed" until the domain is verified in Resend.
-- `SITE_URL` — `http://localhost:3000` on dev, `https://sheddex.com` on prod (links in emails).
+- `AUTH_EMAIL_FROM` — the sender: `soniroll <noreply@soniroll.com>` on prod and dev (soniroll.com
+  is verified in Resend; an unverified domain makes every email fail).
+- `SITE_URL` — `http://localhost:3000` on dev, `https://www.soniroll.com` on prod (links in emails).
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — Google sign-in. Redirect URI:
   `https://<deployment>.convex.site/api/auth/callback/google`.
 
@@ -98,16 +98,13 @@ Web reads `NEXT_PUBLIC_CONVEX_URL` (and optionally `NEXT_PUBLIC_SITE_URL`); mobi
 ## Launch checklist (open as of 2026-10-18)
 
 1. **Deploy prod.** Lessons, booking, feedback, admin, Mayday, analytics and more are on dev
-   only. Run a Vercel production build, watch its log, then check `/admin` on sheddex.com.
-2. **Fix the email sender:** verify sheddex.com in Resend (DNS records), then
-   `npx convex env set AUTH_EMAIL_FROM 'sheddex <noreply@sheddex.com>' --prod` (and on dev). Send
-   yourself a sign-up code to check.
-3. **Google sign-in:** publish the OAuth consent screen ("In production") in Google Cloud Console.
-4. **Limits:** Resend's free plan is 100 emails a day. Check Convex bandwidth and storage after the
+   only. Run a Vercel production build, watch its log, then check `/admin` on soniroll.com.
+2. **Google sign-in:** publish the OAuth consent screen ("In production") in Google Cloud Console.
+3. **Limits:** Resend's free plan is 100 emails a day. Check Convex bandwidth and storage after the
    first days (recordings and sample files are the big items).
-5. **Test on prod** with a fresh email: sign up, sign in on another device, send feedback, report
+4. **Test on prod** with a fresh email: sign up, sign in on another device, send feedback, report
    a post, see it in `/admin`.
-6. **Backups:** turn on Convex's periodic backups for prod.
+5. **Backups:** turn on Convex's periodic backups for prod.
 
 ## If something goes wrong after launch
 

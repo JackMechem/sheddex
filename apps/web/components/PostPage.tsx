@@ -104,7 +104,7 @@ function PostPageContent({ id }: { id: string }) {
 
   async function handleShare() {
     if (!post) return;
-    if ((await shareLink(post.title, `https://sheddex.com/post/${post.id}`)) === "copied") {
+    if ((await shareLink(post.title, `https://www.soniroll.com/post/${post.id}`)) === "copied") {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }

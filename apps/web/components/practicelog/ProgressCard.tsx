@@ -240,7 +240,7 @@ function drawMilestone(ctx: CanvasRenderingContext2D, card: ProgressCard, userna
   // Footer: the site, and the key.
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = f(700, 32);
-  ctx.fillText("sheddex.com", P, H - 52);
+  ctx.fillText("soniroll.com", P, H - 52);
   const sq = 28;
   ctx.font = f(700, 30);
   const wLess = ctx.measureText("Less").width;
@@ -445,7 +445,7 @@ function drawDayReport(ctx: CanvasRenderingContext2D, card: ProgressCard, userna
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = f(700, 32);
   ctx.textAlign = "center";
-  ctx.fillText("sheddex.com", W / 2, H - 40);
+  ctx.fillText("soniroll.com", W / 2, H - 40);
   ctx.textAlign = "left";
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { CHANGELOG_SEEN_KEY, RELEASES } from "@/lib/changelog";
 
-const SEEN_EVENT = "sheddex:changelog-seen";
+const SEEN_EVENT = "soniroll:changelog-seen";
 
 function subscribe(cb: () => void) {
   window.addEventListener("storage", cb);

@@ -1,6 +1,6 @@
-# sheddex style guide
+# soniroll style guide
 
-How sheddex should look, behave and read. These rules come from Jack's own requests and
+How soniroll should look, behave and read. These rules come from Jack's own requests and
 corrections over many sessions. Follow them for every new screen, on web and mobile. If you're
 unsure, copy how an existing, recently redesigned page does it (the Shed Log, the Tunes/Chord
 Charts pages, Lessons, the Metronome).
@@ -12,7 +12,7 @@ Charts pages, Lessons, the Metronome).
   Small field labels are `text-xs font-semibold text-muted`.
 - **Plain, concrete, short.** Say what a thing does in everyday words a musician would use. No
   marketing voice, no developer jargon in the UI. One line beats a paragraph.
-- **Names people see:** "sheddex" (lowercase), "Shed Log" (not Practice Log), "Tunes I Know" (not
+- **Names people see:** "soniroll" (lowercase), "Shed Log" (not Practice Log), "Tunes I Know" (not
   just "Tunes" for that list), "Tunes to Learn", "Chord Charts", "Community", "Lessons". A tool's
   page title must match its `NAV_LINKS` label exactly (the header icon and intro are looked up by
   it); `short` names (e.g. "Intervals") are only for the sidebar.
@@ -87,8 +87,8 @@ Charts pages, Lessons, the Metronome).
 
 ## Motion and feel
 
-- Small, quick animations that respect `prefers-reduced-motion` (page slide-in, the logo's drum
-  hit, check-off bursts, confetti on real achievements). Celebrations only for real moments
+- Small, quick animations that respect `prefers-reduced-motion` (page slide-in, the logo's ring
+  sweep, check-off bursts, confetti on real achievements). Celebrations only for real moments
   (goal met, streak milestones, level passed).
 - Nothing should flash wrong content on load: render nothing user-specific on the server, and wait
   for synced settings (`ready`) before showing values that would otherwise jump.

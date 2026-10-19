@@ -1,4 +1,4 @@
-# How sheddex fits together
+# How soniroll fits together
 
 A short tour of the code for anyone reading the repo. For the rules and full history, see
 [docs/README.md](README.md).

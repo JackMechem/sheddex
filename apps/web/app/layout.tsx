@@ -17,7 +17,7 @@ const DESCRIPTION =
   "Free practice tools for musicians: metronome, tuner, ear training, chord charts, jam practice, a practice log and more. No ads, no paywalls.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sheddex.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.soniroll.com"),
   title: { default: "soniroll", template: "%s · soniroll" },
   description: DESCRIPTION,
   applicationName: "soniroll",
