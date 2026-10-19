@@ -238,7 +238,7 @@ export function RoutineShareDialog({ routine, onClose }: { routine: Routine; onC
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState<"link" | "post" | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const url = shareId ? `${typeof window === "undefined" ? "https://sheddex.com" : window.location.origin}/routine/${shareId}` : null;
+  const url = shareId ? `${typeof window === "undefined" ? "https://www.soniroll.com" : window.location.origin}/routine/${shareId}` : null;
 
   async function makeLink() {
     setBusy("link");

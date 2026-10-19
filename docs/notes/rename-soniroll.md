@@ -62,3 +62,42 @@ Convex env: prod `SITE_URL=https://www.soniroll.com`; prod and dev
 sending from an unverified domain fails every email, sign-up codes included). The new wording
 reaches prod only when `preview` is merged into `main` (the Vercel prod build runs `convex deploy`);
 the env changes applied right away.
+
+## The rest of the switch (2026-10-18, later still)
+
+Jack: keep "Shed Log" and "Your shed"; switch the chart links; update the landing page and every
+link. Help's screenshots don't show the logo or name, so they weren't retaken.
+
+- **Web addresses:** every `https://sheddex.com` in `apps/web` is now `https://www.soniroll.com`
+  (share links for posts, profiles, setlists and routines; the `metadataBase` fallback; Privacy,
+  Terms, Support; the progress cards' footer; the profile editor's address hint; the landing page's
+  mock browser bar shows `soniroll.com`).
+- **Chart links** (`packages/core/chartString.ts`): new links start with `soniroll://`;
+  `OLD_SCHEMES` keeps `sheddex://` links importing (checked with a Node script both ways). The
+  paused mobile app shares this code, so its exports switch too; an old mobile build can't read
+  the new links.
+- **Smaller things:** the Lessons tool description in `navLinks.ts` ("Teach with soniroll"), the
+  calendar `PRODID`, and the window events (`soniroll:open-feedback`, `soniroll:changelog-seen`).
+- **Landing screenshots:** `public/landing/v4/` (`SHOTS = "v4"`). Only `app-light/dark` showed the
+  sidebar, so only those were retaken: Jack's **dev** account, 1440×900 at 2×, with the page clock set
+  to 2026-10-17 20:30 (`context.clock.install`) so the dashboard shows a practised day instead of an
+  empty one. The rest are the v3 files, moved.
+- **Docs:** README, PROJECT.md, the style, versioning and deploying guides and architecture.md say
+  soniroll and soniroll.com; the deploying checklist lost the finished "fix the email sender" step.
+- **Still sheddex on purpose:** the GitHub repo (`JackMechem/sheddex`, not renamed — the in-app
+  GitHub links point at it), lesson calendar UIDs (`@sheddex.com`), the bass-file format IDs
+  (`sheddex.bass-transcription`, `sheddex.bass-player`, inside exported files — changing them would
+  break importing old files), storage keys, the preview demo emails (`@sheddex.test`) and the mobile
+  app.
+
+Checked: `tsc` in web, mobile and convex (core has an older `lessonFiles.ts` `.at()` error, not from
+this change), `pnpm lint` (the old `SettingsBar.tsx` warning), `convex dev --once`, `pnpm build`; in
+nix Chromium, the text of 13 pages (landing, dashboard, legal, support, help, credits, changelog,
+lessons, community, shed log, files, chord charts) has no "sheddex", and the landing page loads the
+v4 pictures with no errors or overflow. Not checked: exporting a chart link from the editor UI by
+hand, the share buttons on a phone.
+
+**Signed-out visitors' saved data:** anything stored in the browser (settings, tunes, logs without an
+account) belongs to the address it was saved on. After the redirect, people who used sheddex.com
+signed out start fresh on soniroll.com; their old data is still in their browser under sheddex.com
+but the site can't read it. Signed-in data is unaffected.

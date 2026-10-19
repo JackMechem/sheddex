@@ -3,17 +3,18 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
-import { FilePreviewDialog, FileRow, FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader, type PreviewFile } from "@/components/files/FileParts";
-import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Rows } from "@/components/library/ui";
+import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUploader } from "@/components/files/FileParts";
+import { MenuButton } from "@/components/library/shared";
+import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { FileIcon, UploadIcon } from "@/components/tools";
-import { type FileKind, type UserFile, FILE_KIND_LABEL, fileKind, filesApi, formatBytes } from "@/lib/files";
+import { ChevronRightIcon, FileIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 
-type Source = "file" | "recording" | "song" | "lesson" | "handin" | "profile";
+type Source = StoredKind;
 
 const SOURCE_LABEL: Record<Source, string> = {
   file: "Uploads",
@@ -24,29 +25,44 @@ const SOURCE_LABEL: Record<Source, string> = {
   profile: "Profile",
 };
 
-/** What a non-upload is, in a row's detail line. */
-const SOURCE_DETAIL: Record<Source, string | null> = {
+/** What a non-upload is, in the Where column. */
+const SOURCE_SHORT: Record<Source, string | null> = {
   file: null,
   recording: "Recording",
-  song: "Song behind your takes",
-  lesson: "Given to a student",
-  handin: "Handed in",
-  profile: null,
+  song: "Tune song",
+  lesson: "Lesson file",
+  handin: "Hand-in",
+  profile: "Profile",
 };
 
-type SortBy = "new" | "name" | "size";
+type SortKey = "added" | "name" | "where" | "size";
+type Sort = { key: SortKey; dir: "asc" | "desc" };
+
+/** The phone's sort menu (the columns sort on wider screens). */
+const SORT_OPTIONS: { value: string; label: string; sort: Sort }[] = [
+  { value: "new", label: "Newest first", sort: { key: "added", dir: "desc" } },
+  { value: "old", label: "Oldest first", sort: { key: "added", dir: "asc" } },
+  { value: "name", label: "Name", sort: { key: "name", dir: "asc" } },
+  { value: "big", label: "Largest first", sort: { key: "size", dir: "desc" } },
+  { value: "small", label: "Smallest first", sort: { key: "size", dir: "asc" } },
+];
+
+const keyOf = (item: { kind: string; id: string }) => `${item.kind}:${item.id}`;
+
+/** The table's columns from `sm` up: select, name, where, size, added, ⋮. */
+const COLUMNS = "sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,13rem)_5.5rem_6.5rem_2.5rem]";
 
 /**
- * `/files` — everything stored with your account, in one place: files you uploaded (on their own or
- * attached to tunes), recordings, tunes' songs, lesson files and hand-ins, profile images. Upload
- * (button or drop anywhere on the page), search, filter by where a file came from and what kind it
- * is, sort, and open anything in place. Your uploads can be renamed, attached to a tune or deleted
- * here; everything else links to where it's managed.
+ * `/files` — everything stored with your account, as a file browser: files you uploaded (on their
+ * own or attached to tunes), recordings, tunes' songs, lesson files and hand-ins, profile images.
+ * Upload (button or drop anywhere on the page), search, filter by where a file came from and what
+ * kind it is, sort by any column, and open anything in place. Every item has a ⋮ menu (also on
+ * right-click): rename, share a link, download, attach to a tune (uploads), delete. Tick several to
+ * delete them together (Delete key works too).
  */
 export default function FilesPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const storage = useQuery(filesApi.storage, isAuthenticated ? {} : "skip");
-  const files = useQuery(filesApi.list, isAuthenticated ? {} : "skip");
   const tunes = useTuneIndex();
   const tuneName = (id: string) => tunes.get(id)?.tune.name;
   const uploader = useFileUploader();
@@ -55,11 +71,11 @@ export default function FilesPage() {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState<Source | "all">("all");
   const [kind, setKind] = useState<FileKind | "all">("all");
-  const [sortBy, setSortBy] = useState<SortBy>("new");
-  const [preview, setPreview] = useState<(PreviewFile & { href: string | null; source: Source; tuneId: string | null }) | null>(null);
+  const [sort, setSort] = useState<Sort>({ key: "added", dir: "desc" });
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [selecting, setSelecting] = useState(false);
 
-  const filesById = useMemo(() => new Map((files ?? []).map((f) => [f._id as string, f])), [files]);
-  const items = useMemo(() => storage?.items ?? [], [storage]);
+  const items = useMemo<StoredEntry[]>(() => storage?.items ?? [], [storage]);
 
   const counts = useMemo(() => {
     const bySource = new Map<string, number>();
@@ -72,6 +88,12 @@ export default function FilesPage() {
     return { bySource, byKind };
   }, [items]);
 
+  /** The Where column: what it is and which tune it's on. */
+  const whereOf = (item: StoredEntry) => {
+    const tune = item.tuneId ? tuneName(item.tuneId) : undefined;
+    return [SOURCE_SHORT[item.kind], tune].filter(Boolean).join(" · ") || "Your files";
+  };
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     const out = items.filter((item) => {
@@ -81,16 +103,61 @@ export default function FilesPage() {
       const tune = item.tuneId ? (tuneName(item.tuneId) ?? "") : "";
       return [item.name, tune].some((t) => t.toLowerCase().includes(q));
     });
-    if (sortBy === "name") out.sort((a, b) => a.name.localeCompare(b.name));
-    else if (sortBy === "size") out.sort((a, b) => b.size - a.size);
+    const by: Record<SortKey, (a: StoredEntry, b: StoredEntry) => number> = {
+      added: (a, b) => a.createdAt - b.createdAt,
+      name: (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+      where: (a, b) => whereOf(a).localeCompare(whereOf(b)),
+      size: (a, b) => a.size - b.size,
+    };
+    out.sort((a, b) => (sort.dir === "asc" ? 1 : -1) * by[sort.key](a, b));
     return out;
-    // tuneName reads `tunes`.
+    // tuneName and whereOf read `tunes`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, query, source, kind, sortBy, tunes]);
+  }, [items, query, source, kind, sort, tunes]);
+
+  // Only what's still listed counts as selected (deleted or filtered-out items drop out).
+  const picked = shown.filter((item) => selected.has(keyOf(item)));
+  const allPicked = shown.length > 0 && picked.length === shown.length;
+  const showChecks = selecting || picked.length > 0;
+
+  function toggle(item: StoredEntry) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(keyOf(item))) next.delete(keyOf(item));
+      else next.add(keyOf(item));
+      return next;
+    });
+  }
+  const clearSelection = () => {
+    setSelected(new Set());
+    setSelecting(false);
+  };
+  const deletePicked = () => actions.deleteMany(picked, clearSelection);
+
+  // Delete / Backspace deletes what's ticked; Escape clears it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      // Not while typing (ticking a box leaves focus on it, which is fine).
+      if (t?.closest("textarea, select, [contenteditable], [role=dialog]") || (t instanceof HTMLInputElement && t.type !== "checkbox")) return;
+      if (!picked.length) return;
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        actions.deleteMany(picked, clearSelection);
+      } else if (e.key === "Escape") clearSelection();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  function sortBy(key: SortKey) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" || key === "where" ? "asc" : "desc" }));
+  }
 
   const used = storage?.used ?? 0;
   const quota = storage?.quota ?? 1;
   const pct = Math.min(100, (used / quota) * 100);
+  const phoneSort = SORT_OPTIONS.find((o) => o.sort.key === sort.key && o.sort.dir === sort.dir)?.value ?? "new";
 
   return (
     <LibraryPage>
@@ -172,22 +239,50 @@ export default function FilesPage() {
                   .map((k) => (
                     <FilterChip key={k} active={kind === k} onClick={() => setKind(k)} label={k === "other" ? "Other" : `${FILE_KIND_LABEL[k]}s`} small />
                   ))}
-                <div className="ml-auto">
+                <div className="ml-auto sm:hidden">
                   <Select
-                    value={sortBy}
-                    onChange={setSortBy}
-                    options={[
-                      { value: "new", label: "Newest first" },
-                      { value: "name", label: "Name" },
-                      { value: "size", label: "Largest first" },
-                    ]}
+                    value={phoneSort}
+                    onChange={(v) => setSort(SORT_OPTIONS.find((o) => o.value === v)!.sort)}
+                    options={SORT_OPTIONS.map(({ value, label }) => ({ value, label }))}
                     className="min-w-36"
                   />
                 </div>
               </div>
             </div>
 
-            <Panel title={source === "all" ? "Everything" : SOURCE_LABEL[source]} detail={`${shown.length}`} flush>
+            <section className="flex flex-col rounded-2xl bg-surface pb-1.5">
+              {/* Title, or what's ticked and what to do with it. */}
+              <div className="flex min-h-14 flex-wrap items-center gap-2 px-4 py-2.5">
+                {picked.length > 0 ? (
+                  <>
+                    <span className="font-semibold">{picked.length} selected</span>
+                    <span className="text-sm tabular-nums text-muted">{formatBytes(picked.reduce((sum, i) => sum + i.size, 0))}</span>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <button type="button" onClick={deletePicked} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold text-danger hover:bg-surface-hover">
+                        <TrashIcon className="h-4 w-4" /> Delete
+                      </button>
+                      <button type="button" onClick={clearSelection} className="inline-flex h-9 items-center rounded-full px-3 text-sm font-semibold text-muted hover:bg-background hover:text-foreground">
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="font-bold">{source === "all" ? "Everything" : SOURCE_LABEL[source]}</h2>
+                    <span className="text-sm tabular-nums text-muted">{shown.length}</span>
+                    {shown.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => (selecting ? clearSelection() : setSelecting(true))}
+                        className="ml-auto inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-accent hover:bg-background sm:hidden"
+                      >
+                        {selecting ? "Done" : "Select"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
               {shown.length === 0 ? (
                 items.length === 0 ? (
                   <EmptyState
@@ -204,56 +299,129 @@ export default function FilesPage() {
                   <p className="px-4 pb-4 text-sm text-muted">Nothing matches.</p>
                 )
               ) : (
-                <Rows>
-                  {shown.map((item) => {
-                    const own = item.kind === "file" ? filesById.get(item.id) : undefined;
-                    const tune = item.tuneId ? tuneName(item.tuneId) : null;
-                    const extra = [SOURCE_DETAIL[item.kind as Source], tune ? `on ${tune}` : null].filter(Boolean).join(" · ");
-                    return (
-                      <FileRow
-                        key={`${item.kind}:${item.id}`}
-                        name={item.name}
-                        mimeType={item.mimeType}
-                        detail={fileDetail(item, extra || null)}
-                        onOpen={() => (own ? actions.openFile(own as UserFile) : setPreview({ ...item, source: item.kind as Source }))}
-                        onMenu={own ? (e) => actions.openMenu(own as UserFile, e) : undefined}
-                        trailing={
-                          !own && item.href ? (
-                            <Link href={item.href} className="hidden shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-accent hover:bg-background sm:block">
-                              {item.kind === "profile" ? "Account" : item.kind === "recording" ? "Recording" : "Lesson"}
-                            </Link>
-                          ) : null
-                        }
+                <div role="table" aria-label="Your files" className="flex flex-col px-1.5">
+                  <div role="row" className={`hidden items-center border-b border-foreground/[0.06] pb-1.5 text-xs font-semibold text-muted sm:grid ${COLUMNS}`}>
+                    <span role="columnheader" className="flex justify-center">
+                      <Checkbox
+                        checked={allPicked}
+                        mixed={picked.length > 0 && !allPicked}
+                        label="Select all"
+                        onChange={() => setSelected(allPicked ? new Set() : new Set(shown.map(keyOf)))}
                       />
+                    </span>
+                    <SortHeader label="Name" k="name" sort={sort} onSort={sortBy} />
+                    <SortHeader label="Where" k="where" sort={sort} onSort={sortBy} />
+                    <SortHeader label="Size" k="size" sort={sort} onSort={sortBy} end />
+                    <SortHeader label="Added" k="added" sort={sort} onSort={sortBy} end />
+                    <span />
+                  </div>
+                  {shown.map((item) => {
+                    const isPicked = selected.has(keyOf(item));
+                    const where = whereOf(item);
+                    return (
+                      <div
+                        key={keyOf(item)}
+                        role="row"
+                        aria-selected={isPicked}
+                        onContextMenu={(e) => actions.contextMenu(item, e)}
+                        className={`group grid items-center rounded-xl ${showChecks ? "grid-cols-[2.25rem_minmax(0,1fr)_2.5rem]" : "grid-cols-[minmax(0,1fr)_2.5rem]"} ${COLUMNS} ${
+                          isPicked ? "bg-accent/10" : "hover:bg-surface-hover"
+                        }`}
+                      >
+                        <span role="cell" className={`${showChecks ? "flex" : "hidden sm:flex"} justify-center`}>
+                          <Checkbox
+                            checked={isPicked}
+                            label={`Select ${item.name}`}
+                            onChange={() => toggle(item)}
+                            faint={!showChecks}
+                          />
+                        </span>
+                        <button
+                          type="button"
+                          role="cell"
+                          onClick={() => (showChecks && !window.matchMedia("(min-width: 640px)").matches ? toggle(item) : actions.openFile(item))}
+                          className="flex min-w-0 items-center gap-3 px-2 py-2 text-left"
+                        >
+                          <FileTypeIcon kind={fileKind(item.mimeType, item.name)} />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate font-semibold">{item.name}</span>
+                              {item.sharedId && (
+                                <span title="Shared by link" className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                                  <LinkIcon className="h-3 w-3" />
+                                  <span className="hidden lg:inline">Shared</span>
+                                </span>
+                              )}
+                            </span>
+                            {/* Phones: everything in one line under the name. */}
+                            <span className="block truncate text-xs text-muted sm:hidden">{fileDetail(item, where === "Your files" ? null : where)}</span>
+                            <span className="hidden truncate text-xs text-muted sm:block">{FILE_KIND_LABEL[fileKind(item.mimeType, item.name)]}</span>
+                          </span>
+                        </button>
+                        <span role="cell" className="hidden truncate px-2 text-sm text-muted sm:block" title={where}>
+                          {item.tuneId && tuneName(item.tuneId) ? (
+                            <>
+                              {SOURCE_SHORT[item.kind] && `${SOURCE_SHORT[item.kind]} · `}
+                              <Link href={`/tunes/tune?id=${encodeURIComponent(item.tuneId)}`} className="text-foreground hover:text-accent hover:underline">
+                                {tuneName(item.tuneId)}
+                              </Link>
+                            </>
+                          ) : (
+                            where
+                          )}
+                        </span>
+                        <span role="cell" className="hidden px-2 text-right text-sm tabular-nums text-muted sm:block">
+                          {formatBytes(item.size)}
+                        </span>
+                        <span role="cell" className="hidden px-2 text-right text-sm tabular-nums text-muted sm:block">
+                          {formatFileDate(item.createdAt)}
+                        </span>
+                        <span role="cell" className="flex justify-center">
+                          <MenuButton label={`Options for ${item.name}`} onClick={(e) => actions.openMenu(item, e)} />
+                        </span>
+                      </div>
                     );
                   })}
-                </Rows>
+                </div>
               )}
-            </Panel>
+              {actions.error && <p className="px-4 pb-3 text-sm text-danger">{actions.error}</p>}
+            </section>
           </>
         )}
       </div>
       {uploader.input}
       {actions.dialogs}
-      {preview && (
-        <FilePreviewDialog
-          file={preview}
-          onClose={() => setPreview(null)}
-          actions={
-            preview.href ? (
-              <Link href={preview.href} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover">
-                <FileTypeIcon kind={fileKind(preview.mimeType, preview.name)} size="sm" />
-                {preview.source === "profile" ? "Change it in Account" : preview.source === "recording" ? "Open the recording" : "Open the lesson"}
-              </Link>
-            ) : preview.source === "song" && preview.tuneId ? (
-              <Link href={`/tunes/tune?id=${encodeURIComponent(preview.tuneId)}`} className="inline-flex h-9 items-center rounded-full bg-background px-3.5 text-sm font-semibold hover:bg-surface-hover">
-                Open {tuneName(preview.tuneId) ?? "the tune"}
-              </Link>
-            ) : null
-          }
-        />
-      )}
     </LibraryPage>
+  );
+}
+
+/** A column heading that sorts by it; a second click flips the order. */
+function SortHeader({ label, k, sort, onSort, end = false }: { label: string; k: SortKey; sort: Sort; onSort: (k: SortKey) => void; end?: boolean }) {
+  const on = sort.key === k;
+  return (
+    <span role="columnheader" aria-sort={on ? (sort.dir === "asc" ? "ascending" : "descending") : "none"} className={`flex px-2 ${end ? "justify-end" : ""}`}>
+      <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-0.5 rounded-md py-1 hover:text-foreground ${on ? "text-foreground" : ""}`}>
+        {label}
+        <ChevronRightIcon className={`h-3 w-3 transition-transform ${on ? "" : "opacity-0"} ${sort.dir === "asc" ? "-rotate-90" : "rotate-90"}`} />
+      </button>
+    </span>
+  );
+}
+
+/** A row's tick box: faint until the row is hovered (or anything is ticked). */
+function Checkbox({ checked, mixed = false, label, onChange, faint = false }: { checked: boolean; mixed?: boolean; label: string; onChange: () => void; faint?: boolean }) {
+  return (
+    <input
+      type="checkbox"
+      aria-label={label}
+      checked={checked}
+      ref={(el) => {
+        if (el) el.indeterminate = mixed;
+      }}
+      onChange={onChange}
+      onClick={(e) => e.stopPropagation()}
+      className={`h-4 w-4 cursor-pointer accent-accent transition-opacity ${faint && !checked ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" : ""}`}
+    />
   );
 }
 

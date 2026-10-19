@@ -129,7 +129,7 @@ function Reveal({ children, className = "", delay = 0 }: { children: ReactNode; 
 
 /** The screenshot set's folder. Bump it (and move the files) whenever the screenshots are retaken:
     Next caches optimized images by URL, so replacing a file in place keeps serving the old one. */
-const SHOTS = "v3";
+const SHOTS = "v4";
 
 /** A real screenshot of the app, swapped for the dark-theme one in dark themes. */
 function Shot({ name, alt, width, height, priority, className = "" }: { name: string; alt: string; width: number; height: number; priority?: boolean; className?: string }) {
@@ -402,7 +402,7 @@ function Showcase() {
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
             <span className="h-2.5 w-2.5 rounded-full bg-foreground/15" />
-            <span className="mx-auto rounded-full bg-background px-10 py-1 text-xs text-muted">sheddex.com</span>
+            <span className="mx-auto rounded-full bg-background px-10 py-1 text-xs text-muted">soniroll.com</span>
           </div>
           <div className="overflow-hidden rounded-[20px]">
             <Shot name="app" alt="The soniroll interface: a sidebar of tools next to the Home dashboard" width={2880} height={1800} priority />

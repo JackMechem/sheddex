@@ -33,6 +33,27 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.2",
+    date: "2026-10-18",
+    title: "Hello, soniroll — and Files",
+    summary: "sheddex is now soniroll, with a new logo. Plus a home for your files: upload, rename, share and delete everything your account stores.",
+    changes: [
+      { kind: "new", text: "**A new name:** sheddex is now **soniroll**, at soniroll.com. Old sheddex.com links still work and bring you here. The Shed Log keeps its name." },
+      { kind: "new", text: "**A new logo:** the daily goal ring, drawn in your theme's colours so it matches whichever theme you pick." },
+      { kind: "new", text: "**Files:** upload PDFs, lead sheets, images, audio and video to your account, on their own or attached to a tune. Drop files anywhere on the Files page to upload them." },
+      { kind: "new", text: "**Everything in one place:** the Files page lists everything your account stores (uploads, recordings, tune songs, lesson files, hand-ins and profile images), with search, filters and columns you can sort by." },
+      { kind: "new", text: "**Rename, share and delete anything** from its ⋮ menu or by right-clicking it. Tick several files to delete them together." },
+      { kind: "new", text: "**Share a file by link:** anyone with the link can open and download it, no account needed, and save a copy to their own files if they're signed in." },
+      { kind: "new", text: "**Share a tune by link** with its chord chart, files and recordings (never your notes). Whoever opens it can save it to their own tunes." },
+      { kind: "new", text: "A **Files** section on every tune's page: upload there, or add files you've already uploaded." },
+      { kind: "improved", text: "Every account has **100 MB** of storage for uploads, recordings, songs and lesson files. The Files page shows how much you've used." },
+      { kind: "improved", text: "The sidebar is grouped into **Your shed** (Shed Log, Library), **People** (Community, Lessons) and **Tools**. The Tunes card is now **Library**." },
+      { kind: "improved", text: "Supporting soniroll is easier to find: a Support row in the sidebar, a card on the dashboard, and a Support page that explains where the money goes." },
+      { kind: "improved", text: "Chord chart links now start with soniroll://. Links made before still import." },
+      { kind: "improved", text: "Emails (sign-up codes, password resets, lesson invites) now come from soniroll." },
+    ],
+  },
+  {
     version: "0.9.1",
     date: "2026-10-18",
     title: "A day view for the Shed Log, and a changelog",

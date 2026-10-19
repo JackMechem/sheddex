@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" updated="October 18, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
-        soniroll (<LegalLink href="https://sheddex.com">sheddex.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
+        soniroll (<LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>) is a free, non-commercial set of music practice tools run by Jack
         Mechem. This page says what it collects and why, in plain words.
       </p>
 
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
       <LegalSection title="Signed out">
         <p>
           Your settings, tunes, chord charts, practice history and any audio files you open stay in your browser&apos;s own storage. They aren&apos;t
-          sent to soniroll. Clearing your browser&apos;s data for sheddex.com deletes them.
+          sent to soniroll. Clearing your browser&apos;s data for soniroll.com deletes them.
         </p>
       </LegalSection>
 
@@ -55,9 +55,10 @@ export default function PrivacyPage() {
             account. Make it private again at any time.
           </li>
           <li>
-            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist, routine or tune you share by link, can be seen by
+            <strong>Posts and shared links:</strong> anything you post to Community, and any setlist, routine, tune or file you share by link, can be seen by
             whoever has it. Recordings attached to a shared setlist can be played by them too. A shared tune shows its keys, tempos, chord chart, the
-            files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. Stop sharing
+            files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. A shared file
+            can be opened, downloaded and copied the same way; your username shows only if your profile is public. Stop sharing
             at any time and the link stops working.
           </li>
           <li>

@@ -1,13 +1,13 @@
 # Versioning and the changelog
 
-sheddex is **v0.9.1 beta**. It uses semantic versioning (MAJOR.MINOR.PATCH); 1.0 will be the
+soniroll is **v0.9.2 beta**. It uses semantic versioning (MAJOR.MINOR.PATCH); 1.0 will be the
 first non-beta release.
 
 ## Where the version lives
 
 - **One source:** `"version"` in `apps/web/package.json`.
 - `apps/web/next.config.ts` passes it in as `NEXT_PUBLIC_APP_VERSION`; `apps/web/lib/version.ts`
-  exposes `APP_VERSION`, `CHANNEL` ("beta" until 1.0) and `VERSION_LABEL` ("v0.9.1 beta").
+  exposes `APP_VERSION`, `CHANNEL` ("beta" until 1.0) and `VERSION_LABEL` ("v0.9.2 beta").
 - It shows under the sidebar logo (a link to `/changelog`, with a "New" pill until the visitor
   opens the latest version) and in the ⋮ menus as "What's new · vX".
 - The root `README.md` has a "Current version" line that must match.
@@ -19,7 +19,7 @@ first non-beta release.
 Jack wants **small steps**:
 - **PATCH** (0.9.1 → 0.9.2) for an ordinary update — fixes, and features too.
 - **MINOR** (0.9.x → 0.10.0) only for a big milestone, and only when Jack says so.
-- **MAJOR** (1.0.0) when Jack decides sheddex is out of beta (then set `CHANNEL` to "stable").
+- **MAJOR** (1.0.0) when Jack decides soniroll is out of beta (then set `CHANNEL` to "stable").
 
 Bump when Jack asks for it, or when you finish a user-visible change and he's said to keep the
 version current. Don't bump for docs-only or internal changes.

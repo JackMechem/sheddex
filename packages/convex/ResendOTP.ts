@@ -2,7 +2,7 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import { generateOtp, sendEmail } from "./lib/resend";
 
 /** The email provider passed to `Password({ verify: ResendOTP })` in `convex/auth.ts` — enables
-    "require a confirmation email for creating accounts" (sheddex's own words for it). Convex
+    "require a confirmation email for creating accounts" (soniroll's own words for it). Convex
     Auth's `Password` provider already handles everything about *when* to trigger this (a fresh
     sign-up, or any account whose `emailVerified` isn't set yet) and the underlying code
     storage/expiry/one-time-use machinery (`authVerificationCodes`, already in the schema via

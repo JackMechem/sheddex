@@ -9,7 +9,7 @@ export default function TermsPage() {
     <LegalPage title="Terms of Service" updated="September 29, 2026">
       <p className="text-sm leading-relaxed text-foreground/90">
         These terms cover your use of soniroll (
-        <LegalLink href="https://sheddex.com">sheddex.com</LegalLink>), a free collection of
+        <LegalLink href="https://www.soniroll.com">soniroll.com</LegalLink>), a free collection of
         browser-based music practice tools built and operated by Jack Mechem. By using the site,
         you agree to these terms. If you don&apos;t agree, please don&apos;t use it.
       </p>

@@ -194,5 +194,11 @@ export const remove = mutation({
     if (!userId || !row || row.userId !== userId) return;
     await ctx.storage.delete(row.storageId);
     await ctx.db.delete(id);
+    // Its link (`files.shareItem`), if it had one.
+    for (const share of await ctx.db
+      .query("sharedFiles")
+      .withIndex("by_user_item", (q) => q.eq("userId", userId).eq("kind", "recording").eq("itemId", id))
+      .collect())
+      await ctx.db.delete(share._id);
   },
 });

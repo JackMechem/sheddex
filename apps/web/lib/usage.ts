@@ -43,7 +43,7 @@ function add(kind: Kind, key: string, n = 1, ms = 0) {
 export function normalizePath(path: string): string {
   const p = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
   const parts = p.split("/").filter(Boolean);
-  const dynamic: Record<string, string> = { post: "[id]", u: "[username]", setlist: "[id]", routine: "[id]", tune: "[id]" };
+  const dynamic: Record<string, string> = { post: "[id]", u: "[username]", setlist: "[id]", routine: "[id]", tune: "[id]", file: "[id]" };
   if (parts.length >= 2 && dynamic[parts[0]]) return `/${parts[0]}/${dynamic[parts[0]]}`;
   return ("/" + parts.slice(0, 3).join("/")).toLowerCase();
 }

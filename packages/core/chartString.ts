@@ -1,6 +1,6 @@
 import type { IRealPlaylist, IRealSong } from "./iRealPro";
 
-// sheddex's own plain-string format for sharing a chord chart or a small chart "playlist" —
+// soniroll's own plain-string format for sharing a chord chart or a small chart "playlist" —
 // deliberately similar in spirit to iReal Pro's own `irealb://...` links (one opaque,
 // copy-pasteable string) but not tied to iReal's scrambled/compressed encoding or its own
 // plain-text chart grammar at all: just the exact same `IRealSong`/`Bar` shape this app already
@@ -9,7 +9,14 @@ import type { IRealPlaylist, IRealSong } from "./iRealPro";
 // back to reading a real iReal Pro link too if what's pasted isn't one of these — kept working on
 // purpose, just never mentioned anywhere in that panel's own copy; see that file's own
 // `parsePlaylistInput`.
-const SCHEME = "sheddex://";
+// New links start with `soniroll://`; links made before the rename (`sheddex://`) still import.
+const SCHEME = "soniroll://";
+const OLD_SCHEMES = ["sheddex://"];
+
+/** The scheme the string starts with, or null if it's not one of ours. */
+function schemeOf(input: string): string | null {
+  return [SCHEME, ...OLD_SCHEMES].find((s) => input.startsWith(s)) ?? null;
+}
 
 function toBase64(json: string): string {
   const bytes = new TextEncoder().encode(json);
@@ -29,7 +36,7 @@ export function encodeChartString(playlist: IRealPlaylist): string {
 }
 
 export function looksLikeChartString(input: string): boolean {
-  return input.trim().startsWith(SCHEME);
+  return schemeOf(input.trim()) !== null;
 }
 
 /** Tolerant of malformed/missing fields the same way `lib/profileTunes.ts`'s
@@ -53,19 +60,20 @@ function sanitizeSong(raw: unknown): IRealSong | null {
   };
 }
 
-/** Parses a `sheddex://...` chart link back into a playlist. Throws a short, user-facing message
+/** Parses a `soniroll://...` (or old `sheddex://...`) chart link back into a playlist. Throws a short, user-facing message
     if the string isn't this format at all or its payload isn't readable JSON, matching
     `parseIrealPlaylist`'s own error-handling shape — but stays deliberately generic (never
     mentions iReal Pro), since `ChordCharts.tsx` falls back to that parser afterward and this
     error is the one a normal user actually sees. */
 export function decodeChartString(input: string): IRealPlaylist {
   const trimmed = input.trim();
-  if (!trimmed.startsWith(SCHEME)) {
-    throw new Error("That doesn't look like a sheddex chord chart link.");
+  const scheme = schemeOf(trimmed);
+  if (!scheme) {
+    throw new Error("That doesn't look like a soniroll chord chart link.");
   }
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fromBase64(trimmed.slice(SCHEME.length)));
+    parsed = JSON.parse(fromBase64(trimmed.slice(scheme.length)));
   } catch {
     throw new Error("Couldn't read that chord chart link.");
   }

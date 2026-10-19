@@ -47,7 +47,7 @@ export default function ChangelogPage() {
   useEffect(() => {
     try {
       if (latest) localStorage.setItem(CHANGELOG_SEEN_KEY, latest);
-      window.dispatchEvent(new Event("sheddex:changelog-seen"));
+      window.dispatchEvent(new Event("soniroll:changelog-seen"));
     } catch {}
   }, [latest]);
 

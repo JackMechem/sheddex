@@ -133,3 +133,52 @@ When it is:
   paid tier is arguably commercial even though the Rhodes itself stays free — ask the author for
   permission or switch to a CC0 / CC BY Rhodes **before** charging. Re-check the other samples'
   licenses too (they're CC0 / CC BY today).
+
+## A real file browser: rename, delete and share anything (2026-10-18, v0.9.2)
+
+Jack: "make the file browser more like a file browser where i can delete files, rename them, and be
+able to share them with others".
+
+- **Backend (`files.ts`), by kind** (`file | recording | song | lesson | handin | profile`, the
+  `StoredKind` ids `storage` lists): `ownedItem` finds one and **re-checks ownership** for every kind
+  (a lesson file's teacher, a hand-in's student, the profile's avatar/banner).
+  - `renameItem` — every kind but profile images. A lesson file renames `fileName` (and the item's
+    title when the title was just the file name); a hand-in renames that file inside the submission.
+  - `removeItem` — deletes the stored file and its row. A lesson **file item** goes entirely (with
+    any submissions); a file attached to another kind of lesson item is just taken off it; a hand-in
+    file is taken out of the submission; a profile image is unset.
+  - **Table `sharedFiles`** (userId, kind, itemId, createdAt; `by_user`, `by_user_item`): `shareItem`
+    (not profile images), `unshareItem`, `itemShare`, and public `getSharedFile({id})` (null while
+    Community is off, or once the item's gone — it reads the item **live**, so renames show and
+    deletes end the link). `copySharedFile` (action) copies it into the caller's files, refusing when
+    it doesn't fit their quota. `storage` now returns each item's `sharedId`.
+  - Deleting through `removeItem`, `files.remove` or `recordings.remove` drops the item's links;
+    account deletion deletes `sharedFiles`.
+- **Web:**
+  - `useFileActions` (`FileParts.tsx`) works on any `StoredEntry` (`lib/files.ts`; `entryOf` turns an
+    upload into one). Menu: Open, Rename, Share a link / Shared — manage link, Download
+    (`downloadFile` fetches to a blob so the file keeps its name — storage URLs are cross-origin,
+    where `download` is ignored), attach / move / detach (uploads), go to where it lives (recording,
+    lesson, tune, Account), Delete (a message per kind). `contextMenu` opens it at the pointer on
+    right-click; `deleteMany` asks once for several. The preview's buttons match.
+  - `FileShareDialog`: make the link, share or copy, open, stop sharing; a line for lesson files,
+    hand-ins and songs saying only that file is shared.
+  - `/files` is a table from `sm` up: tick box, Name (type underneath, a "Shared" link badge), Where
+    (kind + tune, the tune is a link), Size, Added, ⋮ — click a heading to sort, again to flip.
+    Ticking shows "N selected · size · Delete · Cancel"; Delete/Backspace deletes what's ticked,
+    Escape clears. Phones: one line of details under the name, a sort menu, and **Select** to show
+    tick boxes (tapping a row then ticks it).
+  - `/file/<id>` (`SharedFilePage`): name, "shared by @user" (public profiles only), Download,
+    **Save to my files** (signed in) / "Sign in to save a copy", the owner sees "This is your file";
+    PDFs, images, audio and video shown in place (`FileViewer`, pulled out of the preview dialog).
+    Counted as a Community page by Mayday, grouped as `/file/[id]` in usage counts.
+  - Help topic `files` and the privacy policy ("a setlist, routine, tune or file you share by link").
+- **Checked** in nix Chromium on the dev backend, signed in as Jack's dev account with two test
+  files (deleted afterwards, with their link): uploading two files, the right-click menu, rename,
+  making a link (the Shared badge appears), the link signed out (name, Download, "Sign in to save a
+  copy", the PDF shown) and as the owner, ticking both and deleting with the Delete key + confirm,
+  the link then saying "This file isn't available", 390 px in dark (no overflow), no page errors.
+  Found and fixed: the Delete key was ignored while a tick box had focus.
+- **Not checked:** renaming, sharing or deleting a recording, tune song, lesson file or hand-in for
+  real (only the type checks and the code paths — Jack's real ones weren't touched); "Save to my
+  files" from a second account; Download in a real browser (headless doesn't save files).

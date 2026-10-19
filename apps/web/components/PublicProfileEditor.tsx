@@ -145,7 +145,7 @@ export default function PublicProfileEditor() {
         ) : null}
         <Hint>
           This has nothing to do with how you sign in — it&apos;s a separate, public identity
-          (sheddex.com/u/{normalizedUsername || "…"}), only shown if your profile is public.
+          (soniroll.com/u/{normalizedUsername || "…"}), only shown if your profile is public.
         </Hint>
       </label>
 

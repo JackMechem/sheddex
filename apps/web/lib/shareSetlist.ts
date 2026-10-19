@@ -7,7 +7,7 @@ import type { Tune } from "@/lib/types";
 import type { Setlist } from "@/lib/useSetlists";
 
 /** Where a shared setlist's link points — this site's `/setlist/[id]` page. */
-export const SETLIST_SHARE_BASE = "https://sheddex.com/setlist/";
+export const SETLIST_SHARE_BASE = "https://www.soniroll.com/setlist/";
 
 /**
  * Share a setlist by link, then hand the link to the share sheet (or copy it). The link always

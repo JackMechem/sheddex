@@ -282,6 +282,11 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of sharedTunes) await ctx.db.delete(row._id);
+    const sharedFiles = await ctx.db
+      .query("sharedFiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of sharedFiles) await ctx.db.delete(row._id);
 
     // Bass Genius players and their transcriptions.
     for (const table of ["bassTranscriptions", "bassPlayers"] as const) {

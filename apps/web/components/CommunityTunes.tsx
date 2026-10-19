@@ -102,7 +102,7 @@ export function PostListItem({
 
   async function handleShare(e: React.MouseEvent) {
     e.stopPropagation();
-    if ((await shareLink(post.title, `https://sheddex.com/post/${post.id}`)) === "copied") {
+    if ((await shareLink(post.title, `https://www.soniroll.com/post/${post.id}`)) === "copied") {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }

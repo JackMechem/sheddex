@@ -567,6 +567,19 @@ export default defineSchema({
       owner's synced tune lists), its chord chart, attached files and recordings — never its notes.
       `snapshot` (a `PublicTune` without notes) is only shown if the tune has since been deleted.
       One row per (owner, tune); deleting the row stops the link working. */
+  /** A file shared by link (`/file/<id>`): any item on the Files page except profile images,
+      named by its kind and id as `files.storage` lists them (`kind` is a `StoredKind`). The file
+      itself isn't copied — the link shows it as it is now, and stops working when it's deleted or
+      this row is. One row per (owner, item). */
+  sharedFiles: defineTable({
+    userId: v.id("users"),
+    kind: v.string(),
+    itemId: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_item", ["userId", "kind", "itemId"]),
+
   sharedTunes: defineTable({
     userId: v.id("users"),
     tuneId: v.string(),
