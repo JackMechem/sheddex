@@ -583,8 +583,9 @@ function TimeGrid({
   const hourPx = single ? 64 : HOUR_PX;
   const cols = single ? COLS.day : COLS.week;
   const allBlocks = days.flatMap((d) => d.blocks);
-  const firstHour = Math.max(0, Math.min(6, ...allBlocks.map((b) => Math.floor(b.start / 60))));
-  const lastHour = Math.min(24, Math.max(22, ...allBlocks.map((b) => Math.ceil(b.end / 60))));
+  // The whole day, midnight to midnight; it opens scrolled to the first thing planned (or 8 AM).
+  const firstHour = 0;
+  const lastHour = 24;
   const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
   const scroller = useRef<HTMLDivElement>(null);
   const earliest = allBlocks.length ? Math.min(...allBlocks.map((b) => b.start)) : 8 * 60;
