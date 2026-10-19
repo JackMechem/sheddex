@@ -111,7 +111,7 @@ export function Pill({
   );
 }
 
-/** Tunes · Setlists · Chord Charts · Files — the library's own tabs, in each page's header. */
+/** Tunes · Setlists · Chord Charts · Files — the sub-pages of Library, as tabs under its title. */
 export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts" | "files" }) {
   const tabs = [
     { id: "tunes", label: "Tunes", href: "/tunes", icon: NoteIcon },
@@ -131,17 +131,17 @@ export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts
     { id: "files", label: "Files", href: "/files", icon: FileIcon },
   ] as const;
   return (
-    <nav className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-surface p-1 [scrollbar-width:none] sm:gap-1" aria-label="Library">
+    <nav className="-mx-1 flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 px-1 [scrollbar-width:none] sm:gap-2" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href}
           aria-current={active === t.id ? "page" : undefined}
-          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-            active === t.id ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"
+          className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 pb-2.5 pt-1 text-sm font-semibold transition-colors sm:px-3 ${
+            active === t.id ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
-          <t.icon className="hidden h-3.5 w-3.5 sm:block" />
+          <t.icon className={`hidden h-4 w-4 sm:block ${active === t.id ? "text-accent" : ""}`} />
           {"short" in t ? (
             <>
               <span className="sm:hidden">{t.short}</span>
@@ -167,9 +167,10 @@ export function LibraryPage({ children }: { children: ReactNode }) {
 }
 
 /**
- * The title row every library page starts with, styled like the tool and Shed Log titles: optional
- * tabs or back button, the accent icon (or any `leading` element, e.g. a key badge), the title and
- * a line under it, the page's buttons, and `children` (usually its search box) below. `color`
+ * The title row every library page starts with, styled like the tool and Shed Log titles: an
+ * optional back button, the accent icon (or any `leading` element, e.g. a key badge), the title and
+ * a line under it, the page's buttons, then `tabs` (Library's sub-pages) and `children` (usually
+ * its search box) below. `color`
  * colors the icon.
  */
 export function Hero({
@@ -205,14 +206,15 @@ export function Hero({
   const ShownIcon = Icon ?? TopicIcon;
   return (
     <header className="flex flex-col gap-4">
-      {(tabs || back || backHref) && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {back || backHref ? <BackButton onClick={back} href={backHref} label={backLabel} /> : <span />}
-          {tabs}
+      {(back || backHref) && (
+        <div>
+          <BackButton onClick={back} href={backHref} label={backLabel} />
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-[min(100%,16rem)] flex-1 basis-72 items-center gap-3">
+      {/* With tabs (Library), the buttons stay on the title's line on phones too, so the tabs don't
+          move between pages. */}
+      <div className={`flex items-center gap-x-4 gap-y-3 ${tabs ? "" : "flex-wrap"}`}>
+        <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
           {leading}
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
@@ -226,12 +228,13 @@ export function Hero({
               </h1>
               {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
             </div>
-            {subtitle && <div className="text-sm text-muted">{subtitle}</div>}
+            {subtitle && <div className={`text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
           </div>
         </div>
         {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
         {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
       </div>
+      {tabs}
       {children && <div>{children}</div>}
       {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
     </header>

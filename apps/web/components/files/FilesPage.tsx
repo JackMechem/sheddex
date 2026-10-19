@@ -10,7 +10,7 @@ import { FileTypeIcon, UploadProgress, fileDetail, useFileActions, useFileUpload
 import { MenuButton } from "@/components/library/shared";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs } from "@/components/library/ui";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import { ChevronRightIcon, FileIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
+import { LibraryIcon, ChevronRightIcon, FileIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
 
@@ -163,8 +163,8 @@ export default function FilesPage() {
     <LibraryPage>
       <div {...(isAuthenticated ? uploader.drop : {})} className="flex flex-col gap-6">
         <Hero
-          title="Files"
-          icon={FileIcon}
+          title="Library"
+          icon={LibraryIcon}
           helpTopic="files"
           tabs={<LibraryTabs active="files" />}
           subtitle={

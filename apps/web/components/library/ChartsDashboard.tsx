@@ -9,7 +9,7 @@ import { menuPosition } from "@/components/library/shared";
 import { ChartItem, EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Panel, Pill, PlaylistCard, RecentStrip, Rows } from "@/components/library/ui";
 import { ALL_CHARTS_ID, useChartActions } from "@/components/library/useChartActions";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { ChordChartIcon, DownloadIcon, PlusIcon } from "@/components/tools";
+import { LibraryIcon, ChordChartIcon, DownloadIcon, PlusIcon } from "@/components/tools";
 import { formatComposer } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { sortByText } from "@jam-practice/core/sortText";
@@ -73,9 +73,9 @@ export default function ChartsDashboard() {
   return (
     <LibraryPage>
       <Hero
-        title="Chord Charts"
+        title="Library"
+        icon={LibraryIcon}
         helpTopic="chord-charts"
-        icon={ChordChartIcon}
         tabs={<LibraryTabs active="charts" />}
         subtitle={
           loading ? (

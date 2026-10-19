@@ -6,7 +6,7 @@ import { ReactNode, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import StandardsPicker from "@/components/StandardsPicker";
 import TuneEditorModal from "@/components/TuneEditorModal";
-import { Hero, HeroSearch, KeyBadge, LibraryTabs, Pill } from "@/components/library/ui";
+import { Hero, HeroSearch, KeyBadge, Pill } from "@/components/library/ui";
 import { CheckIcon, ChordChartIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { csvToTunes, downloadTunesCsv } from "@/lib/csv";
 import { DEFAULT_TIME_SIGNATURE, Tune, makeId } from "@/lib/types";
@@ -289,7 +289,6 @@ export default function TuneListManager({
           icon={Icon}
           backHref="/tunes"
           backLabel="Tunes"
-          tabs={<LibraryTabs active="tunes" />}
           subtitle={`${tunes.length} tune${tunes.length === 1 ? "" : "s"} · ${chartCount} with a chord chart`}
           actions={<Pill primary icon={PlusIcon} label="Add tune" onClick={openAdd} iconOnlyOnPhone />}
         >

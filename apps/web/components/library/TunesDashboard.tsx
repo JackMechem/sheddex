@@ -10,7 +10,7 @@ import { tuneHref, TUNE_LIST_LABEL, useTuneActions, useTuneLists, type TuneListI
 import { setlistHref } from "@/components/library/setlistParts";
 import PromptDialog from "@/components/PromptDialog";
 import StandardsPicker from "@/components/StandardsPicker";
-import { NoteIcon, PlusIcon, SetlistIcon, StarIcon } from "@/components/tools";
+import { LibraryIcon, NoteIcon, PlusIcon, SetlistIcon, StarIcon } from "@/components/tools";
 import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
@@ -96,9 +96,9 @@ export default function TunesDashboard() {
   return (
     <LibraryPage>
       <Hero
-        title="Tunes"
+        title="Library"
+        icon={LibraryIcon}
         helpTopic="tunes"
-        icon={NoteIcon}
         tabs={<LibraryTabs active="tunes" />}
         subtitle={
           <>
@@ -111,6 +111,7 @@ export default function TunesDashboard() {
             primary
             icon={PlusIcon}
             label="Add"
+            iconOnlyOnPhone
             onClick={(e) =>
               setAddMenu({
                 ...menuPosition(e),

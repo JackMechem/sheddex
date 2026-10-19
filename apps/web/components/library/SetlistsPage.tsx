@@ -6,7 +6,7 @@ import PromptDialog from "@/components/PromptDialog";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, SetlistCard } from "@/components/library/ui";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { PlusIcon, SetlistIcon } from "@/components/tools";
+import { LibraryIcon, PlusIcon, SetlistIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
 
@@ -40,9 +40,8 @@ export default function SetlistsPage() {
   return (
     <LibraryPage>
       <Hero
-        title="Setlists"
-        icon={SetlistIcon}
-        color="var(--key-9, var(--accent))"
+        title="Library"
+        icon={LibraryIcon}
         tabs={<LibraryTabs active="setlists" />}
         subtitle={`${setlists.length} setlist${setlists.length === 1 ? "" : "s"}${shared ? ` · ${shared} shared by link` : ""}`}
         actions={<Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} iconOnlyOnPhone />}

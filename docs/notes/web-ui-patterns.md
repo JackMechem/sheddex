@@ -111,3 +111,14 @@ Support were restyled by hand to the same row. Left alone on purpose: Dashboard,
 Shed Log (and its routine pages). Public profiles (`/u/[name]`) are no longer full width on
 desktop (`max-w-4xl`). Checked at 1440 and 390 in light mode, signed out; signed-in Lessons pages,
 tune pages and dark mode were not screenshotted.
+
+## Library as one page with tabs (2026-10-18)
+
+Tunes, Setlists, Chord Charts and Files now all title themselves "Library" (`LibraryIcon`) and show
+`LibraryTabs` as an underline tab bar under the title row (Hero renders `tabs` below the title
+now, not top-right; the back button keeps its own row). Each tab keeps its own subtitle, buttons
+and `?` intro (Setlists has no help topic, so no `?`). On tab pages Hero keeps the buttons on the
+title line and truncates the subtitle to one line, so the tabs don't move when switching on a
+phone; Tunes' Add became icon-only on phones for room. The "Tunes I Know"/"Tunes to Learn" list
+pages (`TuneListManager`) are deeper pages with a back button, so they lost the tabs and keep their
+own title. Checked at 1440 and 390, light, signed out.
