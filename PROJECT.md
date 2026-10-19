@@ -31,7 +31,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 ## What soniroll is
 
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
-family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, a practice
+family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
 **v0.9.2 beta** (see versioning).
 
@@ -45,7 +45,8 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   should still pass `tsc` in `apps/mobile`. It's mobile only (it won't replace the website; see
   `docs/notes/mobile-tool-screens-and-sync.md`) and shares the backend and pure logic with web.
 - **Backend** (`packages/convex`): Convex — accounts (email + password with emailed codes, and
-  Google), synced settings, the chart library, Community, recordings, Lessons, admin, analytics.
+  Google), synced settings, the chart library, Community, recordings, files, Lessons, admin,
+  analytics.
 - **Shared logic** (`packages/core`): pure TypeScript used by web, mobile and Convex.
 - **Every tool works without an account.** Signed out, data lives in the browser (localStorage /
   IndexedDB). Signed in, it lives in the account. There is **no merge** between the two: signing in
@@ -179,7 +180,9 @@ docs/              guides/ (rules and how-tos), notes/ (feature history), archit
 - **Licenses:** the Rhodes samples (jRhodes3d) are CC BY-NC — fine for a free site with credit,
   not for anything commercial. Every bundled sample/font is credited on `/credits`.
 - **Storage:** every account has 100 MB in total (`packages/convex/lib/storage.ts`; every upload
-  path must call `assertHasRoom` / `assertFits`). Paid plans for more storage are planned, not
+  path must call `assertHasRoom` / `assertFits`). A new kind of stored file must also be added to
+  `storedItems` (so it counts and shows on `/files`) and to `ownedItem` in `files.ts` (rename,
+  delete, share by link). Paid plans for more storage are planned, not
   built — and the Rhodes license has to be sorted out before soniroll charges for anything
   (`docs/notes/files-and-tune-sharing.md`).
 - **Privacy:** if a feature changes what's stored or who can see it, update `app/privacy` (and
@@ -212,6 +215,9 @@ Web (`apps/web`):
   `components/ChordChart.tsx`.
 - Activity: `lib/toolTime.ts`'s `useToolActivity(href, running)` drives Shed Log tool time and
   the anonymous usage counts — call it from any tool that "runs".
+- Files: `components/files/FileParts.tsx` (`useFileActions` — the ⋮/right-click menu, rename,
+  share, delete for any `StoredEntry`; `FileViewer`, `FilePreviewDialog`, `useFileUploader`,
+  `TuneFiles`), `FileShareDialog`, `lib/files.ts` (`fileKind`, `formatBytes`, `downloadFile`).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
 
 Mobile (`apps/mobile/src`): `ToolOptionsSheet` (tabbed options sheet — tool screens don't scroll;
@@ -245,7 +251,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
-| Files (uploads, the `/files` browser, storage quota) and sharing a tune by link (`/tune/<id>`) | `files-and-tune-sharing.md` |
+| Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |
@@ -268,11 +274,12 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 - **Web routes:** `/` landing, `/dashboard`, one route per tool, `/tunes*`, `/chord-charts*`,
   `/setlist-charts`, `/community*`, `/post`, `/u/[username]`, `/shed-log*`, `/lessons*`,
   `/recordings*`, `/files`, `/support`, `/account`, `/help`, `/changelog`, `/feedback`, `/admin`, `/reset-password`,
-  shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, plus `/privacy`, `/terms`, `/credits`.
+  shared links `/setlist/[id]`, `/routine/[id]`, `/tune/[id]`, `/file/[id]`, plus `/privacy`, `/terms`,
+  `/credits`.
 - **Mobile (paused):** a bottom tab bar (Home · Tunes · Chord Charts · Community · Profile) and
   native screens for most tools (`src/app/tool/`); anything not ported opens the `[slug]`
   placeholder. Web-only so far: Bass Genius, Drum Generator, Syncopation, the Shed Log, Lessons and
-  Files / tune share links.
+  Files / tune and file share links.
 - **Accounts and roles:** the owner is `mechemjack@gmail.com` (verified email, hardcoded in
   `packages/convex/lib/roles.ts`); the owner can make other accounts admins. Mayday switches
   (maintenance, Community off, pause posting/sign-ups/uploads/feedback, banner) are owner-only.

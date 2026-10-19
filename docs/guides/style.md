@@ -13,7 +13,8 @@ Charts pages, Lessons, the Metronome).
 - **Plain, concrete, short.** Say what a thing does in everyday words a musician would use. No
   marketing voice, no developer jargon in the UI. One line beats a paragraph.
 - **Names people see:** "soniroll" (lowercase), "Shed Log" (not Practice Log), "Tunes I Know" (not
-  just "Tunes" for that list), "Tunes to Learn", "Chord Charts", "Community", "Lessons". A tool's
+  just "Tunes" for that list), "Tunes to Learn", "Chord Charts", "Library" (the sidebar card for
+  tunes, setlists, charts and files), "Files", "Community", "Lessons". A tool's
   page title must match its `NAV_LINKS` label exactly (the header icon and intro are looked up by
   it); `short` names (e.g. "Intervals") are only for the sidebar.
 - **Never name** the source the Syncopation exercises were modelled on, or the book the Random
