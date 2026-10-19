@@ -58,8 +58,7 @@ soniroll, and the `SITE_URL` fallbacks are `https://www.soniroll.com`. Lesson ca
 as new events.
 
 Convex env: prod `SITE_URL=https://www.soniroll.com`; prod and dev
-`AUTH_EMAIL_FROM=soniroll <noreply@sheddex.com>`. That address is temporary: soniroll.com was still
-"pending" in Resend, and sending from an unverified domain fails every email (including sign-up
-codes). Once Resend shows it verified, switch to `soniroll <noreply@soniroll.com>`. The new wording
+`AUTH_EMAIL_FROM=soniroll <noreply@soniroll.com>` (set once Resend showed soniroll.com verified;
+sending from an unverified domain fails every email, sign-up codes included). The new wording
 reaches prod only when `preview` is merged into `main` (the Vercel prod build runs `convex deploy`);
 the env changes applied right away.
