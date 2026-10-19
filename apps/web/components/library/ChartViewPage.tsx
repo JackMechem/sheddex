@@ -72,7 +72,7 @@ export default function ChartViewPage({ id }: { id: string }) {
       <LibraryPage>
         <BackButton onClick={() => router.back()} />
         <div className="rounded-2xl bg-surface">
-          <EmptyState icon={ChordChartIcon} title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/chord-charts" />} />
+          <EmptyState icon={ChordChartIcon} title="Chart not found" body="That chart isn't in your library." action={<Pill label="Chord Charts" href="/tunes?tab=charts" />} />
         </div>
       </LibraryPage>
     );

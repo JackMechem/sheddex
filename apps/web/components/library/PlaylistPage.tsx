@@ -15,7 +15,7 @@ import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
 export default function PlaylistPage({ id }: { id: string }) {
   const router = useRouter();
   const { playlists, allSongs, loading } = useChordChartsLibrary(null);
-  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/chord-charts") });
+  const { openSongMenu, openPlaylistMenu, element } = useChartActions({ onPlaylistDeleted: () => router.push("/tunes?tab=charts") });
   const [query, setQuery] = useState("");
   const isAll = id === ALL_CHARTS_ID;
   const playlist = useMemo(
@@ -48,7 +48,7 @@ export default function PlaylistPage({ id }: { id: string }) {
       <Hero
         title={playlist?.name ?? "Playlist"}
         color={color}
-        backHref="/chord-charts"
+        backHref="/tunes?tab=charts"
         backLabel="Chord Charts"
         leading={
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl" style={{ background: tint(color, 20), color }}>
@@ -82,7 +82,7 @@ export default function PlaylistPage({ id }: { id: string }) {
         </div>
       ) : !playlist ? (
         <div className="rounded-2xl bg-surface">
-          <EmptyState icon={FolderIcon} title="Playlist not found" body="This playlist isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/chord-charts" />} />
+          <EmptyState icon={FolderIcon} title="Playlist not found" body="This playlist isn't in your library anymore." action={<Pill label="Back to Chord Charts" href="/tunes?tab=charts" />} />
         </div>
       ) : songs.length === 0 ? (
         <div className="rounded-2xl bg-surface">

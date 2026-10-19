@@ -320,13 +320,13 @@ export default function Home() {
               <div className="-mx-2 flex flex-col">
                 <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
                 <StatRow icon={NoteIcon} label="Tunes to learn" value={learning.length} href="/tunes/list?list=learn" />
-                <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes/setlists" />
-                <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/chord-charts" detail={playlists.length ? `${playlists.length} playlist${playlists.length === 1 ? "" : "s"}` : undefined} />
+                <StatRow icon={SetlistIcon} label="Setlists" value={setlists.length} href="/tunes?tab=setlists" />
+                <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} playlist${playlists.length === 1 ? "" : "s"}` : undefined} />
               </div>
             </Card>
 
             {/* Setlists */}
-            <Card title="Setlists" className="lg:col-span-4" action={{ label: setlists.length ? "All" : "New", href: "/tunes/setlists" }}>
+            <Card title="Setlists" className="lg:col-span-4" action={{ label: setlists.length ? "All" : "New", href: "/tunes?tab=setlists" }}>
               {setlists.length ? (
                 <div className="-mx-2 flex flex-col">
                   {[...setlists]
@@ -343,7 +343,7 @@ export default function Home() {
               ) : (
                 <Empty>
                   Put tunes in order for a gig or a session, with the key and tempo for each.{" "}
-                  <Link href="/tunes/setlists" className="font-semibold text-accent hover:underline">Make a setlist</Link>
+                  <Link href="/tunes?tab=setlists" className="font-semibold text-accent hover:underline">Make a setlist</Link>
                 </Empty>
               )}
             </Card>

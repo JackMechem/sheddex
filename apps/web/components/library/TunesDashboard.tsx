@@ -172,7 +172,7 @@ export default function TunesDashboard() {
               />
             )}
             <ShelfCard
-              href="/tunes/setlists"
+              href="/tunes?tab=setlists"
               icon={SetlistIcon}
               count={setlists.length}
               label="Setlists"
@@ -225,7 +225,7 @@ export default function TunesDashboard() {
               )}
             </div>
 
-            <Panel title="Setlists" icon={SetlistIcon} detail={setlists.length || undefined} href={setlists.length ? "/tunes/setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist">
+            <Panel title="Setlists" icon={SetlistIcon} detail={setlists.length || undefined} href={setlists.length ? "/tunes?tab=setlists" : undefined} onAdd={() => setNamingSetlist(true)} addLabel="New setlist">
               {setlists.length === 0 ? (
                 <button type="button" onClick={() => setNamingSetlist(true)} className="flex w-full items-center gap-3 rounded-xl bg-background p-3 text-left text-sm text-muted hover:bg-surface-hover">
                   <SetlistIcon className="h-5 w-5 shrink-0 text-accent" />

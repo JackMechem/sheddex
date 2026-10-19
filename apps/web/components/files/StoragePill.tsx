@@ -17,7 +17,7 @@ export default function StoragePill() {
   const c = 2 * Math.PI * r;
   return (
     <Link
-      href="/files"
+      href="/tunes?tab=files"
       title={`Every account has ${formatBytes(quota)} for uploads, recordings, songs and lesson files. Plans with more storage are coming.`}
       className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-surface pl-1.5 pr-3.5 transition-colors hover:bg-surface-hover sm:h-12 sm:gap-2.5 sm:pr-4"
     >

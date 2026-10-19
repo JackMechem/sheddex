@@ -132,3 +132,21 @@ slot on all four Library tabs, so the header is the same on each. Signed in only
 card is gone; its "full" warning, upload progress and upload errors now show only when needed, and
 "drop files anywhere here to upload" moved into the subtitle. Not seen signed in (no test login
 in that session): only tsc/eslint and the signed-out pages were checked.
+
+## Library tabs are a query param, not routes (2026-10-18)
+
+Jack asked for the Library tabs to be real tabs, not separate routes. `/tunes` is now the only
+Library page: `app/tunes/page.tsx` renders `components/library/LibraryHub.tsx` (in `<Suspense>`,
+because it reads `useSearchParams`), which picks Tunes/Setlists/Chord Charts/Files from
+`?tab=setlists|charts|files` (no tab = Tunes). `libraryHref(tab)` in `components/library/ui.tsx`
+builds the address; `LibraryTabs` links use `replace` and `scroll={false}`, so switching tabs
+doesn't add history entries or reload. The pages `app/tunes/setlists`, `app/chord-charts/page.tsx`
+and `app/files` were deleted; `next.config.ts` redirects those addresses (307, not permanent) to
+the matching tab. Sub-pages (`/tunes/list`, `/tunes/tune`, `/tunes/setlist`, `/chord-charts/view`,
+`/new`, `/import`, `/playlist`, `/edit`) are unchanged. Internal links now go straight to the tab
+URLs. Left as they were on purpose: `NAV_LINKS` (`/chord-charts` is still an entry; the paused
+mobile app uses the same list), `helpContent` hrefs (the redirect covers their Open button), and
+the sidebar's `isLibraryPath`. Split-screen panes for `/tunes` and `/chord-charts` now render
+`LibraryPane` / `ChartsPane` (Chord Charts opens on the charts tab). Checked: redirects by curl,
+tab clicks in the browser (URL updates, no reload, history length unchanged, no console errors),
+`next build`, tsc, lint. Not checked: split-screen panes, signed in.

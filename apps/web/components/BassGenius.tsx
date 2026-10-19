@@ -835,7 +835,7 @@ export default function BassGenius() {
             ) : !loading && allSongs.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-sm text-muted">
                 <p>You don&apos;t have any chord charts yet.</p>
-                <Link href="/chord-charts" className="font-semibold text-accent hover:underline">
+                <Link href="/tunes?tab=charts" className="font-semibold text-accent hover:underline">
                   Import or make one in Chord Charts
                 </Link>
               </div>

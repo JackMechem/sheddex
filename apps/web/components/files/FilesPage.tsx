@@ -54,7 +54,7 @@ const keyOf = (item: { kind: string; id: string }) => `${item.kind}:${item.id}`;
 const COLUMNS = "sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,13rem)_5.5rem_6.5rem_2.5rem]";
 
 /**
- * `/files` — everything stored with your account, as a file browser: files you uploaded (on their
+ * The Library's Files tab (`/tunes?tab=files`) — everything stored with your account, as a file browser: files you uploaded (on their
  * own or attached to tunes), recordings, tunes' songs, lesson files and hand-ins, profile images.
  * Upload (button or drop anywhere on the page), search, filter by where a file came from and what
  * kind it is, sort by any column, and open anything in place. Every item has a ⋮ menu (also on

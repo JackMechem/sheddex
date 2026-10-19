@@ -111,24 +111,33 @@ export function Pill({
   );
 }
 
-/** Tunes · Setlists · Chord Charts · Files — the sub-pages of Library, as tabs under its title. */
-export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts" | "files" }) {
+export type LibraryTab = "tunes" | "setlists" | "charts" | "files";
+export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files"];
+
+/** Library is one page (`/tunes`); its tabs are a `?tab=` query (none means Tunes). */
+export function libraryHref(tab: LibraryTab): string {
+  return tab === "tunes" ? "/tunes" : `/tunes?tab=${tab}`;
+}
+
+/** Tunes · Setlists · Chord Charts · Files — Library's tabs, under its title. They swap the
+    `?tab=` query in place (replace, no scroll) rather than going to another page. */
+export function LibraryTabs({ active }: { active: LibraryTab }) {
   const tabs = [
-    { id: "tunes", label: "Tunes", href: "/tunes", icon: NoteIcon },
+    { id: "tunes", label: "Tunes", href: libraryHref("tunes"), icon: NoteIcon },
     {
       id: "setlists",
       label: "Setlists",
-      href: "/tunes/setlists",
+      href: libraryHref("setlists"),
       icon: SetlistIcon,
     },
     {
       id: "charts",
       label: "Chord Charts",
       short: "Charts",
-      href: "/chord-charts",
+      href: libraryHref("charts"),
       icon: ChordChartIcon,
     },
-    { id: "files", label: "Files", href: "/files", icon: FileIcon },
+    { id: "files", label: "Files", href: libraryHref("files"), icon: FileIcon },
   ] as const;
   return (
     <nav className="-mx-1 flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 px-1 [scrollbar-width:none] sm:gap-2" aria-label="Library">
@@ -136,6 +145,8 @@ export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts
         <Link
           key={t.id}
           href={t.href}
+          replace
+          scroll={false}
           aria-current={active === t.id ? "page" : undefined}
           className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 pb-2.5 pt-1 text-sm font-semibold transition-colors sm:px-3 ${
             active === t.id ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"

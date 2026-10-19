@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
       // The Practice Log was renamed the Shed Log.
       { source: "/practice-log", destination: "/shed-log", permanent: true },
       { source: "/practice-log/:path*", destination: "/shed-log/:path*", permanent: true },
+      // Library's sections became tabs on /tunes (?tab=). Not permanent, so browsers don't cache it.
+      { source: "/tunes/setlists", destination: "/tunes?tab=setlists", permanent: false },
+      { source: "/chord-charts", destination: "/tunes?tab=charts", permanent: false },
+      { source: "/files", destination: "/tunes?tab=files", permanent: false },
     ];
   },
 };
