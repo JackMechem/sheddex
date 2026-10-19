@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CloseIcon, SlidersIcon } from "@/components/tools";
+import { rewardGradient, usePopKey, useReward } from "@/components/reward/Reward";
 
 /** Set by `ToolLayout` around a tool's `options`: when true, `CollapsiblePanel`, `OptionsCard` and
     `OptionSection` render as setting chips (below) instead of panels, which is how every tool's
@@ -74,6 +75,7 @@ export function SettingChip({
   wide,
   headerExtra,
   toggle,
+  trigger,
   open: openProp,
   onOpenChange,
   children,
@@ -86,6 +88,8 @@ export function SettingChip({
       switch (with the label and value) that toggles it straight away, and a separate settings
       button that opens the popover. Dimmed while off. */
   toggle?: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean };
+  /** A differently styled button that opens the popover (e.g. a tool's History stat pill). */
+  trigger?: { className: string; content: ReactNode };
   /** Small caption above the value, e.g. "Time" — or, with no `value`, the chip's only text. */
   label: string;
   /** The current value, e.g. "7/8". */
@@ -105,6 +109,9 @@ export function SettingChip({
     if (onOpenChange) onOpenChange(value);
     if (openProp === undefined) setOpenState(value);
   };
+  const reward = useReward();
+  const valueKey = typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const pop = usePopKey(valueKey);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const chipRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -188,9 +195,50 @@ export function SettingChip({
     </div>
   ) : null;
 
+  const custom = trigger ? (
+    <div ref={chipRef} className="flex">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="dialog" aria-label={title ?? label} className={trigger.className}>
+        {trigger.content}
+      </button>
+    </div>
+  ) : null;
+
+  // The reward look (tools on the new Shed Log logging): a chunky pill with a coloured icon, the
+  // value big on top, and a pop + glow each time the value changes.
+  const rewardChip =
+    reward && !chip && !custom ? (
+      <div ref={chipRef} className="flex">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          className={`relative flex h-14 items-center gap-3 rounded-full bg-surface pl-1.5 pr-5 text-left transition hover:-translate-y-0.5 hover:bg-surface-hover hover:shadow-md active:scale-[0.97] ${open ? "shadow-md" : ""}`}
+          style={open ? { boxShadow: `0 0 0 2px ${reward.color}` } : undefined}
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-accent-foreground shadow-sm" style={{ background: rewardGradient(reward.color) }}>
+            <Icon className="h-5 w-5" />
+          </span>
+          {value === undefined || value === null || value === "" ? (
+            <span className="whitespace-nowrap text-sm font-bold">{label}</span>
+          ) : (
+            <span className="flex min-w-0 flex-col items-start leading-tight">
+              <span key={pop} className={`flex items-center gap-1 whitespace-nowrap text-base font-extrabold ${pop ? "reward-pop" : ""}`}>
+                {value}
+              </span>
+              <span className="whitespace-nowrap text-[11px] font-semibold text-muted">{label}</span>
+            </span>
+          )}
+          {pop > 0 && (
+            <span key={`g${pop}`} aria-hidden className="reward-glow pointer-events-none absolute inset-0 rounded-full" style={{ "--reward": reward.color } as CSSProperties} />
+          )}
+        </button>
+      </div>
+    ) : null;
+
   return (
     <>
-      {chip ?? (
+      {chip ?? custom ?? rewardChip ?? (
       <div ref={chipRef} className="flex">
       <button
         type="button"

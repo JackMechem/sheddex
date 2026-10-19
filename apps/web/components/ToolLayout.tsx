@@ -2,9 +2,12 @@
 
 import { createContext, useContext } from "react";
 import { NAV_LINKS } from "@/components/tools";
+import { RewardProvider } from "@/components/reward/Reward";
 import { ChipsModeContext, SettingsBar } from "@/components/SettingsBar";
 import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
+import ToolStats from "@/components/toolstats/ToolStats";
+import { LOG_BY_BUTTON } from "@/lib/toolTime";
 
 const LayoutContext = createContext<"split" | "stacked">("split");
 
@@ -54,8 +57,10 @@ export default function ToolLayout({
   const TitleIcon = link?.icon;
   const topic = link ? topicForHref(link.href) : undefined;
   const intro = useIntro(topic);
+  // The tool's own stats and its "Log to Shed Log" button (tools on the new logging so far).
+  const statsHref = link && LOG_BY_BUTTON.has(link.href) ? link.href : null;
 
-  return (
+  const page = (
     <LayoutContext.Provider value={layout}>
       <div className="relative flex min-h-full flex-1 flex-col bg-background text-foreground">
         <div className="absolute left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] flex h-10 items-center pl-16 pr-4 sm:pl-[4.5rem] lg:top-3 lg:pl-8">
@@ -66,6 +71,11 @@ export default function ToolLayout({
           {topic && <div className="ml-1.5"><IntroButton onClick={intro.show} label={`How ${title} works`} /></div>}
           {help && <div className="ml-3">{help}</div>}
           {titleExtra && <div className="ml-4 pr-4">{titleExtra}</div>}
+          {statsHref && (
+            <div className="ml-4 hidden min-w-0 flex-1 lg:block">
+              <ToolStats href={statsHref} />
+            </div>
+          )}
         </div>
 
         {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
@@ -83,6 +93,7 @@ export default function ToolLayout({
                 topAligned ? "justify-start" : "justify-center"
               }`}
             >
+              {statsHref && <PhoneStats href={statsHref} />}
               {sidePanel && <TopChips>{sidePanel}</TopChips>}
               {children}
             </section>
@@ -92,6 +103,7 @@ export default function ToolLayout({
           <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-16 xl:max-w-5xl">
             <section className="flex w-full min-w-0 flex-col items-center gap-7 text-center xl:items-center xl:justify-center">
               <div className="relative flex w-full flex-col items-center gap-7 xl:max-w-[24rem]">
+                {statsHref && <PhoneStats href={statsHref} />}
                 {sidePanel && <TopChips>{sidePanel}</TopChips>}
                 {children}
                 {options && <OptionChips mode={optionsMode}>{options}</OptionChips>}
@@ -101,6 +113,14 @@ export default function ToolLayout({
         )}
       </div>
     </LayoutContext.Provider>
+  );
+  // Tools on the new Shed Log logging also get the reward look for their options.
+  return statsHref ? (
+    <RewardProvider href={statsHref} color="var(--accent)">
+      {page}
+    </RewardProvider>
+  ) : (
+    page
   );
 }
 
@@ -129,5 +149,14 @@ function TopChips({ children }: { children: React.ReactNode }) {
     <ChipsModeContext.Provider value={true}>
       <div className="flex flex-wrap justify-center gap-2">{children}</div>
     </ChipsModeContext.Provider>
+  );
+}
+
+/** Below `lg` the stats pills sit at the top of the page, a row you swipe sideways. */
+function PhoneStats({ href }: { href: string }) {
+  return (
+    <div className="w-full max-w-[100vw] text-left lg:hidden">
+      <ToolStats href={href} />
+    </div>
   );
 }

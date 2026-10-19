@@ -307,3 +307,54 @@ next to the title. Back / Next / dots, arrow keys, Escape. Checked in nix Chromi
 sign-in gate briefly bypassed, then restored): opens on the first visit, not after a reload,
 reopens from ?, fits a phone.
 
+
+## Tool stats, per-tool streaks and the Log button — Metronome pilot (2026-10-18)
+
+Jack asked for every tool to show Shed Log-style stats (its own streak, time actually used),
+a button that logs the day's usage into the Shed Log, and the options redesigned to "maximise
+dopamine". Decisions he made: **button-only logging** (a tool's time reaches the Shed Log only when
+you press Log; the automatic adding is off for those tools), **any real use counts** (≥1 min that
+day keeps a tool's streak), options as **pills + reward bits**, and **pilot on the Metronome**
+first, then roll out (all tools, including Bass Genius, Drum Generator, Syncopation and the Sticking
+Warmup for the stats; those four keep their current options).
+
+- **Usage store** `lib/toolUsage.ts`: synced setting `jam-practice-tool-usage`,
+  `{ tools: { [href]: { [day]: [ms, loggedMs] } } }` (one `tools` field because synced settings
+  keep only fields named in their defaults; JSON-stringified so days don't hit the field limit).
+  Works signed out (device) and in (account). Pure helpers: `toolStreak`, `bestStreak`, `weekOf`,
+  `totalMs`, `historyOf`. Written only through `useToolUsageWriter` (mounted in
+  `PracticeLogGlobal`), which keeps a ref to the latest value; `recordUsage`/`markLogged` queue
+  until it's mounted.
+- **`lib/toolTime.ts`**: the tracker now always runs (signed out too). Every running tool's time
+  goes to the usage store (flushed every 30 s and on stop/pagehide). The Shed Log queue still gets
+  the time automatically for tools **not** in `LOG_BY_BUTTON` (only while signed in with "Count
+  time in tools" on, as before). `LOG_BY_BUTTON = {"/metronome"}` for the pilot — adding a tool's
+  href there turns on its stats pills, the Log button and the reward look. `useLiveToolTime`
+  ticks the not-yet-stored time each second; `logToolToday` queues today's unlogged time as a
+  normal `tool:<href>` entry (so the day panel shows it with the tool icon, it adds to the day
+  timer/total, and `useCelebrations` fires goal/streak toasts) and marks it logged.
+- **`components/toolstats/ToolStats.tsx`**: pills like `MomentumPills` — streak (flame, "keep it
+  alive"), today (stopwatch, pulsing dot and "counting…" while running), this week (bars), in total
+  (ring toward the next hour milestone; tapping it opens History: streak / best / days used and a
+  day-by-day list with a ✓ for days in the Shed Log), and the accent "Log N min · to Shed Log"
+  button (burst + toast + two-note chime; "Logged ✓" once nothing's left; signed out it opens the
+  sign-in form). `ToolLayout` shows it beside the title from `lg`, and as a swipe row at the top
+  of the page below that (Log is third there so it's in view). Renders nothing until loaded.
+- **Reward look** `components/reward/Reward.tsx`: `RewardProvider` (from `ToolLayout`, for
+  `LOG_BY_BUTTON` tools) in the theme accent (the category colour clashed with the blue Start
+  button). Shared components switch on `useReward()`: `SettingChip` (chunky pill, gradient icon,
+  value big on top, pop + glow when the value changes — `usePopKey`, not on first render),
+  `Segmented` (lit gradient side), `SubdivisionPicker` / `ClickSoundCards` (`RewardCard`s),
+  volume and tempo sliders (`.slider-reward`, gradient fill and a glowing thumb) and a ✦
+  (`Sparkle`) on round numbers (BPM multiples of 10, volume at 25/50/75/100%). Choices you
+  haven't tried get a dot and a burst the first time (`jam-practice-tried-options`; the current
+  choice counts as tried). Metronome's Time popover gained "Quick picks" (4/4 3/4 2/4 6/8 5/4 7/8
+  9/8 12/8). CSS: `reward-pop`, `reward-glow`, `.slider-reward` (reduced motion off).
+- Help: Metronome got "Your stats" and "Log to Shed Log"; the Shed Log's "Count time in tools"
+  says the Metronome is the exception. Privacy mentions per-tool daily time.
+
+Verified in nix Chromium, signed out: 4 s of Metronome recorded in the usage store, pills with a
+seeded 3-day streak, the History popover, Time/Subdivision/Sound popovers (light, dark, 390 wide,
+no overflow, no console errors); a Node script showed a logged entry lands as one Metronome
+session that counts toward the day's minutes and the streak, and a second log merges. **Not
+verified:** pressing Log signed in (needs an account), audio, hover effects. No version bump yet.

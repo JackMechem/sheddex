@@ -356,3 +356,56 @@ input[type="range"].slider:focus-visible::-moz-range-thumb {
   height: 0;
   pointer-events: none;
 }
+
+/* Reward-look options (components/reward/Reward.tsx): a value popping when it changes, a ring
+   glowing out from what you just picked, and sliders that fill with the tool's colour. */
+@keyframes reward-pop {
+  0% { transform: scale(0.85); }
+  45% { transform: scale(1.14) rotate(-2deg); }
+  100% { transform: scale(1); }
+}
+@keyframes reward-glow {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent); }
+  100% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--reward, var(--accent)) 0%, transparent); }
+}
+.reward-pop { animation: reward-pop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.reward-glow { animation: reward-glow 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .reward-pop, .reward-glow { animation: none; }
+}
+
+input[type="range"].slider.slider-reward::-webkit-slider-runnable-track {
+  height: 10px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)) 0%,
+    var(--reward, var(--accent)) var(--progress, 0%),
+    var(--background) var(--progress, 0%)
+  );
+}
+input[type="range"].slider.slider-reward::-moz-range-track { height: 10px; }
+input[type="range"].slider.slider-reward::-moz-range-progress {
+  height: 10px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--reward, var(--accent)) 55%, var(--accent)), var(--reward, var(--accent)));
+}
+input[type="range"].slider.slider-reward::-webkit-slider-thumb {
+  height: 24px;
+  width: 24px;
+  margin-top: -7px;
+  background: var(--reward, var(--accent));
+  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+}
+input[type="range"].slider.slider-reward::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  background: var(--reward, var(--accent));
+  box-shadow: 0 0 0 4px var(--surface), 0 2px 10px color-mix(in srgb, var(--reward, var(--accent)) 60%, transparent);
+}
+input[type="range"].slider.slider-reward:not(:disabled):active::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+}
+input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
+}

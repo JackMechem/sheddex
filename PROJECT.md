@@ -246,7 +246,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Ear training: Guess the Progression, Learn mode, settings-cache fix | `ear-training.md`; originals in `tools-trainers.md` |
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
-| Shed Log (practice log, routines, goals, streaks, sharing, cards) | `shed-log.md` |
+| Shed Log (practice log, routines, goals, streaks, sharing, cards); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |

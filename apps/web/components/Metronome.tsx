@@ -8,7 +8,9 @@ import {
   TempoNoteValuePicker,
 } from "@/components/MeterFields";
 import StructureEditor from "@/components/StructureEditor";
+import { RewardCard } from "@/components/reward/Reward";
 import {
+  OptionGroup,
   SUB_LABELS,
   Segmented,
   SoundPicker,
@@ -50,6 +52,18 @@ import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
 
 const DEFAULT_BPM = 100;
+
+/** The time signatures people reach for most, as quick-pick cards in the Time popover. */
+const COMMON_METERS: [number, number][] = [
+  [4, 4],
+  [3, 4],
+  [2, 4],
+  [6, 8],
+  [5, 4],
+  [7, 8],
+  [9, 8],
+  [12, 8],
+];
 
 const SETTINGS_KEY = "jam-practice-metronome";
 const DEFAULT_SETTINGS = {
@@ -314,6 +328,29 @@ export default function Metronome() {
                   onChangeBeats={(n) => changeBeats(Math.min(MAX_BEATS, Math.max(1, n)))}
                   onSetBeatUnit={setBeatUnit}
                 />
+                <OptionGroup title="Quick picks">
+                  <div role="radiogroup" aria-label="Common time signatures" className="grid grid-cols-4 gap-2">
+                    {COMMON_METERS.map(([b, u]) => (
+                      <RewardCard
+                        key={`${b}/${u}`}
+                        id={`meter:${b}/${u}`}
+                        on={beatsPerBar === b && beatUnit === u}
+                        label={`${b}/${u}`}
+                        onPick={() => {
+                          setBeatUnit(u);
+                          changeBeats(b);
+                        }}
+                        className="h-14"
+                      >
+                        <span className="flex flex-col items-center text-base font-extrabold leading-[0.95] tabular-nums">
+                          <span>{b}</span>
+                          <span className="my-0.5 h-0.5 w-4 rounded-full bg-current opacity-60" />
+                          <span>{u}</span>
+                        </span>
+                      </RewardCard>
+                    ))}
+                  </div>
+                </OptionGroup>
               </SettingChip>
               <SettingChip icon={NoteIcon} label="Subdivision" value={SUB_LABELS[subdivision] ?? subdivision}>
                 <SubdivisionPicker value={subdivision} onChange={setSubdivision} showTitle={false} />

@@ -8,6 +8,7 @@ import Celebrations, { SHARE_PROGRESS_EVENT, useCelebrations } from "@/component
 import { ProgressShareDialog } from "@/components/practicelog/Sharing";
 import type { ProgressCardKind } from "@/lib/practiceLog";
 import { useToolTimeTracker } from "@/lib/toolTime";
+import { useToolUsageWriter } from "@/lib/toolUsage";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 /**
@@ -32,6 +33,9 @@ export default function PracticeLogGlobal() {
     );
   }, [ready, teachers, syncAssigned]);
   useCelebrations(data, ready);
+  // Tools always keep their own usage log (signed out too); the Shed Log takes the button-less
+  // tools' time automatically only when signed in with "Count time in tools" on.
+  useToolUsageWriter();
   useToolTimeTracker(ready && data.prefs.trackTools !== false);
   const [sharing, setSharing] = useState<{ kind: ProgressCardKind; date?: string; celebrate?: boolean } | null>(null);
   useEffect(() => {
