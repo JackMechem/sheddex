@@ -47,3 +47,19 @@ soni = sound, "on a roll" (streaks), a drum roll, a roll of tunes. 73 logo explo
 Checked: `tsc`, `eslint` (one pre-existing warning in `SettingsBar.tsx`), `pnpm build`, and in nix
 Chromium: the sidebar, collapsed sidebar, phone menu, landing page and link-preview image, in
 several themes; the page-change animation runs without errors.
+
+## Emails switched (2026-10-18, later)
+
+Jack pointed soniroll.com at Vercel (it serves from `www.soniroll.com`; `soniroll.com` and
+`sheddex.com` 308 to it), added it to Resend and Google. The email wording in `packages/convex`
+(sign-up codes, password reset, account confirmations, lesson invites and booking emails) now says
+soniroll, and the `SITE_URL` fallbacks are `https://www.soniroll.com`. Lesson calendar UIDs stay
+`<id>@sheddex.com` on purpose — changing them would make calendars treat updates to existing lessons
+as new events.
+
+Convex env: prod `SITE_URL=https://www.soniroll.com`; prod and dev
+`AUTH_EMAIL_FROM=soniroll <noreply@sheddex.com>`. That address is temporary: soniroll.com was still
+"pending" in Resend, and sending from an unverified domain fails every email (including sign-up
+codes). Once Resend shows it verified, switch to `soniroll <noreply@soniroll.com>`. The new wording
+reaches prod only when `preview` is merged into `main` (the Vercel prod build runs `convex deploy`);
+the env changes applied right away.

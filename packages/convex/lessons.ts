@@ -617,14 +617,14 @@ export const emailInvite = action({
     if (!info) throw new Error("That student isn't one of yours.");
     if (info.joined) throw new Error(`${info.name} has already joined.`);
     if (Date.now() - info.invitedAt < RESEND_AFTER_MS) throw new Error("You just sent this invite — give it a minute before sending it again.");
-    const site = (process.env.SITE_URL ?? "https://sheddex.com").replace(/\/$/, "");
+    const site = (process.env.SITE_URL ?? "https://www.soniroll.com").replace(/\/$/, "");
     const link = `${site}/lessons/join?invite=${info.code}`;
     const from = info.teacher.name;
     const note = (message ?? "").trim().slice(0, 1000);
     const text = [
       `Hi ${info.name},`,
       "",
-      `${from} invited you to their lessons on sheddex — where they'll share lesson notes, assignments, chord charts and practice routines with you.`,
+      `${from} invited you to their lessons on soniroll — where they'll share lesson notes, assignments, chord charts and practice routines with you.`,
       ...(note ? ["", `“${note}”`, `— ${from}`] : []),
       "",
       `Open this link to join (sign up free if you don't have an account):`,
@@ -633,7 +633,7 @@ export const emailInvite = action({
       "If you weren't expecting this, you can ignore it.",
     ].join("\n");
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#111">
-  <p style="font-size:13px;font-weight:700;color:#6366f1;margin:0 0 8px">Lessons on sheddex</p>
+  <p style="font-size:13px;font-weight:700;color:#6366f1;margin:0 0 8px">Lessons on soniroll</p>
   <h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(from)} invited you to their lessons</h1>
   <p style="font-size:15px;line-height:1.6;margin:0 0 16px">Hi ${escapeHtml(info.name)} — ${escapeHtml(from)} will share lesson notes, assignments, chord charts and practice routines with you here, and their routines go straight into your practice log.</p>
   ${note ? `<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:3px solid #6366f1;background:#f4f4f6;font-size:15px;line-height:1.5">${escapeHtml(note).replace(/\n/g, "<br>")}<br><span style="color:#666">— ${escapeHtml(from)}</span></blockquote>` : ""}
@@ -641,7 +641,7 @@ export const emailInvite = action({
   <p style="font-size:13px;color:#666;line-height:1.5;margin:0">Don't have an account? You can sign up free on the page. Or copy this link: <br><a href="${link}" style="color:#6366f1;word-break:break-all">${link}</a></p>
   <p style="font-size:12px;color:#999;margin-top:24px">If you weren't expecting this, you can ignore it.</p>
 </div>`;
-    await sendEmail({ to, subject: `${from} invited you to their lessons on sheddex`, text, html });
+    await sendEmail({ to, subject: `${from} invited you to their lessons on soniroll`, text, html });
     await ctx.runMutation(internal.lessons.markInvited, { id, email: to });
     return { sentTo: to };
   },

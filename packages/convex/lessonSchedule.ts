@@ -38,7 +38,7 @@ const HOUR = 3_600_000;
 const slotArg = v.object({ start: v.number(), end: v.number() });
 
 function site() {
-  return (process.env.SITE_URL ?? "https://sheddex.com").replace(/\/$/, "");
+  return (process.env.SITE_URL ?? "https://www.soniroll.com").replace(/\/$/, "");
 }
 
 function newToken() {
@@ -373,7 +373,7 @@ function eventFor(info: Info, forTeacher: boolean, cancelled = false): LessonEve
     uid: `${info.id}@sheddex.com`,
     slot: info.slot,
     title: `Lesson with ${other}`,
-    description: forTeacher ? `Lesson with ${info.student.name} (sheddex).` : `Lesson with ${info.teacher.name} (sheddex).`,
+    description: forTeacher ? `Lesson with ${info.student.name} (soniroll).` : `Lesson with ${info.teacher.name} (soniroll).`,
     url: pageFor(info, forTeacher),
     sequence: info.sequence,
     cancelled,
@@ -417,7 +417,7 @@ async function sendConfirmed(info: Info) {
       `Details: ${pageFor(info, forTeacher)}`,
     ].join("\n");
     const html = shell({
-      kicker: "Lessons on sheddex",
+      kicker: "Lessons on soniroll",
       heading: `Lesson booked with ${other}`,
       body:
         timeBox(time) +
@@ -510,7 +510,7 @@ export const offerTimes = action({
       link,
     ].join("\n");
     const html = shell({
-      kicker: "Lessons on sheddex",
+      kicker: "Lessons on soniroll",
       heading: `${o.teacherName} offered you ${o.slots.length === 1 ? "a lesson time" : "lesson times"}`,
       body:
         p(`Hi ${escapeHtml(o.studentName)} — pick the time that works for you and it's booked. You'll get a calendar invite.`) +
@@ -643,7 +643,7 @@ export const requestLesson = action({
       `Accept or decline it here: ${link}`,
     ].join("\n");
     const html = shell({
-      kicker: "Lessons on sheddex",
+      kicker: "Lessons on soniroll",
       heading: `${info.student.name} asked for a lesson`,
       body:
         timeBox(time) +
@@ -699,7 +699,7 @@ export const respond = action({
       `Pick another time: ${link}`,
     ].join("\n");
     const html = shell({
-      kicker: "Lessons on sheddex",
+      kicker: "Lessons on soniroll",
       heading: `${info.teacher.name} can't do that time`,
       body: timeBox(time) + (info.reply ? quote(info.reply, info.teacher.name) : "") + p("You can ask for another of their open times."),
       button: { href: link, label: "Pick another time" },
@@ -745,7 +745,7 @@ export const cancel = action({
     const link = pageFor(info, toTeacher);
     const text = [`${from.name} ${what}:`, time, ...(info.reply ? ["", `“${info.reply}” — ${from.name}`] : []), "", link].join("\n");
     const html = shell({
-      kicker: "Lessons on sheddex",
+      kicker: "Lessons on soniroll",
       heading: `${from.name} ${what}`,
       body:
         `<p style="margin:0 0 16px;padding:14px 16px;border-radius:14px;background:#f4f4f6;font-size:17px;font-weight:700;color:#666;text-decoration:line-through">${escapeHtml(time)}</p>` +

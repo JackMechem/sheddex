@@ -27,7 +27,7 @@ export async function sendEmail({
       "AUTH_RESEND_KEY isn't set on this deployment — run `npx convex env set AUTH_RESEND_KEY <key>` first.",
     );
   }
-  const from = process.env.AUTH_EMAIL_FROM ?? "sheddex <onboarding@resend.dev>";
+  const from = process.env.AUTH_EMAIL_FROM ?? "soniroll <onboarding@resend.dev>";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
