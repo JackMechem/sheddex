@@ -14,6 +14,7 @@ import { formatComposer } from "@/lib/iRealPro";
 import { useRecentCharts } from "@/lib/recents";
 import { sortByText } from "@jam-practice/core/sortText";
 import { useChordChartsLibrary, type LibrarySongMeta } from "@/lib/useChordChartsLibrary";
+import StoragePill from "@/components/files/StoragePill";
 
 export const chartHref = (id: string) => `/chord-charts/view?id=${encodeURIComponent(id)}`;
 export const playlistHref = (id: string) => `/chord-charts/playlist?id=${encodeURIComponent(id)}`;
@@ -75,6 +76,7 @@ export default function ChartsDashboard() {
       <Hero
         title="Library"
         icon={LibraryIcon}
+        titleExtra={<StoragePill />}
         helpTopic="chord-charts"
         tabs={<LibraryTabs active="charts" />}
         subtitle={

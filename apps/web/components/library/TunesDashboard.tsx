@@ -15,6 +15,7 @@ import TuneEditorModal from "@/components/TuneEditorModal";
 import { useRecentTunes } from "@/lib/recents";
 import { DEFAULT_TIME_SIGNATURE, makeId, type Tune } from "@/lib/types";
 import { useSetlists } from "@/lib/useSetlists";
+import StoragePill from "@/components/files/StoragePill";
 
 const PREVIEW = 5;
 
@@ -98,6 +99,7 @@ export default function TunesDashboard() {
       <Hero
         title="Library"
         icon={LibraryIcon}
+        titleExtra={<StoragePill />}
         helpTopic="tunes"
         tabs={<LibraryTabs active="tunes" />}
         subtitle={

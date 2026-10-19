@@ -13,6 +13,7 @@ import { SignInButtons } from "@/components/practicelog/ShedLogGate";
 import { LibraryIcon, ChevronRightIcon, FileIcon, LinkIcon, TrashIcon, UploadIcon } from "@/components/tools";
 import { type FileKind, type StoredEntry, type StoredKind, FILE_KIND_LABEL, fileKind, filesApi, formatBytes, formatFileDate } from "@/lib/files";
 import { useTuneIndex } from "@/lib/recordings";
+import StoragePill from "@/components/files/StoragePill";
 
 type Source = StoredKind;
 
@@ -156,7 +157,6 @@ export default function FilesPage() {
 
   const used = storage?.used ?? 0;
   const quota = storage?.quota ?? 1;
-  const pct = Math.min(100, (used / quota) * 100);
   const phoneSort = SORT_OPTIONS.find((o) => o.sort.key === sort.key && o.sort.dir === sort.dir)?.value ?? "new";
 
   return (
@@ -165,10 +165,11 @@ export default function FilesPage() {
         <Hero
           title="Library"
           icon={LibraryIcon}
+          titleExtra={<StoragePill />}
           helpTopic="files"
           tabs={<LibraryTabs active="files" />}
           subtitle={
-            storage ? `${items.length} item${items.length === 1 ? "" : "s"} · ${formatBytes(used)} of ${formatBytes(quota)} used` : "Everything stored with your account"
+            storage ? `${items.length} item${items.length === 1 ? "" : "s"} · drop files anywhere here to upload` : "Everything stored with your account"
           }
           actions={
             isAuthenticated ? (
@@ -201,27 +202,13 @@ export default function FilesPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-              <div className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="font-semibold">Storage</span>
-                <span className="tabular-nums text-muted">
-                  {formatBytes(used)} of {formatBytes(quota)}
-                </span>
+            {(used >= quota || uploader.progress || uploader.error) && (
+              <div className="flex flex-col gap-2">
+                {used >= quota && <p className="text-sm text-danger">Your storage is full. Delete some files or recordings to upload more.</p>}
+                <UploadProgress progress={uploader.progress} />
+                {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-background">
-                <div className={`h-full rounded-full ${pct > 90 ? "bg-danger" : "bg-accent"}`} style={{ width: `${Math.max(pct, used ? 1 : 0)}%` }} />
-              </div>
-              {used >= quota ? (
-                <p className="text-sm text-danger">Your storage is full. Delete some files or recordings to upload more.</p>
-              ) : (
-                <p className="text-xs text-muted">
-                  Every account has {formatBytes(quota)} for uploads, recordings, songs and lesson files. Drop files anywhere on this page to upload them.
-                </p>
-              )}
-              <p className="text-xs text-muted">Need more room? Plans with more storage are coming.</p>
-              <UploadProgress progress={uploader.progress} />
-              {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
-            </div>
+            )}
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-1.5">

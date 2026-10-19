@@ -185,6 +185,7 @@ export function Hero({
   backLabel,
   actions,
   helpTopic,
+  titleExtra,
   children,
 }: {
   title: string;
@@ -198,6 +199,8 @@ export function Hero({
   backLabel?: string;
   actions?: ReactNode;
   helpTopic?: string;
+  /** Beside the title, e.g. Library's storage pill. */
+  titleExtra?: ReactNode;
   children?: ReactNode;
 }) {
   const topic = helpTopic ? topicById(helpTopic) : undefined;
@@ -216,7 +219,7 @@ export function Hero({
       <div className={`flex items-center gap-x-4 gap-y-3 ${tabs ? "" : "flex-wrap"}`}>
         <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
           {leading}
-          <div className="min-w-0 flex-1">
+          <div className={`min-w-0 ${titleExtra ? "" : "flex-1"}`}>
             <div className="flex min-w-0 items-center gap-1.5">
               <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                 {!leading && ShownIcon && (
@@ -230,6 +233,7 @@ export function Hero({
             </div>
             {subtitle && <div className={`text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
           </div>
+          {titleExtra && <div className="shrink-0 sm:ml-1">{titleExtra}</div>}
         </div>
         {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
         {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}

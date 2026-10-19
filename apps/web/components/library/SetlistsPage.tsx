@@ -9,6 +9,7 @@ import { useTuneLists } from "@/components/library/useTuneActions";
 import { LibraryIcon, PlusIcon, SetlistIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
+import StoragePill from "@/components/files/StoragePill";
 
 type Sort = "recent" | "name";
 
@@ -42,6 +43,7 @@ export default function SetlistsPage() {
       <Hero
         title="Library"
         icon={LibraryIcon}
+        titleExtra={<StoragePill />}
         tabs={<LibraryTabs active="setlists" />}
         subtitle={`${setlists.length} setlist${setlists.length === 1 ? "" : "s"}${shared ? ` · ${shared} shared by link` : ""}`}
         actions={<Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} iconOnlyOnPhone />}

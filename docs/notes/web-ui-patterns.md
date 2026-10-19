@@ -122,3 +122,13 @@ title line and truncates the subtitle to one line, so the tabs don't move when s
 phone; Tunes' Add became icon-only on phones for room. The "Tunes I Know"/"Tunes to Learn" list
 pages (`TuneListManager`) are deeper pages with a back button, so they lost the tabs and keep their
 own title. Checked at 1440 and 390, light, signed out.
+
+## Storage pill beside the Library title (2026-10-18)
+
+`components/files/StoragePill.tsx`: a Shed Log-style stat pill (ring + "20 MB / 100 MB",
+"storage"; danger colour past 90%, "storage full" when full) passed to Hero's new `titleExtra`
+slot on all four Library tabs, so the header is the same on each. Signed in only; it links to
+`/files` and reuses `files.storage` (the same query the Files tab runs). The Files tab's storage
+card is gone; its "full" warning, upload progress and upload errors now show only when needed, and
+"drop files anywhere here to upload" moved into the subtitle. Not seen signed in (no test login
+in that session): only tsc/eslint and the signed-out pages were checked.
