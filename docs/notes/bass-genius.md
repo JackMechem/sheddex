@@ -502,3 +502,7 @@ scrolls); narrower screens stack them. The Bass line card's header has **Hide ch
 (setting `showChart`, default on); hiding it gives the bass line the full width. The empty states
 (no charts, pick a chart, type some chords) always show.
 
+
+**No auto-scroll on phones (2026-10-18):** Jack asked to turn off the score following the playing
+note on mobile. The `scrollIntoView` that keeps the `.bass-now` note in view now only runs from
+640px wide (`sm`) up; the note is still highlighted on phones. Not checked on a real phone.

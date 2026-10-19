@@ -96,3 +96,57 @@ signed-in gate (reverted). The Recorder page is now `layout="stacked"` (vertical
 the Metronome card on the left and the recorder (timer, record button, auto gain) above recent
 recordings on the right; on phones recorder, then metronome, then recordings.
 
+
+## One title style for every page (2026-10-18)
+
+Jack asked for consistent page titles. The plain row the tools and the Shed Log use (accent icon,
+`text-2xl sm:text-3xl font-extrabold`, the `?` next to it, buttons on the right, no card) is now
+the style everywhere. `Hero` (`components/library/ui.tsx`) no longer draws a tinted gradient card
+with an icon tile; it renders that row, so Tunes, Setlists, Chord Charts, Files, Lessons (and its
+sub-pages), tune pages and Feedback all changed at once. Because Hero's buttons now sit on the page
+background, its actions wrapper turns any `bg-background` button into `bg-surface`
+(`[&_.bg-background]:bg-surface`); `HeroSearch`, `LibraryTabs` and the Setlists sort toggle moved to
+`bg-surface` for the same reason. Admin (which used hardcoded zinc/indigo colours), What's new and
+Support were restyled by hand to the same row. Left alone on purpose: Dashboard, Community and the
+Shed Log (and its routine pages). Public profiles (`/u/[name]`) are no longer full width on
+desktop (`max-w-4xl`). Checked at 1440 and 390 in light mode, signed out; signed-in Lessons pages,
+tune pages and dark mode were not screenshotted.
+
+## Library as one page with tabs (2026-10-18)
+
+Tunes, Setlists, Chord Charts and Files now all title themselves "Library" (`LibraryIcon`) and show
+`LibraryTabs` as an underline tab bar under the title row (Hero renders `tabs` below the title
+now, not top-right; the back button keeps its own row). Each tab keeps its own subtitle, buttons
+and `?` intro (Setlists has no help topic, so no `?`). On tab pages Hero keeps the buttons on the
+title line and truncates the subtitle to one line, so the tabs don't move when switching on a
+phone; Tunes' Add became icon-only on phones for room. The "Tunes I Know"/"Tunes to Learn" list
+pages (`TuneListManager`) are deeper pages with a back button, so they lost the tabs and keep their
+own title. Checked at 1440 and 390, light, signed out.
+
+## Storage pill beside the Library title (2026-10-18)
+
+`components/files/StoragePill.tsx`: a Shed Log-style stat pill (ring + "20 MB / 100 MB",
+"storage"; danger colour past 90%, "storage full" when full) passed to Hero's new `titleExtra`
+slot on all four Library tabs, so the header is the same on each. Signed in only; it links to
+`/files` and reuses `files.storage` (the same query the Files tab runs). The Files tab's storage
+card is gone; its "full" warning, upload progress and upload errors now show only when needed, and
+"drop files anywhere here to upload" moved into the subtitle. Not seen signed in (no test login
+in that session): only tsc/eslint and the signed-out pages were checked.
+
+## Library tabs are a query param, not routes (2026-10-18)
+
+Jack asked for the Library tabs to be real tabs, not separate routes. `/tunes` is now the only
+Library page: `app/tunes/page.tsx` renders `components/library/LibraryHub.tsx` (in `<Suspense>`,
+because it reads `useSearchParams`), which picks Tunes/Setlists/Chord Charts/Files from
+`?tab=setlists|charts|files` (no tab = Tunes). `libraryHref(tab)` in `components/library/ui.tsx`
+builds the address; `LibraryTabs` links use `replace` and `scroll={false}`, so switching tabs
+doesn't add history entries or reload. The pages `app/tunes/setlists`, `app/chord-charts/page.tsx`
+and `app/files` were deleted; `next.config.ts` redirects those addresses (307, not permanent) to
+the matching tab. Sub-pages (`/tunes/list`, `/tunes/tune`, `/tunes/setlist`, `/chord-charts/view`,
+`/new`, `/import`, `/playlist`, `/edit`) are unchanged. Internal links now go straight to the tab
+URLs. Left as they were on purpose: `NAV_LINKS` (`/chord-charts` is still an entry; the paused
+mobile app uses the same list), `helpContent` hrefs (the redirect covers their Open button), and
+the sidebar's `isLibraryPath`. Split-screen panes for `/tunes` and `/chord-charts` now render
+`LibraryPane` / `ChartsPane` (Chord Charts opens on the charts tab). Checked: redirects by curl,
+tab clicks in the browser (URL updates, no reload, history length unchanged, no console errors),
+`next build`, tsc, lint. Not checked: split-screen panes, signed in.

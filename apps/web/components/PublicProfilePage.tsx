@@ -99,7 +99,7 @@ export default function PublicProfilePage({ username }: { username: string }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:max-w-none lg:px-8 lg:pt-12">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-16 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:pt-12">
       <BackButton onClick={() => (window.history.length > 1 ? router.back() : router.push("/community"))} className="self-start" />
       <section className="overflow-hidden rounded-3xl bg-surface">
         <ProfileBanner banner={profile.banner} className="h-28 sm:h-40" />

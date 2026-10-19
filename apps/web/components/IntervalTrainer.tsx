@@ -71,6 +71,7 @@ import CountdownLabel from "@/components/CountdownLabel";
 import CountdownRing from "@/components/CountdownRing";
 import ElapsedTimer from "@/components/ElapsedTimer";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const MIN_ROUND_SECONDS = 1;
 const MAX_ROUND_SECONDS = 15;
@@ -1140,20 +1141,9 @@ export default function IntervalTrainer() {
               {INTERVALS.map((interval) => {
                 const selected = settings.intervalIds.includes(interval.id);
                 return (
-                  <button
-                    key={interval.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => toggleInterval(interval.id)}
-                    disabled={running}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
-                      selected
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-background text-foreground hover:bg-surface-hover"
-                    }`}
-                  >
+                  <PoolPill key={interval.id} on={selected} onClick={() => toggleInterval(interval.id)} disabled={running} plainClassName="rounded-full px-3 py-1.5 text-xs font-medium">
                     {interval.label}
-                  </button>
+                  </PoolPill>
                 );
               })}
             </div>

@@ -27,8 +27,8 @@ Every tool works without an account.
   account data: signing in just switches which store is used. Mobile also keeps an AsyncStorage
   copy so it works offline.
 - **Things with their own tables:** the chord-chart library (one row per song, bars separate),
-  Community posts, profiles and follows, recordings and tune songs (Convex file storage), setlists
-  shared by link, routines, Lessons (students, lessons, items, hand-ins, bookings), Bass Genius
+  Community posts, profiles and follows, recordings, tune songs and uploaded files (Convex file
+  storage, 100 MB per account), setlists, tunes and files shared by link, routines, Lessons (students, lessons, items, hand-ins, bookings), Bass Genius
   players and transcriptions, feedback, admin roles, site flags, usage counts.
 
 ## Audio

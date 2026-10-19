@@ -79,26 +79,23 @@ export default function AdminPage() {
 
   return (
     <LibraryPage>
-      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-indigo-950 p-5 text-white sm:p-7">
-        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-indigo-500/30 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-fuchsia-500/15 blur-3xl" />
-        <div className="relative flex flex-wrap items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <ShieldIcon className="h-7 w-7" />
-          </span>
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Admin</h1>
-            <p className="text-sm text-white/60">
+            <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+              <ShieldIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Admin</span>
+            </h1>
+            <p className="text-sm text-muted">
               soniroll {VERSION_LABEL} · {role === "owner" ? "Owner" : "Admin"}
             </p>
           </div>
           {stats && stats.newFeedback > 0 && (
-            <button type="button" onClick={() => go("inbox")} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-900 hover:bg-white/90">
+            <button type="button" onClick={() => go("inbox")} className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-accent-foreground hover:bg-accent-hover">
               {stats.newFeedback} new in the inbox
             </button>
           )}
         </div>
-        <nav className="relative mt-5 flex gap-1 overflow-x-auto rounded-2xl bg-white/5 p-1 ring-1 ring-white/10">
+        <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-surface p-1">
           {TABS.map((t) => {
             const badge = t.id === "inbox" ? stats?.newFeedback : t.id === "posts" ? stats?.reports : t.id === "mayday" ? maydayOn : 0;
             return (
@@ -107,11 +104,11 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => go(t.id)}
                 className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                  tab === t.id ? "bg-white text-zinc-900 shadow" : "text-white/70 hover:bg-white/10 hover:text-white"
+                  tab === t.id ? "bg-background text-foreground shadow" : "text-muted hover:bg-surface-hover hover:text-foreground"
                 }`}
               >
                 {t.label}
-                {!!badge && <span className={`rounded-full px-1.5 text-[11px] font-bold ${tab === t.id ? "bg-indigo-600 text-white" : "bg-white/20"}`}>{badge}</span>}
+                {!!badge && <span className={`rounded-full px-1.5 text-[11px] font-bold ${tab === t.id ? "bg-accent text-accent-foreground" : "bg-background"}`}>{badge}</span>}
               </button>
             );
           })}

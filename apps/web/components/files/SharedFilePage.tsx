@@ -71,7 +71,7 @@ export default function SharedFilePage({ id }: { id: string }) {
           </button>
         )}
         {shared.isMine ? (
-          <Link href="/files" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover">
+          <Link href="/tunes?tab=files" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold hover:bg-surface-hover">
             <FileIcon className="h-4 w-4" /> This is your file — open Files
           </Link>
         ) : (
@@ -105,7 +105,7 @@ function SaveCopy({ shareId }: { shareId: string }) {
   }
   if (saved) {
     return (
-      <Link href="/files" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold text-accent hover:bg-surface-hover">
+      <Link href="/tunes?tab=files" className="inline-flex h-10 items-center gap-1.5 rounded-full bg-surface px-4 text-sm font-semibold text-accent hover:bg-surface-hover">
         <CheckIcon className="h-4 w-4" /> Saved — open your files
       </Link>
     );

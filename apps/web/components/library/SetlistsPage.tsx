@@ -6,9 +6,10 @@ import PromptDialog from "@/components/PromptDialog";
 import { EmptyState, Hero, HeroSearch, LibraryPage, LibraryTabs, Pill, SetlistCard } from "@/components/library/ui";
 import { setlistHref } from "@/components/library/setlistParts";
 import { useTuneLists } from "@/components/library/useTuneActions";
-import { PlusIcon, SetlistIcon } from "@/components/tools";
+import { LibraryIcon, PlusIcon, SetlistIcon } from "@/components/tools";
 import { useSetlists } from "@/lib/useSetlists";
 import { sortByText } from "@jam-practice/core/sortText";
+import StoragePill from "@/components/files/StoragePill";
 
 type Sort = "recent" | "name";
 
@@ -40,9 +41,9 @@ export default function SetlistsPage() {
   return (
     <LibraryPage>
       <Hero
-        title="Setlists"
-        icon={SetlistIcon}
-        color="var(--key-9, var(--accent))"
+        title="Library"
+        icon={LibraryIcon}
+        titleExtra={<StoragePill />}
         tabs={<LibraryTabs active="setlists" />}
         subtitle={`${setlists.length} setlist${setlists.length === 1 ? "" : "s"}${shared ? ` · ${shared} shared by link` : ""}`}
         actions={<Pill primary icon={PlusIcon} label="New setlist" onClick={() => setNaming(true)} iconOnlyOnPhone />}
@@ -51,7 +52,7 @@ export default function SetlistsPage() {
           <div className="min-w-0 flex-1">
             <HeroSearch value={query} onChange={setQuery} placeholder={`Search ${setlists.length} setlists, or a tune in one…`} />
           </div>
-          <div className="flex shrink-0 gap-1 self-start rounded-full bg-background p-1 sm:self-auto">
+          <div className="flex shrink-0 gap-1 self-start rounded-full bg-surface p-1 sm:self-auto">
             {(["recent", "name"] as Sort[]).map((key) => (
               <button
                 key={key}

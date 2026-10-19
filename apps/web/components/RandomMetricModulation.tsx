@@ -40,6 +40,7 @@ import {
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const DEFAULT_BPM = 100;
 const MIN_BARS_PER_MODULATION = 1;
@@ -349,21 +350,9 @@ export default function RandomMetricModulation() {
                 {MODULATIONS.map((m) => {
                   const on = enabledRatios.includes(m.id);
                   return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      aria-pressed={on}
-                      title={m.label}
-                      onClick={() => toggleRatio(m.id)}
-                      disabled={running}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums transition-colors disabled:opacity-50 ${
-                        on
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-background text-muted hover:bg-surface-hover"
-                      }`}
-                    >
+                    <PoolPill key={m.id} on={on} onClick={() => toggleRatio(m.id)} disabled={running} title={m.label} plainClassName="rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums">
                       {shortRatio(m.label)}
-                    </button>
+                    </PoolPill>
                   );
                 })}
               </div>

@@ -19,6 +19,7 @@ import {
   sliderFromBpm,
   splitTenths,
 } from "@/lib/meterControls";
+import { Sparkle, useReward } from "@/components/reward/Reward";
 
 // Shared UI atoms for the Metronome, Polyrhythm Metric Modulation Metronome, and Tempo Trainer
 // tools' meter/tempo controls.
@@ -472,6 +473,7 @@ export function TempoHero({
   aboveNumber?: React.ReactNode;
 }) {
   const { whole, tenths } = splitTenths(precise ?? bpm);
+  const reward = useReward();
   return (
     <div className="flex w-full flex-col items-center gap-4">
       {/* A sibling row above the −/number/+ row, not nested inside it — so the steppers below
@@ -504,7 +506,8 @@ export function TempoHero({
               className="w-full rounded-lg bg-transparent text-center text-6xl font-bold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent sm:text-7xl"
             />
           )}
-          <span className="text-sm font-medium text-muted">
+          <span className="flex items-center gap-1 text-sm font-medium text-muted">
+            {reward && <Sparkle show={!locked && bpm % 10 === 0} at={bpm} color={reward.color} />}
             BPM · {beatsPerBar}/{beatUnit}
           </span>
         </div>
@@ -528,9 +531,10 @@ export function TempoHero({
             style={
               {
                 "--progress": `${(sliderFromBpm(bpm) / SLIDER_STEPS) * 100}%`,
+                ...(reward ? { "--reward": reward.color } : {}),
               } as React.CSSProperties
             }
-            className="slider h-6 w-full cursor-pointer"
+            className={`slider h-6 w-full cursor-pointer ${reward ? "slider-reward" : ""}`}
           />
           <button
             type="button"

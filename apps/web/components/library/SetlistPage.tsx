@@ -55,9 +55,9 @@ export default function SetlistPage({ id }: { id: string }) {
   if (!setlist) {
     return (
       <LibraryPage>
-        <BackButton href="/tunes/setlists" label="Setlists" />
+        <BackButton href="/tunes?tab=setlists" label="Setlists" />
         <div className="rounded-2xl bg-surface">
-          <EmptyState icon={SetlistIcon} title="Setlist not found" body="It may have been deleted." action={<Pill label="All setlists" href="/tunes/setlists" />} />
+          <EmptyState icon={SetlistIcon} title="Setlist not found" body="It may have been deleted." action={<Pill label="All setlists" href="/tunes?tab=setlists" />} />
         </div>
       </LibraryPage>
     );
@@ -150,7 +150,7 @@ export default function SetlistPage({ id }: { id: string }) {
       <Hero
         title={setlist.name}
         color={color}
-        backHref="/tunes/setlists"
+        backHref="/tunes?tab=setlists"
         backLabel="Setlists"
         leading={
           <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl leading-none" style={{ background: tint(color, 20), color }}>

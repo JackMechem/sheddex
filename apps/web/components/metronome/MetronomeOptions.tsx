@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { RewardCard, Sparkle, rewardGradient, useReward } from "@/components/reward/Reward";
 import { SubdivisionIcon } from "@/components/MeterFields";
 import NumberField from "@/components/NumberField";
 import { CLICK_SOUNDS, scheduleClick } from "@/lib/clickEngine";
@@ -47,6 +48,33 @@ export function Segmented<T extends string | number>({
   onPage?: boolean;
   disabled?: boolean;
 }) {
+  const reward = useReward();
+  if (reward) {
+    // Reward look: a chunky track, the picked side lit in the tool's colour.
+    return (
+      <div role="radiogroup" aria-label={label} className={`grid auto-cols-fr grid-flow-col gap-1 rounded-full p-1.5 ${onPage ? "bg-surface" : "bg-background"}`}>
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <button
+              key={String(o.value)}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              disabled={disabled}
+              onClick={() => onChange(o.value)}
+              className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-bold transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                on ? "text-accent-foreground shadow-md" : "text-muted hover:text-foreground"
+              }`}
+              style={on ? { background: rewardGradient(reward.color) } : undefined}
+            >
+              <span key={on ? "on" : "off"} className={`inline-block ${on ? "reward-pop" : ""}`}>{o.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div role="radiogroup" aria-label={label} className={`grid auto-cols-fr grid-flow-col gap-1 rounded-full p-1 ${onPage ? "bg-surface" : "bg-background"}`}>
       {options.map((o) => {
@@ -174,7 +202,19 @@ export function StepperPill({
 
 /** How many clicks per beat, as named pictures. */
 export function SubdivisionPicker({ value, onChange, showTitle = true }: { value: number; onChange: (n: number) => void; showTitle?: boolean }) {
-  const grid = (
+  const reward = useReward();
+  const grid = reward ? (
+    <div role="radiogroup" aria-label="Subdivision" className="grid grid-cols-3 gap-2.5">
+      {SUBDIVISIONS.map((s) => (
+        <RewardCard key={s.value} id={`sub:${s.value}`} on={s.value === value} onPick={() => onChange(s.value)} label={s.label} className="h-20">
+          <span className="flex h-8 items-end">
+            <SubdivisionIcon count={s.value} />
+          </span>
+          <span className="text-xs font-bold">{SUB_LABELS[s.value] ?? s.label}</span>
+        </RewardCard>
+      ))}
+    </div>
+  ) : (
       <div role="radiogroup" aria-label="Subdivision" className="grid grid-cols-3 gap-2">
         {SUBDIVISIONS.map((s) => {
           const on = s.value === value;
@@ -242,6 +282,41 @@ export function ClickSoundCards({
   volume?: number;
   label?: string;
 }) {
+  const reward = useReward();
+  if (reward) {
+    return (
+      <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2.5">
+        {CLICK_SOUNDS.map((c) => {
+          const on = c.id === soundId;
+          return (
+            <RewardCard
+              key={c.id}
+              id={`sound:${c.id}`}
+              on={on}
+              label={c.label}
+              onPick={() => {
+                onChange(c.id);
+                previewSound(c.id, volume);
+              }}
+              className="h-14 !flex-row !justify-start px-2"
+            >
+              <span className="flex flex-row items-center gap-2.5">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${on ? "bg-accent-foreground/15" : "text-accent-foreground"}`}
+                  style={on ? undefined : { background: rewardGradient(reward.color) }}
+                >
+                  <svg viewBox="0 0 16 16" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden>
+                    <path d="M5 3.2v9.6a.8.8 0 001.2.7l7.5-4.8a.8.8 0 000-1.4L6.2 2.5A.8.8 0 005 3.2z" />
+                  </svg>
+                </span>
+                <span className="truncate text-sm font-bold">{c.label}</span>
+              </span>
+            </RewardCard>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2">
       {CLICK_SOUNDS.map((c) => {
@@ -283,12 +358,22 @@ export function SoundPicker({
   volume: number;
   setVolume: (volume: number) => void;
 }) {
+  const reward = useReward();
+  const pct = Math.round(volume * 100);
   return (
     <>
       <OptionGroup title="Click">
         <ClickSoundCards soundId={soundId} onChange={setSoundId} volume={volume} />
       </OptionGroup>
-      <OptionGroup title="Volume" aside={<span className="text-sm font-semibold tabular-nums">{Math.round(volume * 100)}%</span>}>
+      <OptionGroup
+        title="Volume"
+        aside={
+          <span className="flex items-center gap-1 text-sm font-semibold tabular-nums">
+            {reward && <Sparkle show={pct % 25 === 0 && pct > 0} at={pct} color={reward.color} />}
+            {pct}%
+          </span>
+        }
+      >
         <div className="flex items-center gap-3">
           <VolumeIcon />
           <input
@@ -300,8 +385,8 @@ export function SoundPicker({
             aria-label="Volume"
             onChange={(e) => setVolume(Number(e.target.value))}
             onPointerUp={() => previewSound(soundId, volume)}
-            style={{ "--progress": `${volume * 100}%` } as React.CSSProperties}
-            className="slider h-6 w-full cursor-pointer"
+            style={{ "--progress": `${volume * 100}%`, ...(reward ? { "--reward": reward.color } : {}) } as React.CSSProperties}
+            className={`slider h-6 w-full cursor-pointer ${reward ? "slider-reward" : ""}`}
           />
           <VolumeIcon loud />
         </div>

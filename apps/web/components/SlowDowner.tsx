@@ -28,6 +28,7 @@ import { makeId } from "@/lib/types";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import { useSpaceToggle } from "@/lib/useSpaceToggle";
 import { useToolActivity } from "@/lib/toolTime";
+import { PoolPill } from "@/components/reward/Reward";
 
 const ADD_FILE_VALUE = "__add-new-file__";
 const SETTINGS_KEY = "jam-practice-slow-downer";
@@ -420,19 +421,9 @@ export default function SlowDowner() {
             <Hint>How fast the file plays back, as a percentage of its original speed.</Hint>
             <div className="flex flex-wrap gap-2">
               {SPEED_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  aria-pressed={speed === preset}
-                  onClick={() => updateSettings({ speed: preset })}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums transition-colors ${
-                    speed === preset
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-background hover:bg-surface-hover"
-                  }`}
-                >
+                <PoolPill key={preset} on={speed === preset} onClick={() => updateSettings({ speed: preset })} plainClassName="rounded-lg px-3 py-1.5 text-sm font-medium tabular-nums">
                   {preset}%
-                </button>
+                </PoolPill>
               ))}
             </div>
             <SwitchRow

@@ -64,7 +64,7 @@ export default function ImportChartsPage() {
       <Hero
         title="Import charts"
         icon={DownloadIcon}
-        backHref="/chord-charts"
+        backHref="/tunes?tab=charts"
         backLabel="Chord Charts"
         subtitle={`Add charts to your library — you have ${totalSongs} now.`}
       />
@@ -125,7 +125,7 @@ export default function ImportChartsPage() {
           {status && (
             <div className={`flex flex-col gap-2 rounded-xl p-3 ${status.kind === "error" ? "bg-danger/10" : "bg-accent/10"}`}>
               <p className={`text-sm ${status.kind === "error" ? "text-danger" : ""}`}>{status.message}</p>
-              {status.kind === "ok" && <Pill label="Back to chord charts" href="/chord-charts" />}
+              {status.kind === "ok" && <Pill label="Back to chord charts" href="/tunes?tab=charts" />}
             </div>
           )}
         </section>

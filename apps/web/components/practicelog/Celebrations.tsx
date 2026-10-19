@@ -77,6 +77,13 @@ export function celebrateNow(title: string, detail: string, sound = true) {
   if (sound) fanfare(true);
 }
 
+/** A small win outside the log (a tool's time just logged): a toast and a two-note chime. */
+export function toastNow(title: string, detail: string) {
+  toast({ kind: "day", title, detail });
+  taskNote(5);
+  setTimeout(() => taskNote(6), 110);
+}
+
 function taskNote(n: number) {
   playNote(LADDER[Math.min(LADDER.length - 1, Math.max(0, n - 1))], 0.35, "pluck");
 }

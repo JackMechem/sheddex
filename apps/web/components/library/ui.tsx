@@ -111,37 +111,48 @@ export function Pill({
   );
 }
 
-/** Tunes · Setlists · Chord Charts · Files — the library's own tabs, in each page's header. */
-export function LibraryTabs({ active }: { active: "tunes" | "setlists" | "charts" | "files" }) {
+export type LibraryTab = "tunes" | "setlists" | "charts" | "files";
+export const LIBRARY_TABS: readonly LibraryTab[] = ["tunes", "setlists", "charts", "files"];
+
+/** Library is one page (`/tunes`); its tabs are a `?tab=` query (none means Tunes). */
+export function libraryHref(tab: LibraryTab): string {
+  return tab === "tunes" ? "/tunes" : `/tunes?tab=${tab}`;
+}
+
+/** Tunes · Setlists · Chord Charts · Files — Library's tabs, under its title. They swap the
+    `?tab=` query in place (replace, no scroll) rather than going to another page. */
+export function LibraryTabs({ active }: { active: LibraryTab }) {
   const tabs = [
-    { id: "tunes", label: "Tunes", href: "/tunes", icon: NoteIcon },
+    { id: "tunes", label: "Tunes", href: libraryHref("tunes"), icon: NoteIcon },
     {
       id: "setlists",
       label: "Setlists",
-      href: "/tunes/setlists",
+      href: libraryHref("setlists"),
       icon: SetlistIcon,
     },
     {
       id: "charts",
       label: "Chord Charts",
       short: "Charts",
-      href: "/chord-charts",
+      href: libraryHref("charts"),
       icon: ChordChartIcon,
     },
-    { id: "files", label: "Files", href: "/files", icon: FileIcon },
+    { id: "files", label: "Files", href: libraryHref("files"), icon: FileIcon },
   ] as const;
   return (
-    <nav className="flex max-w-full gap-0.5 overflow-x-auto rounded-full bg-background/70 p-1 [scrollbar-width:none] sm:gap-1" aria-label="Library">
+    <nav className="-mx-1 flex max-w-full gap-1 overflow-x-auto border-b border-foreground/10 px-1 [scrollbar-width:none] sm:gap-2" aria-label="Library">
       {tabs.map((t) => (
         <Link
           key={t.id}
           href={t.href}
+          replace
+          scroll={false}
           aria-current={active === t.id ? "page" : undefined}
-          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-            active === t.id ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+          className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 pb-2.5 pt-1 text-sm font-semibold transition-colors sm:px-3 ${
+            active === t.id ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
-          <t.icon className="hidden h-3.5 w-3.5 sm:block" />
+          <t.icon className={`hidden h-4 w-4 sm:block ${active === t.id ? "text-accent" : ""}`} />
           {"short" in t ? (
             <>
               <span className="sm:hidden">{t.short}</span>
@@ -167,9 +178,11 @@ export function LibraryPage({ children }: { children: ReactNode }) {
 }
 
 /**
- * The header card every library page starts with: optional tabs or back button, an icon tile (or
- * any `leading` element, e.g. a key badge), the title and a line under it, the page's buttons, and
- * `children` (usually its search box) at the bottom. `color` tints the card.
+ * The title row every library page starts with, styled like the tool and Shed Log titles: an
+ * optional back button, the accent icon (or any `leading` element, e.g. a key badge), the title and
+ * a line under it, the page's buttons, then `tabs` (Library's sub-pages) and `children` (usually
+ * its search box) below. `color`
+ * colors the icon.
  */
 export function Hero({
   title,
@@ -183,6 +196,7 @@ export function Hero({
   backLabel,
   actions,
   helpTopic,
+  titleExtra,
   children,
 }: {
   title: string;
@@ -196,6 +210,8 @@ export function Hero({
   backLabel?: string;
   actions?: ReactNode;
   helpTopic?: string;
+  /** Beside the title, e.g. Library's storage pill. */
+  titleExtra?: ReactNode;
   children?: ReactNode;
 }) {
   const topic = helpTopic ? topicById(helpTopic) : undefined;
@@ -203,38 +219,38 @@ export function Hero({
   const TopicIcon = topic ? ICON_BY_ID[topic.id] : undefined;
   const ShownIcon = Icon ?? TopicIcon;
   return (
-    <header
-      className="relative flex flex-col gap-5 overflow-hidden rounded-3xl p-5 sm:p-7"
-      style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, ${color} 16%, var(--surface)) 0%, var(--surface) 70%)`,
-      }}
-    >
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full blur-3xl" style={{ background: tint(color, 22) }} />
-      {(tabs || back || backHref) && (
-        <div className="relative flex flex-wrap items-center justify-between gap-2">
-          {back || backHref ? <BackButton onClick={back} href={backHref} label={backLabel} /> : <span />}
-          {tabs}
+    <header className="flex flex-col gap-4">
+      {(back || backHref) && (
+        <div>
+          <BackButton onClick={back} href={backHref} label={backLabel} />
         </div>
       )}
-      <div className="relative flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="flex min-w-[min(100%,16rem)] flex-1 basis-72 items-center gap-3 sm:gap-4">
-          {leading ??
-            (ShownIcon && (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14" style={{ background: tint(color, 18), color }}>
-                <ShownIcon className="h-6 w-6 sm:h-7 sm:w-7" />
-              </span>
-            ))}
-          <div className="min-w-0 flex-1">
+      {/* With tabs (Library), the buttons stay on the title's line on phones too, so the tabs don't
+          move between pages. */}
+      <div className={`flex items-center gap-x-4 gap-y-3 ${tabs ? "" : "flex-wrap"}`}>
+        <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
+          {leading}
+          <div className={`min-w-0 ${titleExtra ? "" : "flex-1"}`}>
             <div className="flex min-w-0 items-center gap-1.5">
-              <h1 className="line-clamp-2 break-words text-3xl font-extrabold tracking-tight sm:text-4xl">{title}</h1>
+              <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                {!leading && ShownIcon && (
+                  <span className="shrink-0" style={{ color }}>
+                    <ShownIcon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  </span>
+                )}
+                <span className="line-clamp-2 break-words">{title}</span>
+              </h1>
               {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
             </div>
-            {subtitle && <div className="mt-0.5 text-sm text-muted">{subtitle}</div>}
+            {subtitle && <div className={`text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
           </div>
+          {titleExtra && <div className="shrink-0 sm:ml-1">{titleExtra}</div>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
+        {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}
       </div>
-      {children && <div className="relative">{children}</div>}
+      {tabs}
+      {children && <div>{children}</div>}
       {intro.open && topic && <ToolIntro topic={topic} onClose={intro.close} />}
     </header>
   );
@@ -242,7 +258,7 @@ export function Hero({
 
 export function HeroSearch({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <label className="flex items-center gap-2.5 rounded-2xl bg-background px-4 py-3 shadow-sm ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
+    <label className="flex items-center gap-2.5 rounded-2xl bg-surface px-4 py-3 shadow-sm ring-1 ring-foreground/5 focus-within:ring-2 focus-within:ring-accent">
       <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
       <input
         type="search"

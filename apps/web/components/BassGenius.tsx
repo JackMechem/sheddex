@@ -427,6 +427,8 @@ export default function BassGenius() {
     const el = box.querySelector(`[data-note="${at.measure}:${at.note}"]`);
     if (!el) return;
     el.classList.add("bass-now");
+    // Keep the playing note in view by scrolling — not on phones, where it fought your own scrolling.
+    if (!window.matchMedia("(min-width: 640px)").matches) return;
     const r = el.getBoundingClientRect();
     if (r.top < 80 || r.bottom > window.innerHeight - 40) el.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [nowBeat, scored]);
@@ -835,7 +837,7 @@ export default function BassGenius() {
             ) : !loading && allSongs.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface p-6 text-sm text-muted">
                 <p>You don&apos;t have any chord charts yet.</p>
-                <Link href="/chord-charts" className="font-semibold text-accent hover:underline">
+                <Link href="/tunes?tab=charts" className="font-semibold text-accent hover:underline">
                   Import or make one in Chord Charts
                 </Link>
               </div>

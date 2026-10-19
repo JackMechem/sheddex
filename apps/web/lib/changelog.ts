@@ -33,6 +33,24 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.3",
+    date: "2026-10-18",
+    title: "Streaks for every tool",
+    summary: "Every tool now keeps its own streak and practice time, with a button to log it to your Shed Log. Plus livelier options and a tidier Library.",
+    changes: [
+      { kind: "new", text: "**Tool stats:** every tool shows its own streak, today's time (ticking while it runs), this week and in total, right by its title. Tap the total to see every day you used it." },
+      { kind: "new", text: "**Log to Shed Log:** press **Log** in a tool to add today's time there to your Shed Log and your daily total. A day counts toward a tool's streak after a minute of real use." },
+      { kind: "new", text: "**Hide stats** with the eye button if you'd rather not see them. The Log button stays." },
+      { kind: "improved", text: "**Livelier options:** settings are bigger and pop when you change them, choices light up when picked, sliders fill with colour, round numbers get a ✦, and a dot marks the choices you haven't tried yet. (Bass Genius, Drum Generator, Syncopation and the Sticking Warmup keep their own options.)" },
+      { kind: "improved", text: "**Metronome quick picks:** common time signatures (4/4, 3/4, 6/8, 7/8 and more) are one tap away in Time." },
+      { kind: "improved", text: "Tool time no longer goes into the Shed Log by itself: you choose when with the Log button. The \"Count time in tools\" switch is gone." },
+      { kind: "improved", text: "**Library** is one page with tabs for Tunes, Setlists, Chord Charts and Files, and shows how much storage you've used by its title. Old links still work." },
+      { kind: "improved", text: "Page titles look the same across the site." },
+      { kind: "improved", text: "Profiles are no longer stretched across wide screens." },
+      { kind: "fixed", text: "Bass Genius no longer scrolls the page to follow the playing note on phones." },
+    ],
+  },
+  {
     version: "0.9.2",
     date: "2026-10-18",
     title: "Hello, soniroll — and Files",
