@@ -22,6 +22,53 @@ export type UserFile = {
   url: string | null;
 };
 
+/** Where a stored item came from (`packages/convex/lib/storage.ts`'s `StoredKind`). */
+export type StoredKind = "file" | "recording" | "song" | "lesson" | "handin" | "profile";
+
+/** Anything on the Files page, as `files.storage` lists it — the shape the ⋮ menu, rename, delete
+    and share work on. A plain upload is `kind: "file"` with its `_id` as `id`. */
+export type StoredEntry = {
+  kind: StoredKind;
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: number;
+  url: string | null;
+  tuneId: string | null;
+  href: string | null;
+  sharedId?: string | null;
+};
+
+/** An upload as a `StoredEntry`. */
+export function entryOf(file: UserFile): StoredEntry {
+  return { kind: "file", id: file._id, name: file.name, mimeType: file.mimeType, size: file.size, createdAt: file.createdAt, url: file.url, tuneId: file.tuneId, href: null };
+}
+
+/** The address a shared file's link opens (`app/file/[id]`). */
+export function sharedFileUrl(shareId: string) {
+  return `${window.location.origin}/file/${shareId}`;
+}
+
+/** Saves a file under its own name. Stored files live on another domain, where the browser ignores
+    `download`, so it's fetched first; if that fails it opens in a new tab instead. */
+export async function downloadFile(url: string, name: string) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const href = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 10_000);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 /** Largest single file — same as the backend (`packages/convex/lib/storage.ts`), which checks
     again, along with the account's 100 MB total. */
 export const MAX_FILE_BYTES = 100 * 1024 * 1024;

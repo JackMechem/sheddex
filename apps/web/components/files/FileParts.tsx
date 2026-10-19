@@ -1,22 +1,30 @@
 "use client";
 
 import { useConvexAuth } from "@convex-dev/auth/react";
+import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import FileShareDialog from "@/components/files/FileShareDialog";
+import ContextMenu, { type MenuItem, type MenuState } from "@/components/ContextMenu";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { MenuButton, menuPosition } from "@/components/library/shared";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
 import { tint } from "@/components/library/ui";
-import { CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
+import { CloseIcon, DocumentIcon, DownloadIcon, FileIcon, ImageIcon, LinkIcon, MicIcon, NoteIcon, PencilIcon, SearchIcon, ShareIcon, TrashIcon, UploadIcon, VideoIcon } from "@/components/tools";
 import {
   type FileKind,
+  type StoredEntry,
+  type StoredKind,
   type UserFile,
   FILE_KIND_LABEL,
   canPreview,
+  downloadFile,
+  entryOf,
   errorText,
   fileKind,
   filesApi,
@@ -61,13 +69,15 @@ export function FileTypeIcon({ kind, size = "md" }: { kind: FileKind; size?: "sm
 
 // ---------------------------------------------------------------- rows
 
-/** One file in a list: type icon, name, a detail line, and an optional ⋮ menu. Clicking opens it. */
+/** One file in a list: type icon, name, a detail line, and an optional ⋮ menu (and right-click
+    menu). Clicking opens it. */
 export function FileRow({
   name,
   mimeType,
   detail,
   onOpen,
   onMenu,
+  onContextMenu,
   trailing,
 }: {
   name: string;
@@ -75,11 +85,12 @@ export function FileRow({
   detail: string;
   onOpen: () => void;
   onMenu?: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   trailing?: ReactNode;
 }) {
   const kind = fileKind(mimeType, name);
   return (
-    <div className="group flex items-center gap-1 rounded-xl hover:bg-surface-hover">
+    <div onContextMenu={onContextMenu} className="group flex items-center gap-1 rounded-xl hover:bg-surface-hover">
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2 text-left">
         <FileTypeIcon kind={kind} />
         <span className="min-w-0 flex-1">
@@ -101,6 +112,34 @@ export function fileDetail(file: { name: string; mimeType: string; size: number;
 // ---------------------------------------------------------------- preview
 
 export type PreviewFile = { name: string; mimeType: string; size: number; createdAt: number; url: string | null };
+
+/** The file itself: a PDF, image, audio or video shown in place, or a note to download anything the
+    browser can't show. */
+export function FileViewer({ file, autoPlay = false }: { file: PreviewFile; autoPlay?: boolean }) {
+  const kind = fileKind(file.mimeType, file.name);
+  const url = file.url;
+  if (!url) return <p className="p-8 text-sm text-muted">This file isn&apos;t available.</p>;
+  if (kind === "pdf") return <iframe src={url} title={file.name} className="h-full min-h-[60vh] w-full border-0" />;
+  if (kind === "image") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt={file.name} className="max-h-full max-w-full object-contain p-2" />;
+  }
+  if (kind === "audio") {
+    return (
+      <div className="flex w-full max-w-lg flex-col items-center gap-4 p-8">
+        <FileTypeIcon kind="audio" size="lg" />
+        <audio controls autoPlay={autoPlay} src={url} className="w-full" />
+      </div>
+    );
+  }
+  if (kind === "video") return <video controls autoPlay={autoPlay} src={url} className="max-h-full max-w-full" />;
+  return (
+    <div className="flex flex-col items-center gap-3 p-10 text-center">
+      <FileTypeIcon kind={kind} size="lg" />
+      <p className="text-sm text-muted">This kind of file can&apos;t be shown here — download it to open it.</p>
+    </div>
+  );
+}
 
 /** A file opened full size: the PDF, image, audio or video itself, or a download for anything the
     browser can't show. `actions` adds buttons (rename, delete, …) for your own files. */
@@ -138,26 +177,7 @@ export function FilePreviewDialog({ file, actions, onClose }: { file: PreviewFil
         </div>
 
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-background">
-          {!url ? (
-            <p className="p-8 text-sm text-muted">This file isn&apos;t available.</p>
-          ) : kind === "pdf" ? (
-            <iframe src={url} title={file.name} className="h-full min-h-[60vh] w-full border-0" />
-          ) : kind === "image" ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={file.name} className="max-h-full max-w-full object-contain p-2" />
-          ) : kind === "audio" ? (
-            <div className="flex w-full max-w-lg flex-col items-center gap-4 p-8">
-              <FileTypeIcon kind="audio" size="lg" />
-              <audio controls autoPlay src={url} className="w-full" />
-            </div>
-          ) : kind === "video" ? (
-            <video controls autoPlay src={url} className="max-h-full max-w-full" />
-          ) : (
-            <div className="flex flex-col items-center gap-3 p-10 text-center">
-              <FileTypeIcon kind={kind} size="lg" />
-              <p className="text-sm text-muted">This kind of file can&apos;t be shown here — download it to open it.</p>
-            </div>
-          )}
+          <FileViewer file={file} autoPlay />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-foreground/[0.06] px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-3">
@@ -258,49 +278,117 @@ export function UploadProgress({ progress }: { progress: { done: number; total: 
   );
 }
 
-// ---------------------------------------------------------------- managing your own files
+// ---------------------------------------------------------------- managing what you store
+
+/** What the ⋮ menu's "go to" item says, for items managed somewhere else too. */
+const GO_TO: Partial<Record<StoredKind, string>> = {
+  recording: "Open the recording",
+  lesson: "Open the lesson",
+  handin: "Open the lesson",
+  profile: "Change it in Account",
+};
+
+/** What deleting does, by where the item came from. */
+function deleteMessage(item: StoredEntry, tune: string | undefined) {
+  switch (item.kind) {
+    case "recording":
+      return "The recording is deleted for good.";
+    case "song":
+      return `The song behind your takes${tune ? ` on ${tune}` : ""} is deleted for good. Your takes stay.`;
+    case "lesson":
+      return "It's taken out of your student's lesson and deleted for good.";
+    case "handin":
+      return "It's taken out of your hand-in, so your teacher won't see it any more.";
+    case "profile":
+      return "It's taken off your profile.";
+    default:
+      return "The file is deleted from your account for good. If the tune it's on is shared, it disappears from the link too.";
+  }
+}
 
 /**
- * The ⋮ menu, preview and dialogs for your own files: open, rename, attach to a tune (or another
- * tune), detach, delete. `tuneNames` shows which tune a file is on; `hereTuneId` (on a tune's page)
- * offers "Remove from this tune" instead of "Change tune".
+ * The ⋮ menu (also a right-click menu), preview and dialogs for anything you store: open, rename,
+ * share by link, download, attach an upload to a tune (or move / detach it), go to where it's
+ * managed, delete — and deleting several at once. `tuneName` shows which tune a file is on;
+ * `hereTuneId` (on a tune's page) offers "Remove from this tune" instead of "Move to another tune".
  */
 export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: string) => string | undefined; hereTuneId?: string }) {
   const update = useMutation(filesApi.update);
-  const remove = useMutation(filesApi.remove);
+  const rename = useMutation(filesApi.renameItem);
+  const remove = useMutation(filesApi.removeItem);
+  const router = useRouter();
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const [open, setOpen] = useState<UserFile | null>(null);
-  const [renaming, setRenaming] = useState<UserFile | null>(null);
-  const [linking, setLinking] = useState<UserFile | null>(null);
-  const [deleting, setDeleting] = useState<UserFile | null>(null);
+  const [open, setOpen] = useState<StoredEntry | null>(null);
+  const [renaming, setRenaming] = useState<StoredEntry | null>(null);
+  const [linking, setLinking] = useState<StoredEntry | null>(null);
+  const [sharing, setSharing] = useState<StoredEntry | null>(null);
+  const [deleting, setDeleting] = useState<{ items: StoredEntry[]; onDone?: () => void } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function items(file: UserFile) {
-    const onTune = file.tuneId ? tuneName(file.tuneId) : undefined;
+  const goTo = (item: StoredEntry) =>
+    item.href ? item.href : item.kind === "song" && item.tuneId ? `/tunes/tune?id=${encodeURIComponent(item.tuneId)}` : null;
+  const goToLabel = (item: StoredEntry) => (item.kind === "song" ? `Open ${(item.tuneId && tuneName(item.tuneId)) || "the tune"}` : (GO_TO[item.kind] ?? "Open"));
+
+  function items(item: StoredEntry): MenuItem[] {
+    const onTune = item.tuneId ? tuneName(item.tuneId) : undefined;
+    const where = goTo(item);
     return [
-      { label: "Open", onSelect: () => setOpen(file), icon: <FileIcon className="h-4 w-4" /> },
-      { label: "Rename", onSelect: () => setRenaming(file), icon: <PencilIcon className="h-4 w-4" /> },
-      ...(hereTuneId && file.tuneId === hereTuneId
-        ? [{ label: "Remove from this tune", onSelect: () => void update({ id: file._id, tuneId: null }), icon: <LinkIcon className="h-4 w-4" /> }]
-        : [
-            { label: file.tuneId ? "Move to another tune" : "Attach to a tune", onSelect: () => setLinking(file), icon: <LinkIcon className="h-4 w-4" /> },
-            ...(file.tuneId ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: file._id, tuneId: null }) }] : []),
-          ]),
-      { label: "Delete", onSelect: () => setDeleting(file), danger: true, icon: <TrashIcon className="h-4 w-4" /> },
+      { label: "Open", onSelect: () => setOpen(item), icon: <FileIcon className="h-4 w-4" /> },
+      ...(item.kind !== "profile" ? [{ label: "Rename", onSelect: () => setRenaming(item), icon: <PencilIcon className="h-4 w-4" /> }] : []),
+      ...(item.kind !== "profile" ? [{ label: item.sharedId ? "Shared — manage link" : "Share a link", onSelect: () => setSharing(item), icon: <ShareIcon className="h-4 w-4" /> }] : []),
+      ...(item.url ? [{ label: "Download", onSelect: () => void downloadFile(item.url!, item.name), icon: <DownloadIcon className="h-4 w-4" /> }] : []),
+      ...(item.kind !== "file"
+        ? []
+        : hereTuneId && item.tuneId === hereTuneId
+          ? [{ label: "Remove from this tune", onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }), icon: <LinkIcon className="h-4 w-4" /> }]
+          : [
+              { label: item.tuneId ? "Move to another tune" : "Attach to a tune", onSelect: () => setLinking(item), icon: <LinkIcon className="h-4 w-4" /> },
+              ...(item.tuneId ? [{ label: `Detach from ${onTune ?? "its tune"}`, onSelect: () => void update({ id: item.id as Id<"files">, tuneId: null }) }] : []),
+            ]),
+      ...(where ? [{ label: goToLabel(item), onSelect: () => router.push(where) }] : []),
+      { label: "Delete", onSelect: () => setDeleting({ items: [item] }), danger: true, icon: <TrashIcon className="h-4 w-4" /> },
     ];
   }
 
-  const openMenu = (file: UserFile, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(file) });
+  /** The ⋮ button's menu, under the button. */
+  const openMenu = (item: StoredEntry, e: React.MouseEvent) => setMenu({ ...menuPosition(e), items: items(item) });
+  /** A right-click menu, at the pointer. */
+  const contextMenu = (item: StoredEntry, e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenu({ x: e.clientX, y: e.clientY, items: items(item) });
+  };
+  /** Ask, then delete several items (the Files page's selection). */
+  const deleteMany = (list: StoredEntry[], onDone?: () => void) => list.length && setDeleting({ items: list, onDone });
 
+  async function confirmDelete(list: StoredEntry[], onDone?: () => void) {
+    setDeleting(null);
+    if (open && list.some((i) => i.kind === open.kind && i.id === open.id)) setOpen(null);
+    const failed: string[] = [];
+    for (const item of list) {
+      try {
+        await remove({ kind: item.kind, id: item.id });
+      } catch {
+        failed.push(item.name);
+      }
+    }
+    setError(failed.length ? `Couldn't delete ${failed.map((n) => `"${n}"`).join(", ")}.` : null);
+    onDone?.();
+  }
+
+  const one = deleting?.items.length === 1 ? deleting.items[0] : null;
   const stacked = (
     <>
       {renaming && (
         <PromptDialog
-          title="Rename file"
+          title="Rename"
           initialValue={renaming.name}
           confirmLabel="Rename"
           onSubmit={(name) => {
-            void update({ id: renaming._id, name });
-            if (open?._id === renaming._id) setOpen({ ...open, name: name.trim() || open.name });
+            const clean = name.trim();
+            if (clean) {
+              rename({ kind: renaming.kind, id: renaming.id, name: clean }).catch((e) => setError(errorText(e, "Couldn't rename it.")));
+              if (open && open.kind === renaming.kind && open.id === renaming.id) setOpen({ ...open, name: clean });
+            }
             setRenaming(null);
           }}
           onCancel={() => setRenaming(null)}
@@ -309,8 +397,8 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       {linking && (
         <TuneSelectDialog
           onPick={(tuneId) => {
-            void update({ id: linking._id, tuneId });
-            if (open?._id === linking._id) setOpen({ ...open, tuneId });
+            void update({ id: linking.id as Id<"files">, tuneId });
+            if (open && open.id === linking.id) setOpen({ ...open, tuneId });
             setLinking(null);
           }}
           onClose={() => setLinking(null)}
@@ -318,20 +406,21 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       )}
       {deleting && (
         <ConfirmDialog
-          title={`Delete "${deleting.name}"?`}
-          message="The file is deleted from your account for good. If the tune it's on is shared, it disappears from the link too."
+          title={one ? `Delete "${one.name}"?` : `Delete ${deleting.items.length} items?`}
+          message={
+            one
+              ? deleteMessage(one, one.tuneId ? tuneName(one.tuneId) : undefined)
+              : "They're deleted for good, along with any links to them. Lesson files leave your students' lessons, and recordings are gone from their tunes."
+          }
           confirmLabel="Delete"
-          onConfirm={() => {
-            void remove({ id: deleting._id });
-            if (open?._id === deleting._id) setOpen(null);
-            setDeleting(null);
-          }}
+          onConfirm={() => void confirmDelete(deleting.items, deleting.onDone)}
           onCancel={() => setDeleting(null)}
         />
       )}
     </>
   );
 
+  const where = open ? goTo(open) : null;
   const dialogs = (
     <>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
@@ -341,13 +430,27 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
           onClose={() => setOpen(null)}
           actions={
             <>
-              <button type="button" className={actionBtn} onClick={() => setRenaming(open)}>
-                <PencilIcon className="h-4 w-4" /> Rename
-              </button>
-              <button type="button" className={actionBtn} onClick={() => setLinking(open)}>
-                <LinkIcon className="h-4 w-4" /> {open.tuneId ? `On ${tuneName(open.tuneId) ?? "a tune"}` : "Attach to a tune"}
-              </button>
-              <button type="button" className={`${actionBtn} ml-auto text-danger`} onClick={() => setDeleting(open)}>
+              {open.kind !== "profile" && (
+                <button type="button" className={actionBtn} onClick={() => setRenaming(open)}>
+                  <PencilIcon className="h-4 w-4" /> Rename
+                </button>
+              )}
+              {open.kind !== "profile" && (
+                <button type="button" className={actionBtn} onClick={() => setSharing(open)}>
+                  <ShareIcon className="h-4 w-4" /> Share
+                </button>
+              )}
+              {open.kind === "file" && (
+                <button type="button" className={actionBtn} onClick={() => setLinking(open)}>
+                  <LinkIcon className="h-4 w-4" /> {open.tuneId ? `On ${tuneName(open.tuneId) ?? "a tune"}` : "Attach to a tune"}
+                </button>
+              )}
+              {where && (
+                <Link href={where} className={actionBtn}>
+                  {goToLabel(open)}
+                </Link>
+              )}
+              <button type="button" className={`${actionBtn} ml-auto text-danger`} onClick={() => setDeleting({ items: [open] })}>
                 <TrashIcon className="h-4 w-4" /> Delete
               </button>
             </>
@@ -356,10 +459,12 @@ export function useFileActions({ tuneName, hereTuneId }: { tuneName: (tuneId: st
       )}
       {/* Above the preview, which they can be opened from. */}
       {(renaming || linking || deleting) && createPortal(<div className="relative z-[80]">{stacked}</div>, document.body)}
+      {/* Portals itself above the preview. */}
+      {sharing && <FileShareDialog item={sharing} onClose={() => setSharing(null)} />}
     </>
   );
 
-  return { openMenu, openFile: setOpen, dialogs };
+  return { openMenu, contextMenu, openFile: setOpen, deleteMany, error, clearError: () => setError(null), dialogs };
 }
 
 // ---------------------------------------------------------------- picking files already uploaded
@@ -463,12 +568,21 @@ export function TuneFiles({ tuneId, tuneName }: { tuneId: string; tuneName: (tun
       ) : (
         <div className="flex flex-col">
           {files.map((f) => (
-            <FileRow key={f._id} name={f.name} mimeType={f.mimeType} detail={fileDetail(f)} onOpen={() => actions.openFile(f)} onMenu={(e) => actions.openMenu(f, e)} />
+            <FileRow
+              key={f._id}
+              name={f.name}
+              mimeType={f.mimeType}
+              detail={fileDetail(f)}
+              onOpen={() => actions.openFile(entryOf(f))}
+              onMenu={(e) => actions.openMenu(entryOf(f), e)}
+              onContextMenu={(e) => actions.contextMenu(entryOf(f), e)}
+            />
           ))}
         </div>
       )}
       <UploadProgress progress={uploader.progress} />
       {uploader.error && <p className="text-sm text-danger">{uploader.error}</p>}
+      {actions.error && <p className="text-sm text-danger">{actions.error}</p>}
       {uploader.input}
       {actions.dialogs}
       {adding && (
