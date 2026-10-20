@@ -39,7 +39,7 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const VIEW_KEY = "jam-practice-practice-log-view";
-const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448 };
+const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448, dayHidden: false };
 const DAY_MIN = 300;
 const DAY_DEFAULT = 448;
 const noopSubscribe = () => () => {};
@@ -75,7 +75,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   // "Share your progress" is the app-wide dialog (`PracticeLogGlobal`).
   const setSharingKind = (kind: ProgressCardKind) => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: kind }));
   const { isAuthenticated } = useConvexAuth();
-  const [{ view, showStats, dayWidth }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  const [{ view, showStats, dayWidth, dayHidden }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
   // The day panel's width on desktop: dragged with the handle between it and the calendar.
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const shownDayWidth = dragWidth ?? dayWidth;
@@ -277,11 +277,26 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
       {/* Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
           (right) fills the rest; the page itself only scrolls if the window's too short for it. */}
       <div
-        className="grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0"
+        className={`grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0 ${dayHidden ? "lg:grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)]"}`}
         style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
       >
         <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Desktop: fold the day panel away so the calendar gets the whole width. */}
+            <button
+              type="button"
+              onClick={() => setView({ dayHidden: !dayHidden })}
+              aria-label={dayHidden ? "Show the day panel" : "Hide the day panel"}
+              aria-pressed={!dayHidden}
+              title={dayHidden ? "Show the day panel" : "Hide the day panel"}
+              className="mr-1 hidden rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground lg:flex"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                <path d="M9 4v16" />
+                <path d={dayHidden ? "m13 10 2 2-2 2" : "m15 10-2 2 2 2"} />
+              </svg>
+            </button>
             <button type="button" onClick={() => step(-1)} aria-label={`Previous ${unit}`} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
@@ -322,7 +337,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
           )}
           {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
         </div>
-        <div className="min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
+        <div className={`min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${dayHidden ? "lg:hidden" : ""}`}>
           <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
         </div>
         {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
@@ -355,7 +370,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
             e.preventDefault();
             setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
           }}
-          className="group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
+          className={`group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none ${dayHidden ? "" : "lg:flex"}`}
         >
           <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
         </div>

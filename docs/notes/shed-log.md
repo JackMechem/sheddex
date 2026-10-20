@@ -459,3 +459,9 @@ long-press touch drag (CDP touch events) to 1 PM, and a quick swipe not dragging
 time" setting the routine's own time. No overflow or page errors. tsc, lint. **Not checked:**
 signed in, a real phone's touch (iOS especially), hover styles; dark mode only seen on the phone
 day view (the first runs' seed used the wrong theme key — it's `jam-practice-theme`).
+
+**Follow-ups (2026-10-19):** grid blocks draw the routine cards' rounded left bar (not a flat
+inset edge); the calendar popover anchors to the click point (`usePopover`, falling back to the
+button's rect for keyboard presses); and on desktop a panel button at the start of the calendar
+header hides the day panel (`dayHidden` in the `jam-practice-practice-log-view` settings), giving
+the calendar the full width. Phones are unaffected (the button and the hiding are `lg:` only).
