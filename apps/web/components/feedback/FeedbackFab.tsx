@@ -31,6 +31,11 @@ export function showFeedbackFab() {
   setHidden(false);
 }
 
+/** Hide the floating button on this device (Settings → General). */
+export function hideFeedbackFab() {
+  setHidden(true);
+}
+
 /** Whether the floating button has been closed on this device (false on the server). */
 export function useFeedbackFabHidden(): boolean {
   return useSyncExternalStore(subscribe, read, () => false);

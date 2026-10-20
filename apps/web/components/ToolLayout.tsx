@@ -8,6 +8,7 @@ import ToolIntro, { IntroButton, useIntro } from "@/components/help/ToolIntro";
 import { topicForHref } from "@/lib/helpContent";
 import ToolStats from "@/components/toolstats/ToolStats";
 import { LOG_BY_BUTTON, PLAIN_OPTIONS } from "@/lib/toolTime";
+import { useSiteSettings } from "@/lib/siteSettings";
 
 const LayoutContext = createContext<"split" | "stacked">("split");
 
@@ -60,7 +61,8 @@ export default function ToolLayout({
   // The tool's own stats and its "Log to Shed Log" button (tools on the new logging so far).
   const statsHref = link && LOG_BY_BUTTON.has(link.href) ? link.href : null;
   // ...and the reward look for their options, except the few that keep their own.
-  const rewardOn = !!statsHref && !PLAIN_OPTIONS.has(statsHref);
+  const [{ rewardChips }] = useSiteSettings();
+  const rewardOn = rewardChips && !!statsHref && !PLAIN_OPTIONS.has(statsHref);
 
   const page = (
     <LayoutContext.Provider value={layout}>

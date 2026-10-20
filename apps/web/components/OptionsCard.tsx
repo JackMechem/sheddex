@@ -5,9 +5,10 @@ import { HintsButton } from "@/components/CollapsiblePanel";
 import { SettingChip, useChipsMode } from "@/components/SettingsBar";
 import { HelpIcon, SlidersIcon } from "@/components/tools";
 import { HintsContext } from "@/lib/hints";
+import { useHints } from "@/lib/panels";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 
-const DEFAULTS = { open: true, showHints: false };
+const DEFAULTS = { open: true, showHints: false, hints: "" };
 
 /**
  * One card holding a tool's option sections side by side (used by the full-width tools).
@@ -15,16 +16,17 @@ const DEFAULTS = { open: true, showHints: false };
  * on their own.
  */
 export function OptionsCard({ id, children }: { id: string; children: React.ReactNode }) {
-  const [{ open, showHints }, update] = usePersistedSettings(
+  const [{ open, showHints: savedHints, hints: hintsChoice }, update] = usePersistedSettings(
     `jam-practice-options-card-${id}`,
     DEFAULTS,
   );
+  const [showHints, toggleHints] = useHints(savedHints, hintsChoice, update);
   const bodyId = `options-card-${id}`;
   // As chips, the card itself disappears: each section is its own chip, sharing the card's
   // "show descriptions" setting.
   if (useChipsMode()) {
     return (
-      <CardHints.Provider value={{ showHints, toggle: () => update({ showHints: !showHints }) }}>{children}</CardHints.Provider>
+      <CardHints.Provider value={{ showHints, toggle: toggleHints }}>{children}</CardHints.Provider>
     );
   }
 
@@ -60,7 +62,7 @@ export function OptionsCard({ id, children }: { id: string; children: React.Reac
           aria-pressed={showHints}
           aria-label={showHints ? "Hide option descriptions" : "Show option descriptions"}
           title={showHints ? "Hide option descriptions" : "Show option descriptions"}
-          onClick={() => update({ showHints: !showHints })}
+          onClick={toggleHints}
           className={`mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent sm:mr-3 ${
             showHints
               ? "bg-accent text-accent-foreground"

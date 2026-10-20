@@ -42,8 +42,15 @@ function set(patch: Partial<State>) {
   for (const l of listeners) l();
 }
 
+// Settings → "Confetti and sparkles" (set by `SiteSettingsEffects`).
+let effectsOn = true;
+export function setCelebrationEffects(on: boolean) {
+  effectsOn = on;
+}
+
 /** A sparkle of particles from an element (the checkbox just ticked). */
 export function burstAt(el: Element, color: string) {
+  if (!effectsOn) return;
   const r = el.getBoundingClientRect();
   const id = nextId++;
   set({ bursts: [...state.bursts, { id, x: r.left + r.width / 2, y: r.top + r.height / 2, color }] });
@@ -57,6 +64,7 @@ function toast(t: Omit<Toast, "id">) {
 }
 
 function rain() {
+  if (!effectsOn) return;
   const id = nextId++;
   set({ rain: id });
   setTimeout(() => state.rain === id && set({ rain: null }), 4200);

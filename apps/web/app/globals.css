@@ -414,3 +414,18 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
   transform: scale(1.2);
   box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
 }
+
+/* Settings → Appearance → "Less motion": like the device's reduce-motion setting, for everyone. */
+html.less-motion *,
+html.less-motion *::before,
+html.less-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html.less-motion .confetti-piece,
+/* Settings → General → "Confetti and sparkles" off. */
+html.no-confetti .confetti-piece {
+  display: none;
+}

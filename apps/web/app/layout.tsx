@@ -3,6 +3,8 @@ import Script from "next/script";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { FONT_VARIABLE_CLASSES } from "@/app/fonts";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { DISPLAY_INIT_SCRIPT } from "@/lib/display";
+import SiteSettingsEffects from "@/components/SiteSettingsEffects";
 import AppChrome from "@/components/AppChrome";
 import BackgroundToolDock from "@/components/BackgroundToolDock";
 import CommandPalette from "@/components/CommandPalette";
@@ -45,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
+        <Script id="display-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: DISPLAY_INIT_SCRIPT }} />
         {/* Server (reads the auth cookie during SSR) wraps client (holds the live Convex
             connection) — the app's first-ever context providers. Purely additive: no visual/DOM
             change, everything below is unchanged.
@@ -60,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             real, unavoidable cost of adding Convex Auth here. */}
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
+            <SiteSettingsEffects />
             <PracticeTimerAlert />
             <UsernamePrompt />
             <AppChrome
