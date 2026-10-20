@@ -16,7 +16,7 @@ const MAIN = "main";
  * secret in the GITHUB_WEBHOOK_SECRET env var, events: pushes, pull requests and issues). A commit
  * message or PR title/description that mentions FB-<number> links it to that feedback; "fixes
  * FB-<number>" marks it done once it's on main (a push to main, or a PR merged into main); closing
- * a feedback's GitHub issue marks it done (reopening moves it back to planned).
+ * a feedback's GitHub issue marks it closed (reopening moves it back to planned).
  */
 http.route({
   path: "/github-webhook",

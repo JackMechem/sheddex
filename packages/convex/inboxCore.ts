@@ -70,6 +70,7 @@ export const opVal = v.union(
   v.object({ op: v.literal("removeLink"), id: v.string(), url: v.string() }),
   v.object({ op: v.literal("setIssue"), id: v.string(), issue: v.union(issueVal, v.null()) }),
   v.object({ op: v.literal("number") }),
+  v.object({ op: v.literal("issueState"), id: v.string(), state: v.string() }),
 );
 
 async function rowById(ctx: MutationCtx, id: string) {
@@ -100,6 +101,10 @@ export const applyLocal = internalMutation({
       }
       case "removeLink":
         return ctx.db.patch(row._id, { links: (row.links ?? []).filter((l) => l.url !== op.url), updatedAt: now });
+      case "issueState": {
+        if (!row.issue || row.issue.state === op.state) return;
+        return ctx.db.patch(row._id, { issue: { ...row.issue, state: op.state }, status: issueStatus(op.state, row.status), updatedAt: now });
+      }
       case "setIssue": {
         const moveOn = op.issue && (row.status === "new" || row.status === "seen");
         return ctx.db.patch(row._id, { issue: op.issue ?? undefined, ...(moveOn ? { status: "planned" as const } : {}), updatedAt: now });
@@ -159,6 +164,13 @@ export const markForwarded = internalMutation({
   },
 });
 
+/** A feedback's status when its GitHub issue opens or closes: closed (resolved or not) → Closed;
+    reopened → back to Planned. */
+function issueStatus(state: string, status: Doc<"feedback">["status"]): Doc<"feedback">["status"] {
+  if (state === "closed") return "closed";
+  return status === "done" || status === "closed" ? "planned" : status;
+}
+
 /** The feedback whose GitHub issue is `number` (for the issues webhook). */
 export const setStatusForIssue = internalMutation({
   args: { issueNumber: v.number(), state: v.string() },
@@ -166,8 +178,7 @@ export const setStatusForIssue = internalMutation({
     // Few rows have issues; the inbox is small enough to scan.
     for (const r of await ctx.db.query("feedback").withIndex("by_createdAt").order("desc").take(2000)) {
       if (r.issue?.number !== issueNumber) continue;
-      const status = state === "closed" ? "done" : r.status === "done" || r.status === "closed" ? "planned" : r.status;
-      await ctx.db.patch(r._id, { issue: { ...r.issue, state }, status, updatedAt: Date.now() });
+      await ctx.db.patch(r._id, { issue: { ...r.issue, state }, status: issueStatus(state, r.status), updatedAt: Date.now() });
     }
   },
 });

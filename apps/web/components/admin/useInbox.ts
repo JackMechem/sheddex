@@ -4,6 +4,7 @@ import { useAction } from "convex/react";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Row } from "@jam-practice/convex/inbox";
+import { recentIssues } from "@/lib/githubWork";
 
 /**
  * The admin inbox, read through `inbox.list` (an action, because on dev and previews it reaches
@@ -43,6 +44,18 @@ export function useInbox() {
         await applyAction({ op: { op: "number" }, where: shared ? "shared" : "here" });
         const again = await listAction({});
         set({ rows: again.rows });
+      }
+      // Issues closed (or reopened) on GitHub: the feedback follows, even if the webhook missed it.
+      // GitHub's list is fetched by the browser and kept for 5 minutes.
+      if (rows.some((r) => r.issue)) {
+        try {
+          const states = new Map((await recentIssues()).map((i) => [i.number, i.state]));
+          const changed = rows.filter((r) => r.issue && states.has(r.issue.number) && states.get(r.issue.number) !== r.issue.state);
+          for (const r of changed) await applyAction({ op: { op: "issueState", id: r.id, state: states.get(r.issue!.number)! }, where: r.where });
+          if (changed.length) set({ rows: (await listAction({})).rows });
+        } catch {
+          // GitHub's limit, or a shared inbox that doesn't know this yet: try again next refresh.
+        }
       }
     } catch (e) {
       set({ error: errorText(e) });

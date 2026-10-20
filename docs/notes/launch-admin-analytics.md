@@ -286,3 +286,9 @@ Verified:
   screenshot box → `includeScreenshot: true`, the issue chip, the issue picker against the real
   repo — which has no issues yet). **Not checked:** forwarding between two real deployments,
   creating a real issue (no token here, and it would be public), a real webhook delivery.
+- **Closed issues close the feedback (same day):** a GitHub issue closed (completed or not
+  planned) sets its feedback to **Closed**; reopened → Planned (`issueStatus` in `inboxCore.ts`,
+  used by the webhook's `issues` event and the new `issueState` change). The admin inbox also
+  checks linked issues against GitHub's list when it loads (browser, 5-minute cache) and applies
+  any difference, so it works without the webhook. Checked in the harness against the real repo
+  (#11 open on GitHub corrected a stale "closed").
