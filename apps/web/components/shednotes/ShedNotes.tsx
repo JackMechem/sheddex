@@ -55,7 +55,8 @@ export function matchesKey(e: KeyboardEvent, name: string): boolean {
     else if (m === "alt" || m === "a") want.alt = true;
     else if (m === "shift" || m === "s") want.shift = true;
   }
-  const pressed = e.key === " " ? "space" : e.key.toLowerCase();
+  // Option-Space on a Mac types a no-break space, so Space is read from the physical key.
+  const pressed = e.key === " " || e.code === "Space" ? "space" : e.key.toLowerCase();
   const code = e.code.startsWith("Key") ? e.code.slice(3).toLowerCase() : e.code.startsWith("Digit") ? e.code.slice(5) : "";
   return (pressed === key || code === key) && e.ctrlKey === want.ctrl && e.metaKey === want.meta && e.altKey === want.alt && e.shiftKey === want.shift;
 }

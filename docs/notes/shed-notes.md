@@ -327,3 +327,12 @@ through it. Applying a template whose title clashes renames with `rename({ uniqu
 numbers the same way and shows a notice. A plain rename you type still refuses a taken title
 (so a typo doesn't silently become "X - 1"). Checked `uniqueTitle` with a Node script; tsc in
 web, convex and mobile; pushed to dev. Not clicked through in a browser.
+
+## 2026-10-20: the command palette's default key is Alt-Space
+
+Jack's pick. `Alt-Space` replaces `Mod-Space` in `DEFAULT_CONFIG.keybindings`; `Mod-p` stays.
+`matchesKey` now reads Space from `e.code` too, because Option-Space on a Mac types a no-break
+space (`e.key` isn't " "). On Windows the system may grab Alt-Space for the window menu; Ctrl-P
+still works there. Help text updated. Checked in the harness (Chromium on Linux): Alt+Space opens
+the palette from the list and from inside the editor without typing a space; Ctrl+Space no
+longer does. Not tried on a Mac or Windows.
