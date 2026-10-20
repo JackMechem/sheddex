@@ -250,7 +250,7 @@ Lora stick to one note and not another, Ctrl+Alt+F toggles.
   zips. Each zip is read on its own; the shared top folder is dropped; with the metadata file the
   titles/folders/fonts come back exactly, otherwise folders come from paths and titles from file
   names; dot folders (`.obsidian`) and `__MACOSX` skipped. `shedNotes.importNotes` takes ≤100
-  notes per call (the client chunks, ~4 MB max), with `clash` skip / replace / copy ("Title 2").
+  notes per call (the client chunks, ~4 MB max), with `clash` skip / replace / copy ("Title - 1").
   Score blocks keep their ids, so notation only comes back in the same account.
 - Checked: the zip writer with `unzip -t`; export → import round trip and a zip made by `zip -r`
   (deflated, with `.obsidian`) through the real functions in Node; in the harness (fake backend):
@@ -317,3 +317,13 @@ Lora stick to one note and not another, Ctrl+Alt+F toggles.
 - Verified in the esbuild harness: menu items, drag/click/double-click widths, reload keeps the
   width, `[[` menu at 1300 light and 390 dark, no handle or overflow at 390. Not checked signed
   in on the real backend.
+
+## 2026-10-20: duplicate titles get " - 1", " - 2"
+
+Jack asked that a new note whose title is taken gets " - 1" (or whichever number is free) instead
+of failing. `uniqueTitle` in `packages/core/shedNotes.ts` now numbers from 1 as "Title - N" (it
+was "Title 2"); `create`, `importNotes` (Keep both) and the `[[`/palette/template paths all go
+through it. Applying a template whose title clashes renames with `rename({ unique: true })`, which
+numbers the same way and shows a notice. A plain rename you type still refuses a taken title
+(so a typo doesn't silently become "X - 1"). Checked `uniqueTitle` with a Node script; tsc in
+web, convex and mobile; pushed to dev. Not clicked through in a browser.

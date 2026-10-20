@@ -239,7 +239,8 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         await setTemplateMut({ id: current as Id<"shedNotes">, templateId: f.template.id as Id<"shedNoteTemplates"> });
         if (typedTitle && typedTitle !== currentMeta.title) {
           try {
-            await renameMut({ id: current as Id<"shedNotes">, title: typedTitle });
+            const got = await renameMut({ id: current as Id<"shedNotes">, title: typedTitle, unique: true });
+            if (got !== typedTitle) setNotice(`You already had “${typedTitle}”, so this one is “${got}”`);
           } catch (e) {
             setNotice(`Applied, but kept the title: ${errorText(e)}`);
           }

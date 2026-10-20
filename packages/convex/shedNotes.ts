@@ -184,7 +184,7 @@ async function attach(ctx: MutationCtx, userId: Id<"users">, noteId: Id<"shedNot
   await ctx.db.insert("shedNoteLinks", { userId, noteId, target, label: label.slice(0, 200), createdAt: Date.now() });
 }
 
-/** A new note. The title is made unique ("Untitled 2"); returns its id and the title it got. */
+/** A new note. The title is made unique ("Untitled - 1"); returns its id and the title it got. */
 export const create = mutation({
   args: { title: v.optional(v.string()), folder: v.optional(v.string()), body: v.optional(v.string()), attach: attachArg, templateId: v.optional(v.id("shedNoteTemplates")) },
   handler: async (ctx, args) => {
@@ -226,16 +226,22 @@ export const save = mutation({
   },
 });
 
-/** Renames a note and rewrites `[[Old title]]` links in your other notes. Returns the new title,
-    or throws if another note already has it. */
+/** Renames a note and rewrites `[[Old title]]` links in your other notes. Returns the new title.
+    If another note already has it, throws — or, with `unique` (a template giving the note its
+    title), numbers it like a new note ("Title - 1"). */
 export const rename = mutation({
-  args: { id: v.id("shedNotes"), title: v.string() },
+  args: { id: v.id("shedNotes"), title: v.string(), unique: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const userId = await me(ctx);
     const note = await ownNote(ctx, userId, args.id);
-    const title = cleanTitle(args.title);
+    let title = cleanTitle(args.title);
     if (!title) throw new Error("Give the note a title.");
     if (title === note.title) return title;
+    if (args.unique) {
+      const taken = new Set((await allNotes(ctx, userId)).filter((n) => n._id !== note._id).map((n) => n.titleKey));
+      title = uniqueTitle(title, taken);
+      if (title === note.title) return title;
+    }
     const key = titleKey(title);
     if (await titleTaken(ctx, userId, key, note._id)) throw new Error(`There's already a note called "${title}".`);
     const now = Date.now();
@@ -424,7 +430,7 @@ export const detachNote = mutation({
 });
 
 /** Import (a chunk of) notes — from an export's .zip, or a folder of Markdown files. A note whose
-    title you already have is skipped, replaces yours, or comes in as a copy ("Title 2"). Folders
+    title you already have is skipped, replaces yours, or comes in as a copy ("Title - 1"). Folders
     are made too (they can be empty). */
 export const importNotes = mutation({
   args: {
@@ -475,7 +481,7 @@ export const importNotes = mutation({
         continue;
       }
       let final = title;
-      for (let i = 2; existing && (await titleTaken(ctx, userId, titleKey(final))); i++) final = `${title} ${i}`;
+      for (let i = 1; existing && (await titleTaken(ctx, userId, titleKey(final))); i++) final = `${title} - ${i}`;
       await ctx.db.insert("shedNotes", {
         userId,
         title: final,

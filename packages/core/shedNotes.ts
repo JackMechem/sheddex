@@ -121,8 +121,8 @@ export function findTags(text: string): string[] {
 export function uniqueTitle(base: string, taken: Set<string>): string {
   const clean = cleanTitle(base) || "Untitled";
   if (!taken.has(titleKey(clean))) return clean;
-  for (let n = 2; ; n++) {
-    const t = `${clean} ${n}`;
+  for (let n = 1; ; n++) {
+    const t = `${clean} - ${n}`;
     if (!taken.has(titleKey(t))) return t;
   }
 }
