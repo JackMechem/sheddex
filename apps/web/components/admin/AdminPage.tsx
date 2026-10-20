@@ -9,6 +9,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import Select from "@/components/Select";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { type GitHubItem, recentCommits, recentPulls, repoBranches } from "@/lib/githubWork";
 import { LibraryPage } from "@/components/library/ui";
 import { BugIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, SparkIcon, TrashIcon, UsersIcon } from "@/components/tools";
 import { VERSION_LABEL } from "@/lib/version";
@@ -621,39 +622,25 @@ function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
   );
 }
 
-type GitHubItem = { kind: "commit" | "pr"; ref: string; url: string; title: string; detail: string; at: number; merged?: boolean };
-type WorkList = { branches: string[]; items: GitHubItem[] };
-
-// Fetched lists, shared by every card for a few minutes (GitHub allows 60 requests an hour).
-const workCache = new Map<string, { at: number; data: Promise<WorkList> }>();
-
 /** The repo's recent commits (by branch) and pull requests, to link one with a click. */
 function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: (item: GitHubItem) => void; onClose: () => void }) {
-  const fetchWork = useAction(api.github.recentWork);
   const [kind, setKind] = useState<"commits" | "pulls">("commits");
   const [branch, setBranch] = useState("preview");
-  const [data, setData] = useState<WorkList | null>(null);
+  const [data, setData] = useState<{ branches: string[]; items: GitHubItem[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    const key = `${kind}:${kind === "commits" ? branch : ""}`;
-    let hit = workCache.get(key);
-    if (!hit || Date.now() - hit.at > 5 * 60_000) {
-      hit = { at: Date.now(), data: fetchWork({ kind, branch }) };
-      workCache.set(key, hit);
-      hit.data.catch(() => workCache.delete(key));
-    }
     let live = true;
-    hit.data.then(
-      (d) => live && (setData(d), setError(null)),
-      (e: Error) => live && setError(e.message.replace(/^[\s\S]*?Uncaught Error:\s*/, "").split("\n")[0]),
+    Promise.all([repoBranches(), kind === "commits" ? recentCommits(branch) : recentPulls()]).then(
+      ([branches, items]) => live && (setData({ branches, items }), setError(null)),
+      (e: Error) => live && setError(e.message),
     );
     return () => {
       live = false;
     };
-  }, [kind, branch, fetchWork]);
+  }, [kind, branch]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

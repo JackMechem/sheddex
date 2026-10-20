@@ -257,3 +257,8 @@ Verified:
   `github.recentWork` (public repo; optional `GITHUB_TOKEN` for the rate limit), cached 5 minutes
   in the page; a click links one with its title. Checked against real GitHub data (60 commits on
   preview, 8 PRs) in the harness at 1200 and 390; the action itself not run signed in.
+- **Pick… moved to the browser (same day):** the Convex action hit "rate limit reached" straight
+  away — GitHub's unauthenticated limit is per IP, and Convex's servers are shared. The picker now
+  calls GitHub's API from the page (`lib/githubWork.ts`, CORS allowed, 5-minute cache; the
+  message says when the limit resets), and `convex/github.ts` is gone. Checked live from the
+  harness page: 60 commits, 8 PRs.
