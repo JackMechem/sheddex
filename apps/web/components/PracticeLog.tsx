@@ -36,10 +36,11 @@ import {
 } from "@/lib/practiceLog";
 import { recordingsApi } from "@/lib/recordings";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
-const VIEW_KEY = "jam-practice-practice-log-view";
-const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448, dayHidden: false };
+export const VIEW_KEY = "jam-practice-practice-log-view";
+export const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448, dayHidden: false };
 const DAY_MIN = 300;
 const DAY_DEFAULT = 448;
 const noopSubscribe = () => () => {};
@@ -75,7 +76,15 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   // "Share your progress" is the app-wide dialog (`PracticeLogGlobal`).
   const setSharingKind = (kind: ProgressCardKind) => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: kind }));
   const { isAuthenticated } = useConvexAuth();
-  const [{ view, showStats, dayWidth, dayHidden }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  const [{ view: lastView, showStats, dayWidth, dayHidden }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  // Settings → Shed Log picks the view it opens on ("last" = whichever you used last).
+  const [{ shedLogOpenOn }] = useSiteSettings();
+  const [chosenView, setChosenView] = useState<typeof lastView | null>(null);
+  const view = chosenView ?? (shedLogOpenOn === "last" ? lastView : shedLogOpenOn);
+  const pickView = (v: typeof lastView) => {
+    setChosenView(v);
+    setView({ view: v });
+  };
   // The day panel's width on desktop: dragged with the handle between it and the calendar.
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const shownDayWidth = dragWidth ?? dayWidth;
@@ -145,7 +154,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         label="Calendar view"
         onPage
         value={view}
-        onChange={(v) => setView({ view: v })}
+        onChange={pickView}
         options={[
           { value: "month", label: "Month" },
           { value: "week", label: "Week" },
@@ -327,7 +336,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
               onStep={step}
               onOpenDay={(date) => {
                 setPicked(date);
-                setView({ view: "day" });
+                pickView("day");
               }}
               onAddTask={(date, time) => {
                 setPicked(date);

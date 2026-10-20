@@ -20,6 +20,7 @@ import {
   CATEGORY_COLORS,
   BugIcon,
   FeedbackIcon,
+  GearIcon,
   MegaphoneIcon,
   HeartIcon,
   HelpIcon,
@@ -32,6 +33,8 @@ import {
   svgProps,
 } from "@/components/tools";
 import { useCollapsedCategories } from "@/lib/panels";
+import { useSiteSettings } from "@/lib/siteSettings";
+import { useConvexAuth } from "@convex-dev/auth/react";
 import { openFeedback } from "@/components/feedback/FeedbackForm";
 import { showFeedbackFab, useFeedbackFabHidden } from "@/components/feedback/FeedbackFab";
 import { useIsAdmin } from "@/lib/useIsAdmin";
@@ -372,8 +375,13 @@ function NavItems({
       ? collectLeaves(tilingState.tree).find((l) => l.id === tilingState.activePaneId)?.href
       : undefined;
   const effectivePathname = activePaneHref ?? pathname;
-  const filtered = filterLinks(query);
+  const [site] = useSiteSettings();
   const searching = query.trim().length > 0;
+  // Settings: tools you've hidden stay out of the lists (a search still finds them), and so do
+  // Community and Lessons when they're turned off.
+  const filtered = filterLinks(query).filter(
+    (l) => (searching || !site.hiddenTools.includes(l.href)) && (site.community || l.href !== "/community") && (site.lessons || l.href !== "/lessons"),
+  );
   const router = useRouter();
   const [menu, setMenu] = useState<MenuState | null>(null);
   // Right-click any page in the sidebar (desktop): open it, or open it in split screen next to
@@ -558,7 +566,7 @@ function NavItems({
   // forces every section open — a collapsed one hiding its own search matches would just look
   // like the search was broken.
   function isSectionCollapsed(key: string) {
-    return !collapsed && !searching && (collapsedCategories[key] ?? false);
+    return !collapsed && !searching && (collapsedCategories[key] ?? site.sidebarCategoriesCollapsed);
   }
 
   if (collapsed) {
@@ -594,7 +602,7 @@ function NavItems({
           "shed",
           "Your shed",
           <>
-            <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed onNavigate={onNavigate} />
+            {site.shedLog && <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed onNavigate={onNavigate} />}
             {shedItems.map(iconLink)}
           </>,
         )}
@@ -621,7 +629,7 @@ function NavItems({
               <DashboardNavCard active={effectivePathname === DASHBOARD_PATH} collapsed={collapsed} large={large} onNavigate={onNavigate} />
               {/* Your shed: your own practice — the Shed Log and your library. */}
               <SectionHeading large={large}>Your shed</SectionHeading>
-              <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />
+              {site.shedLog && <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />}
               {shedItems.map((link) => renderTile(link, true))}
               {/* People: other musicians — Community, and your teachers or students. */}
               {peopleItems.length > 0 && (
@@ -689,6 +697,12 @@ export default function Sidebar() {
   const isAdmin = useIsAdmin();
   const fabHidden = useFeedbackFabHidden();
   const currentPath = usePathname();
+  const [site] = useSiteSettings();
+  // Signed in, the theme lives on the Settings page; signed out, it's the theme dialog.
+  const { isAuthenticated } = useConvexAuth();
+  const openSettings = () => (isAuthenticated ? router.push("/account?tab=general") : setThemeOpen(true));
+  const settingsIcon = isAuthenticated ? GearIcon : PaletteIcon;
+  const settingsLabel = isAuthenticated ? "Settings" : "Theme";
   const onHelp = currentPath === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
@@ -804,10 +818,11 @@ export default function Sidebar() {
                       }}
                     />
                     <FlyoutItem
-                      icon={PaletteIcon}
-                      label="Theme"
+                      icon={settingsIcon}
+                      label={settingsLabel}
                       onSelect={() => {
-                        setThemeOpen(true);
+                        setMobileOpen(false);
+                        openSettings();
                         close();
                       }}
                     />
@@ -850,7 +865,7 @@ export default function Sidebar() {
           </div>
           <div className="mt-1 flex flex-col gap-1 p-1 bg-background rounded-2xl">
             <PracticeTimerWidget />
-            <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />
+            {site.sidebarSupport && <SupportRow large active={currentPath === SUPPORT_PATH} onNavigate={() => setMobileOpen(false)} />}
             <AccountMenu large onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -935,10 +950,10 @@ export default function Sidebar() {
                   />
                 )}
                 <FlyoutItem
-                  icon={PaletteIcon}
-                  label="Theme"
+                  icon={settingsIcon}
+                  label={settingsLabel}
                   onSelect={() => {
-                    setThemeOpen(true);
+                    openSettings();
                     close();
                   }}
                 />
@@ -980,17 +995,18 @@ export default function Sidebar() {
           className={`mt-1 flex flex-col gap-1 ${collapsed ? "" : "bg-background rounded-2xl p-1"}`}
         >
           <PracticeTimerWidget collapsed={collapsed} />
-          <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />
+          {site.sidebarSupport && <SupportRow collapsed={collapsed} active={currentPath === SUPPORT_PATH} />}
           {collapsed && (
             <div className="flex flex-col items-center gap-1 pb-1">
               <Flyout icon={DotsIcon} label="Sidebar options" align="start">
                 {(close) => (
                   <>
                     <FlyoutItem
-                      icon={PaletteIcon}
-                      label="Theme"
+                      icon={settingsIcon}
+                      label={settingsLabel}
                       onSelect={() => {
-                        setThemeOpen(true);
+                        setMobileOpen(false);
+                        openSettings();
                         close();
                       }}
                     />

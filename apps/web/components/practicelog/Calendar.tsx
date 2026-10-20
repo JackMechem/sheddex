@@ -739,7 +739,7 @@ function TimeGrid({
           <div className="relative">
             {hours.map((h, i) => (
               <span key={h} className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums text-muted" style={{ top: i * hourPx }}>
-                {i === 0 ? "" : formatTime(h * 60).replace(":00", "")}
+                {i === 0 ? "" : formatTime(h * 60).replace(/:00(?= )/, "")}
               </span>
             ))}
           </div>

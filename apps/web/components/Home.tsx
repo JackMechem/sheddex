@@ -37,6 +37,7 @@ import { useFavorites } from "@/lib/useFavorites";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { usePracticeSessions } from "@/lib/usePracticeSessions";
 import { useSetlists } from "@/lib/useSetlists";
+import { useSiteSettings, type DashboardCard } from "@/lib/siteSettings";
 import { useSyncedSettings } from "@/lib/useSyncedSettings";
 import EarTrainingProgress from "@/components/learning/EarTrainingProgress";
 import TodayPractice from "@/components/practicelog/TodayPractice";
@@ -120,8 +121,12 @@ export default function Home() {
     return out.slice(0, 8);
   }, [q, lists]);
 
-  const favoriteTools = TOOLS.filter((t) => favorites.includes(t.href));
-  const pinned = favoriteTools.length ? favoriteTools : TOOLS.filter((t) => STARTER_HREFS.includes(t.href));
+  // Settings: the cards you've turned off, and tools you've hidden (a search still finds them).
+  const [site] = useSiteSettings();
+  const show = (card: DashboardCard) => !site.hiddenCards.includes(card);
+  const tools = TOOLS.filter((t) => !site.hiddenTools.includes(t.href));
+  const favoriteTools = tools.filter((t) => favorites.includes(t.href));
+  const pinned = favoriteTools.length ? favoriteTools : tools.filter((t) => STARTER_HREFS.includes(t.href));
   const canStar = isAuthenticated;
 
   // Where you left off: recent tools, then recent tunes and charts.
@@ -223,11 +228,13 @@ export default function Home() {
           </div>
         ) : (
           <>
-          <TodayPractice />
-          <SupportCard />
-          <LessonsDashboard />
-          <div className="grid gap-4 lg:grid-cols-12">
+          {site.shedLog && show("today") && <TodayPractice />}
+          {show("support") && <SupportCard />}
+          {site.lessons && show("lessons") && <LessonsDashboard />}
+          {/* Dense, so turning a card off (Settings) doesn't leave a hole in the rows. */}
+          <div className="grid gap-4 lg:grid-flow-row-dense lg:grid-cols-12">
             {/* Where you left off */}
+            {show("recent") && (
             <section className="flex flex-col gap-4 rounded-3xl bg-accent/10 p-5 ring-1 ring-accent/15 lg:col-span-8">
               <h2 className="text-sm font-semibold text-muted">Pick up where you left off</h2>
               {recents.length ? (
@@ -265,8 +272,10 @@ export default function Home() {
                 <p className="rounded-2xl bg-surface p-4 text-sm text-muted">The tools, tunes and charts you open will show up here.</p>
               )}
             </section>
+            )}
 
             {/* Tune of the day */}
+            {show("tuneOfDay") && (
             <Card title="Tune of the day" className="lg:col-span-4" action={tuneOfDay ? { label: "Shuffle in Jam Practice", href: "/jam-practice" } : undefined}>
               {tuneOfDay ? (
                 <div className="flex flex-1 flex-col justify-between gap-4">
@@ -294,8 +303,10 @@ export default function Home() {
                 </Empty>
               )}
             </Card>
+            )}
 
             {/* Pinned tools */}
+            {show("favorites") && (
             <Card
               title={favoriteTools.length ? "Favorites" : "Get started"}
               detail={favoriteTools.length || !canStar ? undefined : "Star a tool to pin it here"}
@@ -314,8 +325,10 @@ export default function Home() {
                 </p>
               )}
             </Card>
+            )}
 
             {/* Library */}
+            {show("library") && (
             <Card title="Your library" className="lg:col-span-4">
               <div className="-mx-2 flex flex-col">
                 <StatRow icon={NoteIcon} label="Tunes I know" value={known.length} href="/tunes/list?list=tunes" />
@@ -324,8 +337,10 @@ export default function Home() {
                 <StatRow icon={ChordChartIcon} label="Chord charts" value={totalSongs} href="/tunes?tab=charts" detail={playlists.length ? `${playlists.length} playlist${playlists.length === 1 ? "" : "s"}` : undefined} />
               </div>
             </Card>
+            )}
 
             {/* Setlists */}
+            {show("setlists") && (
             <Card title="Setlists" className="lg:col-span-4" action={{ label: setlists.length ? "All" : "New", href: "/tunes?tab=setlists" }}>
               {setlists.length ? (
                 <div className="-mx-2 flex flex-col">
@@ -347,8 +362,10 @@ export default function Home() {
                 </Empty>
               )}
             </Card>
+            )}
 
             {/* Practice sessions, or the one running now */}
+            {show("sessions") && (
             <Card title={timer ? "Practicing now" : "Practice sessions"} className="lg:col-span-4" action={{ label: "Open timer", href: "/practice-timer" }}>
               {timer ? (
                 <div className="-mx-1">
@@ -373,8 +390,10 @@ export default function Home() {
                 </Empty>
               )}
             </Card>
+            )}
 
             {/* Ear training weak spots */}
+            {show("weakSpots") && (
             <Card title="Ear training weak spots" className="lg:col-span-4">
               {weakSpots.length ? (
                 <div className="flex flex-col gap-3">
@@ -403,17 +422,21 @@ export default function Home() {
                 </Empty>
               )}
             </Card>
+            )}
 
             {/* Ear-training learning paths */}
+            {show("earPath") && (
             <Card title="Ear training path" className="lg:col-span-12" detail="Learn mode in each tool">
               <EarTrainingProgress summaries={learningSummaries} links />
             </Card>
+            )}
 
             {/* Every tool */}
+            {show("allTools") && (
             <section className="rounded-3xl bg-surface p-5 lg:col-span-12">
               <h2 className="mb-4 text-sm font-semibold text-muted">All tools</h2>
               <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-                {groupByCategory(TOOLS).map(({ category, items }) => (
+                {groupByCategory(tools).map(({ category, items }) => (
                   <div key={category} className="min-w-0">
                     <h3 className="mb-1.5 px-2 text-xs font-semibold text-muted">{category}</h3>
                     <ToolRows items={items} favorites={favorites} canStar={canStar} isDesktop={isDesktop} onToggle={toggleFavorite} />
@@ -421,6 +444,7 @@ export default function Home() {
                 ))}
               </div>
             </section>
+            )}
           </div>
           </>
         )}

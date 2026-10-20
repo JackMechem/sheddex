@@ -5,8 +5,22 @@ import {
   usePersistedSettings,
   writeSettings,
 } from "@/lib/usePersistedSettings";
+import { useSiteSettings } from "@/lib/siteSettings";
 
-export const PANEL_DEFAULTS = { open: true, showHints: false };
+/** `hints` is what you chose with this panel's "?" ("on"/"off"); "" follows Settings' default.
+    `showHints` is the older on/off switch, still honoured when it's on. */
+export const PANEL_DEFAULTS = { open: true, showHints: false, hints: "" };
+
+/** Whether a panel's option descriptions show, and a toggle that saves your choice for it. */
+export function useHints(
+  showHints: boolean,
+  hints: string,
+  update: (patch: { showHints?: boolean; hints?: string }) => void,
+): [boolean, () => void] {
+  const [{ hintsByDefault }] = useSiteSettings();
+  const on = hints === "on" || (hints !== "off" && (showHints || hintsByDefault));
+  return [on, () => update({ hints: on ? "off" : "on", showHints: !on })];
+}
 
 export function panelKey(id: string) {
   return `jam-practice-panel-${id}`;

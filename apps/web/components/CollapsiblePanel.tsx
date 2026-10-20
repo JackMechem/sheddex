@@ -3,7 +3,7 @@
 import { SettingChip, useChipsMode } from "@/components/SettingsBar";
 import { HelpIcon } from "@/components/tools";
 import { HintsContext } from "@/lib/hints";
-import { PANEL_DEFAULTS, panelKey } from "@/lib/panels";
+import { PANEL_DEFAULTS, panelKey, useHints } from "@/lib/panels";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 
 /** A titled settings card whose body can be folded away. The open state is remembered. */
@@ -46,10 +46,11 @@ export default function CollapsiblePanel({
   onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
 }) {
-  const [{ open: storedOpen, showHints }, update] = usePersistedSettings(
+  const [{ open: storedOpen, showHints: savedHints, hints: hintsChoice }, update] = usePersistedSettings(
     panelKey(id),
     PANEL_DEFAULTS,
   );
+  const [showHints, toggleHints] = useHints(savedHints, hintsChoice, update);
   const chips = useChipsMode();
   if (chips && asMode && toggle) {
     if (!toggle.checked) return null;
@@ -62,7 +63,7 @@ export default function CollapsiblePanel({
         headerExtra={
           <>
             {action}
-            {hints && <HintsButton on={showHints} onToggle={() => update({ showHints: !showHints })} />}
+            {hints && <HintsButton on={showHints} onToggle={toggleHints} />}
           </>
         }
       >
@@ -83,7 +84,7 @@ export default function CollapsiblePanel({
         headerExtra={
           <>
             {action}
-            {hints && <HintsButton on={showHints} onToggle={() => update({ showHints: !showHints })} />}
+            {hints && <HintsButton on={showHints} onToggle={toggleHints} />}
           </>
         }
       >
@@ -129,7 +130,7 @@ export default function CollapsiblePanel({
           aria-pressed={showHints}
           aria-label={showHints ? "Hide option descriptions" : "Show option descriptions"}
           title={showHints ? "Hide option descriptions" : "Show option descriptions"}
-          onClick={() => update({ showHints: !showHints })}
+          onClick={toggleHints}
           className={`mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
             showHints
               ? "bg-accent text-accent-foreground"

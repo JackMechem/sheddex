@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.9.5 beta** (see versioning).
+**v0.9.6 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -213,6 +213,9 @@ Web (`apps/web`):
   `components/library/shared.tsx` (`PageShell`, `PageHeader`, `BackButton`),
   `components/library/chartView.tsx` (`ChartPaper`, `ReaderBar`). The chart renderer is
   `components/ChordChart.tsx`.
+- Site settings: `lib/siteSettings.ts` (`useSiteSettings`: features, sidebar, dashboard, tool
+  defaults; synced) and `lib/display.ts` (text size, less motion; this device). New "turn it off"
+  or "default" options go there and on `components/settings/SettingsSections.tsx`.
 - Activity: `lib/toolTime.ts`'s `useToolActivity(href, running)` drives Shed Log tool time and
   the anonymous usage counts — call it from any tool that "runs".
 - Files: `components/files/FileParts.tsx` (`useFileActions` — the ⋮/right-click menu, rename,
@@ -252,6 +255,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |
 | Lessons (teachers/students, notes, invites, scheduling, assignments) | `lessons.md` |
 | Files (uploads, the `/files` browser: rename/delete/share any stored item, storage quota), sharing a tune (`/tune/<id>`) or a file (`/file/<id>`) by link | `files-and-tune-sharing.md` |
+| Site settings (Account → Settings: features, theme, text size, sidebar, dashboard, tools, Shed Log defaults; `/settings`) | `site-settings.md` |
 | Donations: `/support`, the sidebar's Support row, the dashboard card; why no ads | `support-and-donations.md` |
 | The rename to soniroll: new logo, what changed and what didn't | `rename-soniroll.md` |
 | iPhone silent-mode audio | `ios-audio.md` |

@@ -6,6 +6,7 @@ import { useSyncExternalStore } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { formatStopwatch, useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { minutesOn, streak, todayKey, goalOn } from "@/lib/practiceLog";
+import { useSiteSettings } from "@/lib/siteSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
@@ -23,7 +24,8 @@ export default function StreakBadge({ compact = false, onNavigate }: { compact?:
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   const today = mounted ? todayKey() : "";
   const watch = useDayTimerMs(data, today);
-  if (!ready || !mounted || !isAuthenticated) return null;
+  const [site] = useSiteSettings();
+  if (!ready || !mounted || !isAuthenticated || !site.sidebarStreak || !site.shedLog) return null;
   const s = streak(data, today);
   const minutes = minutesOn(data, today, watch.liveMs);
   const lit = minutes > 0;

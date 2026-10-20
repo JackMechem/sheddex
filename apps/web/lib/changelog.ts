@@ -33,6 +33,22 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.6",
+    date: "2026-10-19",
+    title: "Settings",
+    summary: "A new Settings page in your account, to make soniroll work the way you like.",
+    changes: [
+      { kind: "new", text: "**Settings** in your account: General, Appearance, Sidebar, Dashboard, Tools and Shed Log." },
+      { kind: "new", text: "Turn off the **Shed Log, Community or Lessons** if you don't use them. Nothing is deleted." },
+      { kind: "new", text: "**Hide tools** you don't use from the sidebar and dashboard, and choose which **dashboard cards** show." },
+      { kind: "new", text: "A **24-hour clock**, a bigger or smaller **text size**, and **less motion**." },
+      { kind: "new", text: "Turn off confetti, the bug report button, the stats beside tool titles, or the colorful option chips." },
+      { kind: "new", text: "Show option descriptions without pressing ?, and choose whether pages explain themselves the first time." },
+      { kind: "new", text: "Pick which view the Shed Log opens on, and start the sidebar with its tool groups folded." },
+      { kind: "improved", text: "The **theme picker** now lives in Settings → Appearance (the sidebar's ⋮ menu takes you there)." },
+    ],
+  },
+  {
     version: "0.9.5",
     date: "2026-10-19",
     title: "Plan your practice by the clock",

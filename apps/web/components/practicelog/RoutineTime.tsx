@@ -75,7 +75,7 @@ export default function RoutineTimePicker({
             }}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${current === timeString(m) ? "bg-accent text-accent-foreground" : "bg-surface hover:bg-surface-hover"}`}
           >
-            {formatTime(m).replace(":00", "")}
+            {formatTime(m).replace(/:00(?= )/, "")}
           </button>
         ))}
         <input

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
@@ -10,22 +10,19 @@ import FollowLists from "@/components/FollowLists";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MyPostsTab from "@/components/MyPostsTab";
 import PublicProfileEditor from "@/components/PublicProfileEditor";
-import GoalDialog from "@/components/practicelog/GoalDialog";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
-import ThemeModal from "@/components/ThemeModal";
 import UserAvatar from "@/components/UserAvatar";
 import ProfileBanner from "@/components/ProfileBanner";
-import SwitchRow from "@/components/SwitchRow";
-import { getServerThemeState, getThemeState, setPreset, subscribeTheme } from "@/lib/theme";
-import { CUSTOM_THEME_ID, PRESETS, getPreset } from "@/lib/themes";
-import { WEEKDAY_LETTER, formatMinutesShort } from "@/lib/practiceLog";
-import { usePracticeLog } from "@/lib/usePracticeLog";
+import { AppearanceSettings, DashboardSettings, GeneralSettings, PracticeSettings, SidebarSettings, ToolSettings } from "@/components/settings/SettingsSections";
 import TunesTab from "@/components/TunesTab";
 import TunesToLearnTab from "@/components/TunesToLearnTab";
 import {
   BookIcon,
   CalendarIcon,
   ChevronLeftIcon,
+  GearIcon,
+  HomeIcon,
+  SlidersIcon,
   ChevronRightIcon,
   GoogleIcon,
   ListIcon,
@@ -52,7 +49,20 @@ function PageShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   );
 }
 
-type AccountView = "profile" | "tunes" | "tunesToLearn" | "posts" | "following" | "practice" | "appearance" | "security" | "danger";
+type AccountView =
+  | "profile"
+  | "tunes"
+  | "tunesToLearn"
+  | "posts"
+  | "following"
+  | "general"
+  | "appearance"
+  | "sidebar"
+  | "dashboard"
+  | "tools"
+  | "practice"
+  | "security"
+  | "danger";
 
 /** Turns a thrown Error into UI text — Convex actions surface a real message (e.g. our own
     "Enter your password to confirm."), but a wrong password comes back as a long, internal-
@@ -581,6 +591,15 @@ function PaletteIcon({ className }: { className?: string }) {
   );
 }
 
+function SidebarIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M9 4v16" />
+    </svg>
+  );
+}
+
 type NavItem = { id: AccountView; label: string; icon: React.ComponentType<{ className?: string }>; danger?: boolean };
 const NAV: { group: string; items: NavItem[] }[] = [
   { group: "You", items: [{ id: "profile", label: "Profile", icon: UserIcon }] },
@@ -599,10 +618,14 @@ const NAV: { group: string; items: NavItem[] }[] = [
     ],
   },
   {
-    group: "Preferences",
+    group: "Settings",
     items: [
-      { id: "practice", label: "Shed Log", icon: CalendarIcon },
+      { id: "general", label: "General", icon: GearIcon },
       { id: "appearance", label: "Appearance", icon: PaletteIcon },
+      { id: "sidebar", label: "Sidebar", icon: SidebarIcon },
+      { id: "dashboard", label: "Dashboard", icon: HomeIcon },
+      { id: "tools", label: "Tools", icon: SlidersIcon },
+      { id: "practice", label: "Shed Log", icon: CalendarIcon },
     ],
   },
   {
@@ -618,8 +641,9 @@ const isView = (v: string | null | undefined): v is AccountView => !!v && (ALL_V
 
 /** The account settings page (`/account[?tab=…]`). A header card (picture, @username, email,
     public/private, sign-in methods, View profile, Sign out), then settings grouped in a left nav —
-    You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Preferences
-    (the Shed Log's daily goal and sounds, the theme), Account (password and Google, delete). On a
+    You (profile), Library (Tunes I Know / to Learn), Community (posts, following), Settings
+    (site-wide: features, theme, sidebar, dashboard, tools, the Shed Log — `components/settings/`;
+    `/settings` redirects here), Account (password and Google, delete). On a
     phone the nav is a list you tap into, with a back button. The section is kept in the address
     bar (`?tab=`), so other pages can link straight to one. Signed out it says so (no redirect). */
 export default function AccountPage({ initialTab }: { initialTab?: string }) {
@@ -770,9 +794,17 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
           {view === "following" && <FollowLists />}
 
-          {view === "practice" && <PracticeSettings />}
+          {view === "general" && <GeneralSettings />}
 
           {view === "appearance" && <AppearanceSettings />}
+
+          {view === "sidebar" && <SidebarSettings />}
+
+          {view === "dashboard" && <DashboardSettings />}
+
+          {view === "tools" && <ToolSettings />}
+
+          {view === "practice" && <PracticeSettings />}
 
           {view === "security" && (
             <>
@@ -799,95 +831,5 @@ export default function AccountPage({ initialTab }: { initialTab?: string }) {
 
       {deleteOpen && <DeleteAccountModal requiresPassword={hasPassword} email={user?.email ?? null} onClose={() => setDeleteOpen(false)} />}
     </PageShell>
-  );
-}
-
-function SettingsCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-5 text-left">
-      <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {description && <p className="text-sm text-muted">{description}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** The Shed Log's preferences: the daily goal (the full goal window), sounds, counting tool time. */
-function PracticeSettings() {
-  const log = usePracticeLog();
-  const { data } = log;
-  const [goalOpen, setGoalOpen] = useState(false);
-  const by = data.prefs.goalByWeekday;
-  const perDay = Array.isArray(by) && by.length === 7;
-  return (
-    <>
-      <SettingsCard title="Daily goal" description="How much practice makes a full day. Hitting it fills the ring, stars the day and keeps the celebrations coming.">
-        <div className="flex flex-wrap items-center gap-3">
-          {perDay ? (
-            <div className="flex gap-1">
-              {by!.map((m, i) => (
-                <span key={i} className="flex w-10 flex-col items-center rounded-xl bg-background py-1.5">
-                  <span className="text-[11px] font-bold text-muted">{WEEKDAY_LETTER[i]}</span>
-                  <span className="text-xs font-extrabold tabular-nums">{m > 0 ? m : "–"}</span>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <span className="text-3xl font-extrabold tabular-nums">{formatMinutesShort(data.prefs.dailyGoal)}</span>
-          )}
-          <span className="text-sm text-muted">{perDay ? "minutes, by weekday" : "every day"}</span>
-          <button type="button" onClick={() => setGoalOpen(true)} className="ml-auto rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
-            Change
-          </button>
-        </div>
-      </SettingsCard>
-      <SettingsCard title="While you practice">
-        <SwitchRow label="Sounds when you check things off" checked={data.prefs.sounds} onChange={(sounds) => log.setPrefs({ sounds })} />
-        <Link href="/shed-log" className="self-start text-sm font-semibold text-accent hover:underline">
-          Open the Shed Log →
-        </Link>
-      </SettingsCard>
-      {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}
-    </>
-  );
-}
-
-/** The theme: the current one, a few swatches to switch in one tap, and the full picker. */
-function AppearanceSettings() {
-  const theme = useSyncExternalStore(subscribeTheme, getThemeState, getServerThemeState);
-  const [open, setOpen] = useState(false);
-  const name = theme.id === CUSTOM_THEME_ID ? "Custom" : (getPreset(theme.id)?.label ?? theme.id);
-  return (
-    <SettingsCard title="Theme" description="Colors for the whole site. Saved on this device.">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {PRESETS.slice(0, 10).map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setPreset(p.id)}
-            aria-pressed={theme.id === p.id}
-            className={`flex flex-col gap-1.5 rounded-xl p-2 text-left text-xs font-semibold ring-2 transition-colors ${theme.id === p.id ? "ring-accent" : "ring-transparent hover:ring-surface-hover"}`}
-            style={{ background: p.colors.background, color: p.colors.foreground }}
-          >
-            <span className="flex gap-1">
-              <span className="h-4 w-4 rounded-full" style={{ background: p.colors.accent }} />
-              <span className="h-4 w-4 rounded-full" style={{ background: p.colors.surface }} />
-            </span>
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted">
-          Current: <strong className="text-foreground">{name}</strong>
-        </span>
-        <button type="button" onClick={() => setOpen(true)} className="ml-auto rounded-full bg-background px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
-          More themes & custom colors
-        </button>
-      </div>
-      {open && <ThemeModal onClose={() => setOpen(false)} />}
-    </SettingsCard>
   );
 }

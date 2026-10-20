@@ -277,9 +277,16 @@ export function timeString(minutes: number): string {
 }
 
 /** 450 → "7:30 AM". */
+let clock24 = false;
+/** Show times on a 24-hour clock ("15:00") instead of "3:00 PM" (the website's Settings). */
+export function setClock24(on: boolean) {
+  clock24 = on;
+}
+
 export function formatTime(minutes: number): string {
   const m = ((Math.round(minutes) % 1440) + 1440) % 1440;
   const h = Math.floor(m / 60);
+  if (clock24) return `${pad(h)}:${pad(m % 60)}`;
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${pad(m % 60)} ${h < 12 ? "AM" : "PM"}`;
 }

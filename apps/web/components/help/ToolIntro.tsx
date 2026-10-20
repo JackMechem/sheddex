@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Shot, TopicIcon } from "@/components/help/helpParts";
 import { CloseIcon, HelpIcon } from "@/components/tools";
 import type { HelpTopic } from "@/lib/helpContent";
+import { useSiteSettings } from "@/lib/siteSettings";
 
 /**
  * A page's quick intro: the help topic's screenshot, what it's for and its steps, with a link to
@@ -44,6 +45,17 @@ function markSeen(id: string) {
   listeners.forEach((l) => l());
 }
 
+/** Forget which intros were seen, so each page's opens again the next time (Settings → Tools). */
+export function resetIntros() {
+  cache = "";
+  try {
+    window.localStorage.removeItem(SEEN_KEY);
+  } catch {
+    // storage unavailable
+  }
+  listeners.forEach((l) => l());
+}
+
 function subscribe(l: () => void) {
   listeners.add(l);
   return () => listeners.delete(l);
@@ -53,7 +65,9 @@ function subscribe(l: () => void) {
 export function useIntro(topic: HelpTopic | undefined) {
   const raw = useSyncExternalStore(subscribe, readSeen, () => "*");
   const [asked, setAsked] = useState(false);
-  const open = !!topic && (asked || !hasSeen(raw, topic.id));
+  // Settings → Tools can turn off opening it by itself the first time.
+  const [{ toolIntros }] = useSiteSettings();
+  const open = !!topic && (asked || (toolIntros && !hasSeen(raw, topic.id)));
   return {
     open,
     show: () => setAsked(true),
