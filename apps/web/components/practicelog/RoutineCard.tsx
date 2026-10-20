@@ -8,6 +8,7 @@ import { AttachmentList } from "@/components/practicelog/Attachments";
 import { burstAt } from "@/components/practicelog/Celebrations";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import RecordClip from "@/components/practicelog/RecordClip";
+import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
 import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon } from "@/components/tools";
@@ -25,7 +26,6 @@ import {
   progressOf,
   routineSpan,
   scheduleTasks,
-  timeString,
   todayKey,
 } from "@/lib/practiceLog";
 import { pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
@@ -77,7 +77,7 @@ export default function RoutineCard({
       x: rect.right - 208,
       y: rect.bottom + 4,
       items: [
-        { label: "Change the time for this day", onSelect: () => setEditingTime(true) },
+        { label: span ? "Change the time" : "Set a time", onSelect: () => setEditingTime(true) },
         ...(timeOverride
           ? [{ label: "Use the routine's own time", onSelect: () => log.updateOccurrence(date, routine.id, (o) => { const n = { ...o }; delete n.startTime; return n; }) }]
           : []),
@@ -105,9 +105,13 @@ export default function RoutineCard({
           </Link>
           {routine.assigned && <span className="text-[11px] font-semibold text-accent">From {routine.assigned.teacher}</span>}
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-            <span className={timeOverride ? "font-semibold text-foreground" : ""}>
-              {span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : "Any time"}
-            </span>
+            {span ? (
+              <span className={timeOverride ? "font-semibold text-foreground" : ""}>{`${formatTime(span.start)} – ${formatTime(span.end)}`}</span>
+            ) : (
+              <button type="button" onClick={() => setEditingTime(true)} className="font-semibold text-accent hover:underline" title="Set a time">
+                Any time · Set a time
+              </button>
+            )}
             <span>·</span>
             <span>{formatMinutesShort(allTasks.reduce((s, t) => s + t.minutes, 0))}</span>
             <span className="flex basis-full items-center gap-1">
@@ -139,24 +143,7 @@ export default function RoutineCard({
         </div>
       )}
 
-      {editingTime && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-background p-2 text-sm">
-          <span className="text-muted">Start this day at</span>
-          <input
-            type="time"
-            autoFocus
-            defaultValue={occurrence.startTime ?? routine.startTime ?? (span ? timeString(span.start) : "")}
-            onChange={(e) => {
-              const v = e.target.value;
-              log.updateOccurrence(date, routine.id, (o) => ({ ...o, startTime: v || null }));
-            }}
-            className="rounded-lg bg-surface px-2 py-1"
-          />
-          <button type="button" onClick={() => setEditingTime(false)} className="ml-auto rounded-full px-3 py-1 font-medium hover:bg-surface">
-            Done
-          </button>
-        </div>
-      )}
+      {editingTime && <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setEditingTime(false)} />}
 
       {engine && running ? (
         <div className="flex items-center gap-4 rounded-xl bg-background p-3">

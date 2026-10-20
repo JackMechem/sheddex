@@ -33,6 +33,21 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.9.5",
+    date: "2026-10-19",
+    title: "Plan your practice by the clock",
+    summary: "Put routines at a time by dragging them, and see a whole day hour by hour.",
+    changes: [
+      { kind: "new", text: "**Drag routines and tasks onto a time** in the Shed Log's week and day views, or between days." },
+      { kind: "new", text: "**Set a time** for an any-time routine in a couple of taps, just for one day or every time." },
+      { kind: "improved", text: "**Day view** is now an hour-by-hour grid like the week, next to the day's routines." },
+      { kind: "improved", text: "The week and day grids show **the whole day**, midnight to midnight." },
+      { kind: "improved", text: "On desktop you can **hide the day panel** so the calendar gets the full width." },
+      { kind: "improved", text: "A routine's details now open **where you click** on the calendar." },
+      { kind: "improved", text: "Routines on the calendar have the same coloured bar as their cards." },
+    ],
+  },
+  {
     version: "0.9.4",
     date: "2026-10-19",
     title: "A better week view",

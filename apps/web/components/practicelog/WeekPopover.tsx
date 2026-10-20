@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { burstAt } from "@/components/practicelog/Celebrations";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
-import { CheckIcon, ChevronRightIcon, CloseIcon, PlayIcon } from "@/components/tools";
+import RoutineTimePicker, { hasFixedTimes } from "@/components/practicelog/RoutineTime";
+import { CheckIcon, ChevronRightIcon, CloseIcon, PlayIcon, PlusIcon } from "@/components/tools";
 import {
   ROUTINE_COLORS,
   formatMinutesShort,
@@ -46,7 +47,8 @@ export default function WeekPopover({
   anchor: DOMRect;
   log: Log;
   onClose: () => void;
-  onOpenDay: (date: string) => void;
+  /** Switches to the day on its own (not given in day view). */
+  onOpenDay?: (date: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -97,10 +99,11 @@ function dayLabel(date: string) {
   return date === today ? "Today" : `${WEEKDAY_SHORT[weekdayOf(date)]}, ${formatShortDate(date)}`;
 }
 
-function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTarget, { kind: "routine" }>; log: Log; onClose: () => void; onOpenDay: (date: string) => void }) {
+function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTarget, { kind: "routine" }>; log: Log; onClose: () => void; onOpenDay?: (date: string) => void }) {
   const { date, routineId } = target;
   const item = routinesOn(log.data, date).find((i) => i.routine.id === routineId);
   const { engine, startRoutine, runningTask } = useRoutineTimer();
+  const [picking, setPicking] = useState(false);
   if (!item) return <Empty onClose={onClose} />;
   const { routine, occurrence } = item;
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
@@ -123,6 +126,14 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
           <h3 className={`truncate text-base font-bold ${skipped ? "line-through opacity-60" : ""}`}>{routine.name || "Untitled routine"}</h3>
           <p className="text-xs text-muted">
             {dayLabel(date)} · {span ? `${formatTime(span.start)} – ${formatTime(span.end)}` : "Any time"} · {formatMinutesShort(minutes)}
+            {span && !hasFixedTimes(routine, occurrence) && !picking && (
+              <>
+                {" · "}
+                <button type="button" onClick={() => setPicking(true)} className="font-semibold text-accent hover:underline">
+                  Change time
+                </button>
+              </>
+            )}
           </p>
           {(skipped || complete || status === "missed" || status === "partial") && (
             <p className={`mt-0.5 text-xs font-semibold ${complete ? "text-green-600 dark:text-green-400" : skipped ? "text-muted" : status === "missed" ? "text-red-500" : "text-amber-600 dark:text-amber-400"}`}>
@@ -141,6 +152,22 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
             {done}/{total}
           </span>
         </div>
+      )}
+      {picking ? (
+        <div className="mx-3 mb-2">
+          <RoutineTimePicker date={date} routine={routine} occurrence={occurrence} log={log} onDone={() => setPicking(false)} />
+        </div>
+      ) : (
+        !span &&
+        !skipped && (
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className="mx-3 mb-2 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-accent/50 px-3 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+          >
+            <PlusIcon className="h-4 w-4" /> Set a time
+          </button>
+        )
       )}
       <ul className="min-h-0 flex-1 overflow-y-auto px-2">
         {schedule.map(({ task, start }) => {
@@ -211,7 +238,7 @@ function RoutineBody({ target, log, onClose, onOpenDay }: { target: Extract<Week
   );
 }
 
-function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTarget, { kind: "tasks" }>; log: Log; onClose: () => void; onOpenDay: (date: string) => void }) {
+function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTarget, { kind: "tasks" }>; log: Log; onClose: () => void; onOpenDay?: (date: string) => void }) {
   const { date, ids } = target;
   const all = log.data.days[date]?.tasks ?? [];
   const tasks = all.filter((t) => ids.includes(t.id));
@@ -289,7 +316,8 @@ function TasksBody({ target, log, onClose, onOpenDay }: { target: Extract<WeekTa
   );
 }
 
-function OpenDayButton({ date, onOpenDay, onClose }: { date: string; onOpenDay: (date: string) => void; onClose: () => void }) {
+function OpenDayButton({ date, onOpenDay, onClose }: { date: string; onOpenDay?: (date: string) => void; onClose: () => void }) {
+  if (!onOpenDay) return null;
   return (
     <button
       type="button"

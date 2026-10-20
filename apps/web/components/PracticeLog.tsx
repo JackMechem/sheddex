@@ -14,7 +14,7 @@ import ShedLogTour, { tourSeen } from "@/components/practicelog/ShedLogTour";
 import TaskDialog from "@/components/practicelog/TaskDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Segmented } from "@/components/metronome/MetronomeOptions";
-import { MonthView, WeekView } from "@/components/practicelog/Calendar";
+import { DayView, MonthView, WeekView } from "@/components/practicelog/Calendar";
 import DayPanel from "@/components/practicelog/DayPanel";
 import { CalendarIcon, HelpIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, ListIcon, PlusIcon, ShareIcon, SlidersIcon, SpeakerIcon } from "@/components/tools";
 import { ChartIcon } from "@/components/practicelog/RoutineIcon";
@@ -22,6 +22,7 @@ import {
   type DayTask,
   type ProgressCardKind,
   MONTH_NAMES,
+  WEEKDAY_SHORT,
   newDayTask,
   addDays,
   addMonths,
@@ -38,7 +39,7 @@ import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const VIEW_KEY = "jam-practice-practice-log-view";
-const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448 };
+const VIEW_DEFAULTS = { view: "month" as "month" | "week" | "day", showStats: true, dayWidth: 448, dayHidden: false };
 const DAY_MIN = 300;
 const DAY_DEFAULT = 448;
 const noopSubscribe = () => () => {};
@@ -74,7 +75,7 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   // "Share your progress" is the app-wide dialog (`PracticeLogGlobal`).
   const setSharingKind = (kind: ProgressCardKind) => window.dispatchEvent(new CustomEvent(SHARE_PROGRESS_EVENT, { detail: kind }));
   const { isAuthenticated } = useConvexAuth();
-  const [{ view, showStats, dayWidth }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  const [{ view, showStats, dayWidth, dayHidden }, setView] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
   // The day panel's width on desktop: dragged with the handle between it and the calendar.
   const [dragWidth, setDragWidth] = useState<number | null>(null);
   const shownDayWidth = dragWidth ?? dayWidth;
@@ -120,14 +121,24 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
   const title =
     view === "month"
       ? `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
-      : (() => {
+      : view === "day"
+        ? (
+            // "Oct 19" on a phone, "Mon, Oct 19" from sm.
+            <>
+              <span className="hidden sm:inline">{WEEKDAY_SHORT[d.getDay()]}, </span>
+              {formatShortDate(selected)}
+              {d.getFullYear() !== new Date().getFullYear() ? `, ${d.getFullYear()}` : ""}
+            </>
+          )
+        : (() => {
           const from = startOfWeek(selected);
           const to = addDays(from, 6);
           // "Oct 18 – 24" within a month, so it fits on a phone.
           const sameMonth = fromDateKey(from).getMonth() === fromDateKey(to).getMonth();
           return `${formatShortDate(from)} – ${sameMonth ? fromDateKey(to).getDate() : formatShortDate(to)}${fromDateKey(to).getFullYear() !== new Date().getFullYear() ? `, ${fromDateKey(to).getFullYear()}` : ""}`;
         })();
-  const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, 7 * n));
+  const step = (n: number) => setPicked(view === "month" ? addMonths(selected, n) : addDays(selected, (view === "day" ? 1 : 7) * n));
+  const unit = view === "month" ? "month" : view === "day" ? "day" : "week";
   const viewSwitch = (
     <div className="w-[10.5rem] shrink-0 sm:w-56">
       <Segmented
@@ -263,102 +274,107 @@ export default function PracticeLog({ initialDate }: { initialDate?: string }) {
         </div>
       </div>
 
-      {/* Day view: no calendar — the day has the whole page. */}
-      {view === "day" ? (
-        <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-          <DayPanel
-            date={selected}
-            log={log}
-            recordings={recordings}
-            onDateChange={setPicked}
-            wide
-            controls={
-              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
-                {todayButton}
-                {viewSwitch}
-              </div>
-            }
-          />
+      {/* Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
+          (right) fills the rest; the page itself only scrolls if the window's too short for it. */}
+      <div
+        className={`grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0 ${dayHidden ? "lg:grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)]"}`}
+        style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
+      >
+        <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Desktop: fold the day panel away so the calendar gets the whole width. */}
+            <button
+              type="button"
+              onClick={() => setView({ dayHidden: !dayHidden })}
+              aria-label={dayHidden ? "Show the day panel" : "Hide the day panel"}
+              aria-pressed={!dayHidden}
+              title={dayHidden ? "Show the day panel" : "Hide the day panel"}
+              className="mr-1 hidden rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground lg:flex"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <rect x="3" y="4" width="18" height="16" rx="2.5" />
+                <path d="M9 4v16" />
+                <path d={dayHidden ? "m13 10 2 2-2 2" : "m15 10-2 2 2 2"} />
+              </svg>
+            </button>
+            <button type="button" onClick={() => step(-1)} aria-label={`Previous ${unit}`} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => step(1)} aria-label={`Next ${unit}`} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+            <h2 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{title}</h2>
+            {todayButton}
+            {viewSwitch}
+          </div>
+          {view === "month" ? (
+            <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
+          ) : view === "day" ? (
+            <DayView
+              log={log}
+              date={selected}
+              onSelect={setPicked}
+              onAddTask={(date, time) => {
+                setPicked(date);
+                setNewTask({ ...newDayTask(), time });
+              }}
+            />
+          ) : (
+            <WeekView
+              log={log}
+              selected={selected}
+              onSelect={setPicked}
+              onStep={step}
+              onOpenDay={(date) => {
+                setPicked(date);
+                setView({ view: "day" });
+              }}
+              onAddTask={(date, time) => {
+                setPicked(date);
+                setNewTask({ ...newDayTask(), time });
+              }}
+            />
+          )}
           {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
         </div>
-      ) : (
-        // Desktop: the page is the window's height — the day (left) scrolls on its own, the calendar
-        // (right) fills the rest; the page itself only scrolls if the window's too short for it.
-        <div
-          className="grid items-start gap-6 lg:min-h-[28rem] lg:flex-1 lg:grid-cols-[var(--day-w)_1.5rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:items-stretch lg:gap-0"
-          style={{ "--day-w": `${shownDayWidth}px` } as React.CSSProperties}
-        >
-          <div className="flex min-w-0 flex-col gap-3 lg:order-3 lg:min-h-0">
-            <div className="flex items-center gap-1 sm:gap-2">
-              <button type="button" onClick={() => step(-1)} aria-label={view === "month" ? "Previous month" : "Previous week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
-                <ChevronLeftIcon className="h-5 w-5" />
-              </button>
-              <button type="button" onClick={() => step(1)} aria-label={view === "month" ? "Next month" : "Next week"} className="rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground">
-                <ChevronRightIcon className="h-5 w-5" />
-              </button>
-              <h2 className="min-w-0 flex-1 truncate text-lg font-bold sm:text-xl">{title}</h2>
-              {todayButton}
-              {viewSwitch}
-            </div>
-            {view === "month" ? (
-              <MonthView year={d.getFullYear()} month={d.getMonth()} data={data} selected={selected} onSelect={setPicked} clipsByDate={clipsByDate} />
-            ) : (
-              <WeekView
-                log={log}
-                selected={selected}
-                onSelect={setPicked}
-                onStep={step}
-                onOpenDay={(date) => {
-                  setPicked(date);
-                  setView({ view: "day" });
-                }}
-                onAddTask={(date, time) => {
-                  setPicked(date);
-                  setNewTask({ ...newDayTask(), time });
-                }}
-              />
-            )}
-            {!ready && <LoadingSpinner size="sm" label="Loading your log" showLabel />}
-          </div>
-          <div className="min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
-            <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
-          </div>
-          {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize the day panel"
-            aria-valuenow={shownDayWidth}
-            tabIndex={0}
-            title="Drag to resize · double-click to reset"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.currentTarget.setPointerCapture(e.pointerId);
-              setDragWidth(dayWidth);
-            }}
-            onPointerMove={(e) => {
-              if (dragWidth === null) return;
-              const grid = e.currentTarget.parentElement;
-              const left = grid?.getBoundingClientRect().left ?? 0;
-              setDragWidth(clampDay(e.clientX - left - 12, grid));
-            }}
-            onPointerUp={() => {
-              if (dragWidth !== null) setView({ dayWidth: dragWidth });
-              setDragWidth(null);
-            }}
-            onPointerCancel={() => setDragWidth(null)}
-            onDoubleClick={() => setView({ dayWidth: DAY_DEFAULT })}
-            onKeyDown={(e) => {
-              if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-              e.preventDefault();
-              setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
-            }}
-            className="group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none lg:flex"
-          >
-            <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
-          </div>
+        <div className={`min-w-0 lg:order-1 lg:-mr-2 lg:min-h-0 lg:overflow-y-auto lg:pr-2 ${dayHidden ? "lg:hidden" : ""}`}>
+          <DayPanel date={selected} log={log} recordings={recordings} onDateChange={setPicked} />
         </div>
-      )}
+        {/* Drag to resize the day panel; double-click to reset; arrow keys too. */}
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize the day panel"
+          aria-valuenow={shownDayWidth}
+          tabIndex={0}
+          title="Drag to resize · double-click to reset"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            setDragWidth(dayWidth);
+          }}
+          onPointerMove={(e) => {
+            if (dragWidth === null) return;
+            const grid = e.currentTarget.parentElement;
+            const left = grid?.getBoundingClientRect().left ?? 0;
+            setDragWidth(clampDay(e.clientX - left - 12, grid));
+          }}
+          onPointerUp={() => {
+            if (dragWidth !== null) setView({ dayWidth: dragWidth });
+            setDragWidth(null);
+          }}
+          onPointerCancel={() => setDragWidth(null)}
+          onDoubleClick={() => setView({ dayWidth: DAY_DEFAULT })}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            setView({ dayWidth: clampDay(dayWidth + (e.key === "ArrowLeft" ? -24 : 24), e.currentTarget.parentElement) });
+          }}
+          className={`group order-2 hidden cursor-col-resize touch-none items-center justify-center outline-none ${dayHidden ? "" : "lg:flex"}`}
+        >
+          <span className={`flex h-14 w-1.5 items-center justify-center rounded-full transition-colors group-hover:bg-accent group-focus-visible:bg-accent ${dragWidth !== null ? "bg-accent" : "bg-muted/40"}`} />
+        </div>
+      </div>
       {addMenu && <ContextMenu menu={addMenu} onClose={() => setAddMenu(null)} />}
       {tourOpen && <ShedLogTour onClose={() => setTourOpen(false)} />}
       {goalOpen && <GoalDialog data={data} onSave={log.setPrefs} onClose={() => setGoalOpen(false)} />}

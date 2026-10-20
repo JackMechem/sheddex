@@ -83,6 +83,8 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Attachments and recordings", text: "Link tunes, setlists, chord charts or tools to a day, routine or task, and record clips to a day or routine." },
       { name: "Share", text: "Share a routine by link or post it to Community; share a progress card (streak, hours or days, for a week, month or year)." },
       { name: "Week view", text: "Tap a routine or task to tick it off or start it without leaving the week. Click a free time on the grid to add a task then. On a phone the week is a list of days; swipe sideways for the next or last week." },
+      { name: "Day view", text: "The day as a timeline, like one column of the week, with the day's details beside it. Tap a routine or task to tick it off; tap a free time to add something there." },
+      { name: "Scheduling", text: "Drag a routine or task onto a time in the week or day view to schedule it, or onto another day to move it (on a touch screen, press and hold first). A routine with no time has a Set a time button: pick a time for just that day or for every time it comes round." },
     ],
     tips: ["The ? next to the Shed Log title replays its quick tour.", "Share a routine by link, or post it to Community, from the routine's page."],
     shot: "shed-log",

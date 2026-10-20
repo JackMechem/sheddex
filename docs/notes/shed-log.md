@@ -417,3 +417,51 @@ signed in, hover styles, a real phone's touch, sounds, starting a routine from t
 Testing note: `/Applications/Chromium.app` here is v100 and can't render Tailwind v4's `bg-x/10`
 colours (they come out solid); use Google Chrome (`executablePath`) with playwright-core's `launch`.
 Playwright's `reload` hung on this page; seed with `addInitScript` before `goto` instead.
+
+
+## Scheduling: Set a time, drag onto the grid, a time-grid day view (2026-10-19)
+
+Jack asked for an easy way to give an "any time" routine a time, to drag routines onto a time in
+the week view, and for the day view to look like the week view (times, routines, tasks, drag).
+- **Set a time** (`components/practicelog/RoutineTime.tsx`, `RoutineTimePicker`): quick picks (8 AM,
+  12 PM, 5 PM, 7 PM) and a time field, with "Just this day" (sets `Occurrence.startTime`) or "Every
+  time" (sets `Routine.startTime` and drops the day's override); a "once" routine has no switch.
+  "Make it any time" clears it (hidden when tasks have their own clock times — `hasFixedTimes`).
+  Shown in the week popover (a dashed "Set a time" button for an untimed routine, "Change time"
+  in the subtitle otherwise) and on the day panel's `RoutineCard` ("Any time · Set a time"; the ⋮
+  item is "Set a time" / "Change the time").
+- **Drag** (`useTimeDrag` in `Calendar.tsx`): any-time chips/pills, timed blocks and a day's own tasks
+  drag onto a day column (`[data-drop="grid"]`, snapped to 15 min, the grab point kept) or the
+  "Any time" row (`[data-drop="any"]`). A dashed preview shows the time. Mouse: after 4 px. Touch:
+  press and hold 350 ms (moving first scrolls instead); a non-passive document `touchmove` listener
+  stops the page scrolling while a finger drags. Held near the grid's top/bottom edge for 250 ms it
+  scrolls (immediate edge scrolling fired while just passing through from the Any time row and
+  shifted drops by 15 min). Escape cancels. `justDragged()` (module flag) swallows the click after a
+  drop and the week swipe. Routine drops write `Occurrence.startTime` (removed when it equals the
+  routine's own time). Dropping on another day moves it: `addToDay` there, and the old day is
+  `removeFromDay` (if it was added) or skipped (if it was scheduled). Not allowed: routines that are
+  skipped or have tasks with clock times (moving the start wouldn't move them), cross-day moves for a
+  routine with ticks or timed work that day (`locked`), or onto a day that already has it. Tasks use
+  `moveDayTask` with the new `time`. In the week's Any time row, several tasks share one chip, so
+  only a lone task drags from there (each is its own block once timed).
+- The free-slot menu also offers "<untimed routine on that day> at 3:00 PM" and "Add <routine> at
+  3:00 PM" (adds it and sets the day's time).
+- **Day view** is now the same layout as week/month: the day panel on the left and `DayView` (a
+  one-column `TimeGrid`, 64 px hours with half-hour lines, the Any time row always shown with big
+  pills, no day headers) on the right; arrows step a day; title "Mon, Oct 19" ("Oct 19" on phones).
+  `TimeGrid` is the week's old grid pulled out and shared; `dayInfo` builds a day for it. The week
+  popover's "Open day" is hidden in day view (`onOpenDay` optional). `DayPanel`'s `wide`/`controls`
+  props are no longer used by the page.
+Verified in headless nix Chromium (gate briefly bypassed, then restored; data seeded in
+localStorage): week 1440 — chip to 3 PM, block 6 → 7:30 PM, a task to tomorrow 10 AM, no popover
+after a drop, Set a time → 5 PM, the picker; day 1440 the same drags; day 390 with a simulated
+long-press touch drag (CDP touch events) to 1 PM, and a quick swipe not dragging; the card's "Every
+time" setting the routine's own time. No overflow or page errors. tsc, lint. **Not checked:**
+signed in, a real phone's touch (iOS especially), hover styles; dark mode only seen on the phone
+day view (the first runs' seed used the wrong theme key — it's `jam-practice-theme`).
+
+**Follow-ups (2026-10-19):** grid blocks draw the routine cards' rounded left bar (not a flat
+inset edge); the calendar popover anchors to the click point (`usePopover`, falling back to the
+button's rect for keyboard presses); and on desktop a panel button at the start of the calendar
+header hides the day panel (`dayHidden` in the `jam-practice-practice-log-view` settings), giving
+the calendar the full width. Phones are unaffected (the button and the hiding are `lg:` only).

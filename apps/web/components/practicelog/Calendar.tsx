@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { CheckIcon, CloseIcon, MicIcon, PlusIcon, StarIcon } from "@/components/tools";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import { hasFixedTimes } from "@/components/practicelog/RoutineTime";
 import WeekPopover, { type WeekTarget } from "@/components/practicelog/WeekPopover";
 import {
   type DayRoutine,
@@ -26,6 +27,7 @@ import {
   routinesOn,
   scheduleTasks,
   startOfWeek,
+  tasksOf,
   timeString,
   todayKey,
   weekdayOf,
@@ -208,6 +210,8 @@ function RoutineChip({ item, status = null, fill = false }: { item: DayRoutine; 
 }
 
 const HOUR_PX = 48;
+/** Dropping snaps to quarter hours. */
+const SNAP = 15;
 
 type BlockBase = {
   id: string;
@@ -222,6 +226,8 @@ type BlockBase = {
   done: number;
   total: number;
   skipped: boolean;
+  /** What dragging it moves (none for a routine whose tasks have clock times of their own). */
+  drag: DragItem | null;
 };
 type Block = BlockBase & { lane: number; lanes: number };
 
@@ -229,6 +235,7 @@ type Block = BlockBase & { lane: number; lanes: number };
 function blocksFor(item: DayRoutine, key: string): BlockBase[] {
   const { routine, occurrence } = item;
   const { done, total } = progressOf(routine, occurrence);
+  const drag = routineDrag(item, key);
   const out: BlockBase[] = [];
   let cur: BlockBase | null = null;
   for (const s of scheduleTasks(routine, occurrence)) {
@@ -250,6 +257,7 @@ function blocksFor(item: DayRoutine, key: string): BlockBase[] {
         done,
         total,
         skipped: !!occurrence.skipped,
+        drag,
       };
       out.push(cur);
     }
@@ -286,18 +294,590 @@ function layoutLanes(blocks: BlockBase[]): Block[] {
 }
 
 /** Where a pointer is in a day's column, as minutes into the day (snapped to half hours). */
-function slotAt(e: React.MouseEvent, firstHour: number): number {
+function slotAt(e: React.MouseEvent, firstHour: number, hourPx: number): number {
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  const half = Math.floor(((e.clientY - r.top) / HOUR_PX) * 2);
+  const half = Math.floor(((e.clientY - r.top) / hourPx) * 2);
   return Math.min(24 * 60 - 30, firstHour * 60 + Math.max(0, half) * 30);
 }
 
+/** One day on the time grid: its routines and tasks, timed and not, and how it went. */
+type DayInfo = ReturnType<typeof dayInfo>;
+
+function dayInfo(data: PracticeLogData, key: string, today: string) {
+  const items = routinesOn(data, key);
+  const tasks = data.days[key]?.tasks ?? [];
+  const taskBlocks: BlockBase[] = tasks
+    .filter((t) => parseTime(t.time) !== null)
+    .map((t) => {
+      const start = parseTime(t.time)!;
+      return {
+        id: `task-${t.id}`,
+        target: { kind: "tasks", date: key, ids: [t.id] },
+        color: TASK_COLOR,
+        title: t.title || "Task",
+        tasks: [],
+        start,
+        end: start + Math.max(10, t.minutes),
+        done: t.done ? 1 : 0,
+        total: 1,
+        skipped: false,
+        drag: { kind: "task", date: key, taskId: t.id, minutes: Math.max(10, t.minutes), title: t.title || "Task", color: TASK_COLOR },
+      };
+    });
+  const minutes = minutesOn(data, key);
+  const goal = goalOn(data, key);
+  return {
+    key,
+    items,
+    tasks,
+    untimed: items.filter((it) => !scheduleTasks(it.routine, it.occurrence).some((s) => s.start !== null)),
+    untimedTasks: tasks.filter((t) => parseTime(t.time) === null),
+    blocks: layoutLanes([...items.flatMap((it) => blocksFor(it, key)), ...taskBlocks]),
+    status: dayStatus(data, key, today),
+    minutes,
+    goal,
+    goalPct: goal > 0 ? Math.min(1, minutes / goal) : minutes > 0 ? 1 : 0,
+  };
+}
+
+// ---------------------------------------------------------------- dragging onto a time
+
+/** Something being dragged on the time grid: a routine on a day, or one of a day's own tasks. */
+type DragItem =
+  | { kind: "routine"; date: string; routineId: string; minutes: number; title: string; color: string; locked: boolean }
+  | { kind: "task"; date: string; taskId: string; minutes: number; title: string; color: string };
+/** Where it would land: a day, at a time (minutes into the day) or any time (null). */
+type Drop = { key: string; min: number | null };
+type Drag = { item: DragItem; drop: Drop | null };
+
+/** A routine can be dragged unless it's skipped or its tasks keep clock times of their own (moving
+    its start wouldn't move them). `locked`: something's been done on its day, so it stays there. */
+function routineDrag(item: DayRoutine, key: string): DragItem | null {
+  const { routine, occurrence } = item;
+  if (occurrence.skipped || hasFixedTimes(routine, occurrence)) return null;
+  return {
+    kind: "routine",
+    date: key,
+    routineId: routine.id,
+    minutes: Math.max(SNAP, tasksOf(routine, occurrence).reduce((s, t) => s + t.minutes, 0)),
+    title: routine.name || "Untitled routine",
+    color: colorOf(routine.color),
+    locked: (occurrence.done?.length ?? 0) > 0 || Object.keys(occurrence.spentMs ?? {}).length > 0,
+  };
+}
+
+// While a drag runs (and just after it ends), taps and swipes are ignored — the pointer-up that
+// ends a drag would otherwise also click what's under it.
+let dragActive = false;
+let dragEndedAt = 0;
+function justDragged() {
+  return dragActive || Date.now() - dragEndedAt < 250;
+}
+
 /**
- * A week. On wider screens a time grid: each routine's timed tasks where they fall in the day,
- * untimed ones in the "Any time" row above; click a free time to add a task there. On phones a
- * list of the seven days with each one's routines as big buttons. Either way, tapping a routine
- * (or a day's tasks) opens it in a popover to tick tasks off or start it, and swiping sideways
- * changes the week.
+ * Drag to schedule: hold a routine or task (a long press on touch screens) and drop it on a time
+ * in a day's column, or on "Any time". Columns are `[data-drop]` elements (`data-day`, and
+ * `data-drop="grid"` or `"any"`). Dropping on another day moves it there.
+ */
+function useTimeDrag({
+  log,
+  hourPx,
+  firstHour,
+  lastHour,
+  scroller,
+  onDropped,
+}: {
+  log: Log;
+  hourPx: number;
+  firstHour: number;
+  lastHour: number;
+  scroller: React.RefObject<HTMLDivElement | null>;
+  onDropped: (key: string) => void;
+}) {
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const live = useRef<Drag | null>(null);
+
+  // A finger that's dragging mustn't scroll the page.
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      if (live.current && e.cancelable) e.preventDefault();
+    };
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => document.removeEventListener("touchmove", onTouchMove);
+  }, []);
+
+  function dropAt(x: number, y: number, item: DragItem, offset: number): Drop | null {
+    const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop]");
+    const key = el?.dataset.day;
+    if (!el || !key) return null;
+    if (key !== item.date && item.kind === "routine") {
+      // A routine that's been started stays on its day, and can't go to a day that already has it.
+      if (item.locked || routinesOn(log.data, key).some((i) => i.routine.id === item.routineId)) return null;
+    }
+    if (el.dataset.drop === "any") return { key, min: null };
+    const r = el.getBoundingClientRect();
+    const raw = firstHour * 60 + ((y - r.top) / hourPx) * 60 - offset;
+    const latest = Math.max(firstHour * 60, lastHour * 60 - Math.min(item.minutes, 60));
+    return { key, min: Math.max(firstHour * 60, Math.min(latest, Math.round(raw / SNAP) * SNAP)) };
+  }
+
+  function apply(item: DragItem, drop: Drop) {
+    const time = drop.min === null ? null : timeString(drop.min);
+    if (item.kind === "task") {
+      const task = log.data.days[item.date]?.tasks?.find((t) => t.id === item.taskId);
+      if (task) log.moveDayTask(item.date, drop.key, { ...task, time });
+      onDropped(drop.key);
+      return;
+    }
+    const routine = log.data.routines.find((r) => r.id === item.routineId);
+    if (!routine) return;
+    if (drop.key !== item.date) {
+      // Moved to another day: added there, and taken off (or skipped on) the day it was on.
+      const from = routinesOn(log.data, item.date).find((i) => i.routine.id === routine.id);
+      log.addToDay(drop.key, routine.id);
+      if (from?.added) log.removeFromDay(item.date, routine.id);
+      else log.updateOccurrence(item.date, routine.id, (o) => ({ ...o, skipped: true }));
+    }
+    // The routine's own time needs no override for the day.
+    log.updateOccurrence(drop.key, routine.id, (o) => {
+      const n = { ...o };
+      if (time === routine.startTime) delete n.startTime;
+      else n.startTime = time;
+      return n;
+    });
+    onDropped(drop.key);
+  }
+
+  /** Pointer-down on something draggable; `offset` = minutes between its top and the pointer. */
+  function begin(e: React.PointerEvent, item: DragItem, offset = 0) {
+    if (e.button !== 0) return;
+    const touch = e.pointerType === "touch";
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let x = sx;
+    let y = sy;
+    let active = false;
+    let frame = 0;
+    const hold = touch ? window.setTimeout(() => activate(), 350) : 0;
+
+    const set = (d: Drag | null) => {
+      live.current = d;
+      setDrag(d);
+    };
+    const refresh = () => {
+      const drop = dropAt(x, y, item, offset);
+      const prev = live.current;
+      if (prev && (prev.drop?.key !== drop?.key || prev.drop?.min !== drop?.min)) set({ ...prev, drop });
+    };
+    // Held near the top or bottom of the grid, it scrolls (not when just passing through).
+    let edgeSince = 0;
+    const tick = () => {
+      const el = scroller.current;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const inside = x >= r.left && x <= r.right;
+        const dir = inside && y >= r.top && y < r.top + 32 ? -1 : inside && y <= r.bottom && y > r.bottom - 32 ? 1 : 0;
+        if (!dir) edgeSince = 0;
+        else if (!edgeSince) edgeSince = performance.now();
+        else if (performance.now() - edgeSince > 250) el.scrollTop += dir * 8;
+      }
+      refresh();
+      frame = requestAnimationFrame(tick);
+    };
+    function activate() {
+      active = true;
+      dragActive = true;
+      document.body.style.cursor = "grabbing";
+      if (touch) navigator.vibrate?.(10);
+      set({ item, drop: dropAt(x, y, item, offset) });
+      frame = requestAnimationFrame(tick);
+    }
+    const move = (ev: PointerEvent) => {
+      x = ev.clientX;
+      y = ev.clientY;
+      if (active) return;
+      const dist = Math.hypot(x - sx, y - sy);
+      // On a touch screen moving first means scrolling; with a mouse it starts the drag.
+      if (touch && dist > 8) finish(false);
+      else if (!touch && dist > 4) activate();
+    };
+    const up = () => finish(true);
+    const cancel = () => finish(false);
+    const key = (ev: KeyboardEvent) => ev.key === "Escape" && finish(false);
+    function finish(commit: boolean) {
+      clearTimeout(hold);
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", key);
+      if (!active) return;
+      active = false;
+      dragActive = false;
+      dragEndedAt = Date.now();
+      document.body.style.cursor = "";
+      const d = live.current;
+      set(null);
+      if (commit && d?.drop) apply(d.item, d.drop);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", key);
+  }
+
+  /** Props for something draggable. */
+  function handle(item: DragItem | null, offsetOf?: (e: React.PointerEvent) => number) {
+    if (!item) return {};
+    return {
+      onPointerDown: (e: React.PointerEvent) => begin(e, item, offsetOf?.(e) ?? 0),
+      onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+      "data-dragging": isSame(drag?.item, item) || undefined,
+    };
+  }
+
+  return { drag, handle };
+}
+
+function isSame(a: DragItem | undefined, b: DragItem): boolean {
+  if (!a || a.kind !== b.kind || a.date !== b.date) return false;
+  return a.kind === "routine" ? b.kind === "routine" && a.routineId === b.routineId : b.kind === "task" && a.taskId === b.taskId;
+}
+
+/** Classes for things you can drag: a grab cursor, no text selection or long-press menu, and faded
+    while it's being dragged. */
+const DRAGGABLE = "cursor-grab select-none [-webkit-touch-callout:none] data-[dragging]:opacity-40";
+
+const COLS = { week: "grid-cols-[3rem_repeat(7,minmax(0,1fr))]", day: "grid-cols-[3rem_minmax(0,1fr)]" };
+
+/**
+ * The time grid for a week (seven columns) or one day: each routine's timed tasks where they fall,
+ * untimed ones in the "Any time" row above. Click a free time to add something there; drag a
+ * routine or task to a time (or another day) to schedule it.
+ */
+function TimeGrid({
+  log,
+  days,
+  selected,
+  onSelect,
+  onOpen,
+  onOpenDay,
+  onAddTask,
+  single = false,
+  className = "",
+}: {
+  log: Log;
+  days: DayInfo[];
+  selected: string;
+  onSelect: (date: string) => void;
+  onOpen: (e: React.MouseEvent, target: WeekTarget) => void;
+  onOpenDay?: (date: string) => void;
+  onAddTask: (date: string, time: string | null) => void;
+  /** One day: no day headers, taller hours, bigger "Any time" pills. */
+  single?: boolean;
+  className?: string;
+}) {
+  const { data } = log;
+  const router = useRouter();
+  const today = todayKey();
+  const hourPx = single ? 64 : HOUR_PX;
+  const cols = single ? COLS.day : COLS.week;
+  const allBlocks = days.flatMap((d) => d.blocks);
+  // The whole day, midnight to midnight; it opens scrolled to the first thing planned (or 8 AM).
+  const firstHour = 0;
+  const lastHour = 24;
+  const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
+  const scroller = useRef<HTMLDivElement>(null);
+  const earliest = allBlocks.length ? Math.min(...allBlocks.map((b) => b.start)) : 8 * 60;
+  const { drag, handle } = useTimeDrag({ log, hourPx, firstHour, lastHour, scroller, onDropped: onSelect });
+
+  // Scrolled to the first block (or 8 AM) when the days change.
+  const first = days[0]?.key;
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollTop = Math.max(0, ((earliest - firstHour * 60) / 60) * hourPx - 16);
+  }, [first, earliest, firstHour, hourPx]);
+
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const hasUntimed = single || days.some((d) => d.untimed.length > 0 || d.untimedTasks.length > 0);
+
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  // The free half hour under the mouse, shown as a "+ 3:00 PM" slot.
+  const [ghost, setGhost] = useState<{ key: string; min: number } | null>(null);
+  const open = (e: React.MouseEvent, target: WeekTarget) => {
+    if (!justDragged()) onOpen(e, target);
+  };
+
+  function openSlotMenu(e: React.MouseEvent, key: string, min: number) {
+    onSelect(key);
+    const onDay = new Set(routinesOn(data, key).map((i) => i.routine.id));
+    const free = data.routines.filter((r) => !onDay.has(r.id));
+    // An any-time routine already on the day can be put at this time.
+    const untimed = routinesOn(data, key).filter((it) => !routineSpan(it.routine, it.occurrence) && routineDrag(it, key));
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: `Task at ${formatTime(min)}`, icon: <PlusIcon className="h-4 w-4 text-accent" />, onSelect: () => onAddTask(key, timeString(min)) },
+        ...untimed.map((it) => ({
+          label: `${it.routine.name || "Untitled routine"} at ${formatTime(min)}`,
+          icon: <RoutineIcon icon={it.routine.icon} color={it.routine.color} size="sm" />,
+          onSelect: () => log.updateOccurrence(key, it.routine.id, (o) => ({ ...o, startTime: timeString(min) })),
+        })),
+        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${key}`) },
+        ...free.map((r) => ({
+          label: `Add ${r.name || "Untitled routine"} at ${formatTime(min)}`,
+          icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />,
+          onSelect: () => {
+            log.addToDay(key, r.id);
+            if (!hasFixedTimes(r)) log.updateOccurrence(key, r.id, (o) => ({ ...o, startTime: timeString(min) }));
+          },
+        })),
+      ],
+    });
+  }
+
+  return (
+    <div className={`flex-col ${className}`}>
+      {!single && (
+        <div className={`grid ${cols} border-b border-surface-hover`}>
+          <div />
+          {days.map(({ key, minutes, status, goalPct }) => {
+            const isSel = key === selected;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onSelect(key)}
+                onDoubleClick={() => onOpenDay?.(key)}
+                title="Click to open the day · double-click for day view"
+                aria-pressed={isSel}
+                className={`flex flex-col items-center gap-1 py-2 transition-colors ${isSel ? "bg-accent/10" : "hover:bg-surface-hover/50"}`}
+              >
+                <span className={`text-xs font-semibold ${isSel ? "text-accent" : "text-muted"}`}>{WEEKDAY_SHORT[weekdayOf(key)]}</span>
+                <DayNumber dayKey={key} today={today} status={status} />
+                <DayGoal dayKey={key} today={today} minutes={minutes} pct={goalPct} status={status} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {hasUntimed && (
+        <div className={`grid ${cols} border-b border-surface-hover`}>
+          <div className={`px-1 text-right text-[10px] font-semibold leading-tight text-muted ${single ? "py-3" : "py-1.5"}`}>Any time</div>
+          {days.map(({ key, untimed, untimedTasks }) => {
+            const over = drag?.drop?.key === key && drag.drop.min === null;
+            return (
+              <div
+                key={key}
+                data-drop="any"
+                data-day={key}
+                className={`flex min-w-0 border-l border-surface-hover transition-colors ${single ? "min-h-14 flex-wrap items-center gap-1.5 p-2" : "flex-col gap-0.5 p-0.5"} ${over ? "bg-accent/15 ring-2 ring-inset ring-accent" : key === selected && !single ? "bg-accent/5" : ""}`}
+              >
+                {untimed.map((it) =>
+                  single ? (
+                    <AgendaPill key={it.routine.id} item={it} dayKey={key} today={today} onOpen={open} className={`w-auto max-w-full ${DRAGGABLE}`} dragProps={handle(routineDrag(it, key))} />
+                  ) : (
+                    <button
+                      key={it.routine.id}
+                      type="button"
+                      onClick={(e) => open(e, { kind: "routine", date: key, routineId: it.routine.id })}
+                      title="Click to open · drag onto a time to schedule it"
+                      {...handle(routineDrag(it, key))}
+                      className={`min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${routineDrag(it, key) ? DRAGGABLE : ""}`}
+                    >
+                      <RoutineChip item={it} status={routineStatus(it, key, today)} fill />
+                    </button>
+                  ),
+                )}
+                {single
+                  ? untimedTasks.map((t) => (
+                      <AgendaTasksPill
+                        key={t.id}
+                        tasks={[t]}
+                        dayKey={key}
+                        onOpen={open}
+                        className={`w-auto max-w-full ${DRAGGABLE}`}
+                        dragProps={handle({ kind: "task", date: key, taskId: t.id, minutes: Math.max(10, t.minutes), title: t.title || "Task", color: TASK_COLOR })}
+                      />
+                    ))
+                  : untimedTasks.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => open(e, { kind: "tasks", date: key, ids: untimedTasks.map((t) => t.id) })}
+                        title={untimedTasks.length === 1 ? "Click to open · drag onto a time to schedule it" : undefined}
+                        {...(untimedTasks.length === 1
+                          ? handle({ kind: "task", date: key, taskId: untimedTasks[0].id, minutes: Math.max(10, untimedTasks[0].minutes), title: untimedTasks[0].title || "Task", color: TASK_COLOR })
+                          : {})}
+                        className={`min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${untimedTasks.length === 1 ? DRAGGABLE : ""}`}
+                      >
+                        <TasksChip tasks={untimedTasks} />
+                      </button>
+                    )}
+                {single && untimed.length === 0 && untimedTasks.length === 0 && (
+                  <span className="pointer-events-none px-1 text-xs text-muted">{over ? "Drop to do it any time" : "Nothing without a time"}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div ref={scroller} className="max-h-[32rem] overflow-y-auto lg:h-0 lg:max-h-none lg:min-h-[20rem] lg:flex-1">
+        {allBlocks.length === 0 && !drag && (
+          <div className="pointer-events-none sticky top-2 z-20 h-0">
+            <p className="mx-auto w-fit max-w-[90%] rounded-full bg-background/90 px-3 py-1 text-center text-xs text-muted shadow-sm">
+              {single ? "Nothing at a set time. Drag a routine onto a time, or tap a time to add a task." : "Nothing at a set time this week. Drag a routine onto a time, or click a time to add a task."}
+            </p>
+          </div>
+        )}
+        <div className={`relative grid ${cols}`} style={{ height: hours.length * hourPx }}>
+          <div className="relative">
+            {hours.map((h, i) => (
+              <span key={h} className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums text-muted" style={{ top: i * hourPx }}>
+                {i === 0 ? "" : formatTime(h * 60).replace(":00", "")}
+              </span>
+            ))}
+          </div>
+          {days.map(({ key, blocks }) => {
+            const drop = drag?.drop?.key === key && drag.drop.min !== null ? drag.drop.min : null;
+            return (
+              <div
+                key={key}
+                data-drop="grid"
+                data-day={key}
+                className={`relative cursor-cell border-l border-surface-hover ${key === selected && !single ? "bg-accent/5" : ""}`}
+                onPointerMove={(e) => {
+                  if (e.pointerType !== "mouse" || drag) return;
+                  if (e.target !== e.currentTarget) {
+                    if (ghost) setGhost(null);
+                    return;
+                  }
+                  const min = slotAt(e, firstHour, hourPx);
+                  if (ghost?.key !== key || ghost.min !== min) setGhost({ key, min });
+                }}
+                onPointerLeave={() => setGhost(null)}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget && !justDragged()) openSlotMenu(e, key, slotAt(e, firstHour, hourPx));
+                }}
+              >
+                {hours.map((h, i) => (
+                  <div key={h} className="pointer-events-none absolute inset-x-0 border-t border-surface-hover/60" style={{ top: i * hourPx }} />
+                ))}
+                {single &&
+                  hours.map((h, i) => (
+                    <div key={`${h}-half`} className="pointer-events-none absolute inset-x-0 border-t border-dashed border-surface-hover/40" style={{ top: i * hourPx + hourPx / 2 }} />
+                  ))}
+                {ghost?.key === key && !drag && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0.5 flex items-start gap-1 rounded-md border border-dashed border-accent/60 bg-accent/10 px-1 py-0.5 text-[11px] font-semibold text-accent"
+                    style={{ top: ((ghost.min - firstHour * 60) / 60) * hourPx + 1, height: hourPx / 2 - 2 }}
+                  >
+                    <PlusIcon className="mt-px h-3 w-3 shrink-0" /> <span className="truncate">{formatTime(ghost.min)}</span>
+                  </div>
+                )}
+                {blocks.map((b) => {
+                  const top = ((b.start - firstHour * 60) / 60) * hourPx;
+                  const height = Math.max(18, ((b.end - b.start) / 60) * hourPx - 2);
+                  const complete = b.total > 0 && b.done === b.total;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={(e) => open(e, b.target)}
+                      title={`${b.title}: ${formatTime(b.start)} – ${formatTime(b.end)}${b.tasks.length ? `\n${b.tasks.join(", ")}` : ""}${b.drag ? "\nDrag to move it" : ""}`}
+                      {...handle(b.drag, (e) => (((e.clientY - e.currentTarget.getBoundingClientRect().top) / hourPx) * 60))}
+                      className={`absolute z-[1] overflow-hidden rounded-md text-left leading-tight transition-[filter,box-shadow] hover:z-[2] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${single ? "py-1 pl-4 pr-2 text-xs" : "py-0.5 pl-2.5 pr-1 text-[11px]"} ${b.skipped ? "opacity-40 line-through" : ""} ${b.drag ? DRAGGABLE : ""}`}
+                      style={{
+                        top,
+                        height,
+                        left: `calc(${(b.lane / b.lanes) * 100}% + 1px)`,
+                        width: `calc(${100 / b.lanes}% - 2px)`,
+                        background: `color-mix(in srgb, ${b.color} ${complete ? 45 : 22}%, var(--surface))`,
+                      }}
+                    >
+                      {/* The same rounded bar down the left as the routine cards in the day panel. */}
+                      <span aria-hidden className={`absolute w-1 rounded-full ${single ? "bottom-1.5 left-1.5 top-1.5" : "bottom-1 left-1 top-1"}`} style={{ background: b.color }} />
+                      <span className="flex items-center gap-1 font-semibold">
+                        {b.icon !== undefined && <RoutineIcon icon={b.icon} color={b.colorIdx ?? 0} size="xs" />}
+                        {complete && <CheckIcon className="h-3 w-3 shrink-0" />}
+                        <span className="truncate">{b.title}</span>
+                        {single && height <= 34 && <span className="shrink-0 font-normal text-muted">{formatTime(b.start)}</span>}
+                      </span>
+                      {height > 34 && (
+                        <span className="block truncate text-muted">
+                          {formatTime(b.start)}
+                          {single && ` – ${formatTime(b.end)}`}
+                          {b.total > 1 && b.done > 0 && !complete && ` · ${b.done}/${b.total}`}
+                        </span>
+                      )}
+                      {height > 52 && b.tasks.length > 0 && <span className="block truncate">{b.tasks.join(" · ")}</span>}
+                      {b.total > 1 && b.done > 0 && (
+                        <span className="absolute inset-x-0 bottom-0 h-0.5" style={{ background: `linear-gradient(90deg, ${b.color} ${(b.done / b.total) * 100}%, transparent 0)` }} />
+                      )}
+                    </button>
+                  );
+                })}
+                {drop !== null && drag && (
+                  <div
+                    className="pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border-2 border-dashed px-1.5 py-0.5 text-[11px] font-semibold leading-tight shadow-lg"
+                    style={{
+                      top: ((drop - firstHour * 60) / 60) * hourPx,
+                      height: Math.max(20, (drag.item.minutes / 60) * hourPx - 2),
+                      borderColor: drag.item.color,
+                      background: `color-mix(in srgb, ${drag.item.color} 30%, var(--surface))`,
+                    }}
+                  >
+                    {(drag.item.minutes / 60) * hourPx >= 36 ? (
+                      <>
+                        <span className="block truncate">{drag.item.title}</span>
+                        <span className="block truncate text-muted">
+                          {formatTime(drop)} – {formatTime(drop + drag.item.minutes)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="block truncate">
+                        {formatTime(drop)} · {drag.item.title}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {key === today && nowMin >= firstHour * 60 && nowMin <= lastHour * 60 && (
+                  <div className="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-danger" style={{ top: ((nowMin - firstHour * 60) / 60) * hourPx }}>
+                    <span className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+    </div>
+  );
+}
+
+/** Opens a routine or tasks in the week popover, beside what was tapped. */
+function usePopover(onSelect: (date: string) => void) {
+  const [pop, setPop] = useState<{ target: WeekTarget; anchor: DOMRect } | null>(null);
+  const open = (e: React.MouseEvent, target: WeekTarget) => {
+    e.stopPropagation();
+    onSelect(target.date);
+    // Open where it was clicked; a keyboard press (no pointer position) opens beside the whole button.
+    const anchor = e.detail > 0 ? new DOMRect(e.clientX, e.clientY, 0, 0) : (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPop({ target, anchor });
+  };
+  return { pop, open, close: () => setPop(null) };
+}
+
+/**
+ * A week. On wider screens a time grid (see `TimeGrid`); on phones a list of the seven days with
+ * each one's routines as big buttons. Either way, tapping a routine (or a day's tasks) opens it in
+ * a popover to tick tasks off or start it, and swiping sideways changes the week.
  */
 export function WeekView({
   log,
@@ -318,97 +898,11 @@ export function WeekView({
   onAddTask: (date: string, time: string | null) => void;
 }) {
   const { data } = log;
-  const router = useRouter();
   const start = startOfWeek(selected);
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
   const today = todayKey();
-  const perDay = useMemo(
-    () =>
-      days.map((key) => {
-        const items = routinesOn(data, key);
-        const tasks = data.days[key]?.tasks ?? [];
-        const taskBlocks: BlockBase[] = tasks
-          .filter((t) => parseTime(t.time) !== null)
-          .map((t) => {
-            const start = parseTime(t.time)!;
-            return {
-              id: `task-${t.id}`,
-              target: { kind: "tasks", date: key, ids: [t.id] },
-              color: TASK_COLOR,
-              title: t.title || "Task",
-              tasks: [],
-              start,
-              end: start + Math.max(10, t.minutes),
-              done: t.done ? 1 : 0,
-              total: 1,
-              skipped: false,
-            };
-          });
-        const minutes = minutesOn(data, key);
-        const goal = goalOn(data, key);
-        return {
-          key,
-          items,
-          tasks,
-          untimed: items.filter((it) => !scheduleTasks(it.routine, it.occurrence).some((s) => s.start !== null)),
-          untimedTasks: tasks.filter((t) => parseTime(t.time) === null),
-          blocks: layoutLanes([...items.flatMap((it) => blocksFor(it, key)), ...taskBlocks]),
-          status: dayStatus(data, key, today),
-          minutes,
-          goal,
-          goalPct: goal > 0 ? Math.min(1, minutes / goal) : minutes > 0 ? 1 : 0,
-        };
-      }),
-    [days, data, today],
-  );
-  const allBlocks = perDay.flatMap((d) => d.blocks);
-  const firstHour = Math.max(0, Math.min(6, ...allBlocks.map((b) => Math.floor(b.start / 60))));
-  const lastHour = Math.min(24, Math.max(22, ...allBlocks.map((b) => Math.ceil(b.end / 60))));
-  const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
-  const scroller = useRef<HTMLDivElement>(null);
-  const earliest = allBlocks.length ? Math.min(...allBlocks.map((b) => b.start)) : 8 * 60;
-
-  // Scrolled to the week's first block (or 8 AM) when the week changes.
-  useEffect(() => {
-    const el = scroller.current;
-    if (el) el.scrollTop = Math.max(0, ((earliest - firstHour * 60) / 60) * HOUR_PX - 16);
-  }, [start, earliest, firstHour]);
-
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(id);
-  }, []);
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const hasUntimed = perDay.some((d) => d.untimed.length > 0 || d.untimedTasks.length > 0);
-
-  const [pop, setPop] = useState<{ target: WeekTarget; anchor: DOMRect } | null>(null);
-  const [menu, setMenu] = useState<MenuState | null>(null);
-  // The free half hour under the mouse, shown as a "+ 3:00 PM" slot.
-  const [ghost, setGhost] = useState<{ key: string; min: number } | null>(null);
+  const perDay = useMemo(() => Array.from({ length: 7 }, (_, i) => dayInfo(data, addDays(start, i), today)), [start, data, today]);
+  const { pop, open: openPop, close } = usePopover(onSelect);
   const touch = useRef<{ x: number; y: number } | null>(null);
-
-  function openPop(e: React.MouseEvent, target: WeekTarget) {
-    e.stopPropagation();
-    onSelect(target.date);
-    setPop({ target, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() });
-  }
-
-  function openSlotMenu(e: React.MouseEvent, key: string, min: number) {
-    onSelect(key);
-    const onDay = new Set(routinesOn(data, key).map((i) => i.routine.id));
-    setMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: [
-        { label: `Task at ${formatTime(min)}`, icon: <PlusIcon className="h-4 w-4 text-accent" />, onSelect: () => onAddTask(key, timeString(min)) },
-        { label: "New routine starting this day", icon: <PlusIcon className="h-4 w-4 text-muted" />, onSelect: () => router.push(`/shed-log/routine/edit?date=${key}`) },
-        ...data.routines
-          .filter((r) => !onDay.has(r.id))
-          .map((r) => ({ label: `Add ${r.name || "Untitled routine"} to this day`, icon: <RoutineIcon icon={r.icon} color={r.color} size="sm" />, onSelect: () => log.addToDay(key, r.id) })),
-      ],
-    });
-  }
 
   return (
     <div
@@ -420,7 +914,7 @@ export function WeekView({
       onTouchEnd={(e) => {
         const s = touch.current;
         touch.current = null;
-        if (!s) return;
+        if (!s || justDragged()) return;
         const t = e.changedTouches[0];
         const dx = t.clientX - s.x;
         const dy = t.clientY - s.y;
@@ -459,147 +953,42 @@ export function WeekView({
       </ul>
 
       {/* Wider screens: the time grid. */}
-      <div className="hidden grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover sm:grid">
-        <div />
-        {perDay.map(({ key, minutes, status, goalPct }) => {
-          const isSel = key === selected;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onSelect(key)}
-              onDoubleClick={() => onOpenDay(key)}
-              title="Click to open the day · double-click for day view"
-              aria-pressed={isSel}
-              className={`flex flex-col items-center gap-1 py-2 transition-colors ${isSel ? "bg-accent/10" : "hover:bg-surface-hover/50"}`}
-            >
-              <span className={`text-xs font-semibold ${isSel ? "text-accent" : "text-muted"}`}>{WEEKDAY_SHORT[weekdayOf(key)]}</span>
-              <DayNumber dayKey={key} today={today} status={status} />
-              <DayGoal dayKey={key} today={today} minutes={minutes} pct={goalPct} status={status} />
-            </button>
-          );
-        })}
-      </div>
-      {hasUntimed && (
-        <div className="hidden grid-cols-[3rem_repeat(7,minmax(0,1fr))] border-b border-surface-hover sm:grid">
-          <div className="px-1 py-1.5 text-right text-[10px] font-semibold leading-tight text-muted">Any time</div>
-          {perDay.map(({ key, untimed, untimedTasks }) => (
-            <div key={key} className={`flex min-w-0 flex-col gap-0.5 border-l border-surface-hover p-0.5 ${key === selected ? "bg-accent/5" : ""}`}>
-              {untimed.map((it) => (
-                <button
-                  key={it.routine.id}
-                  type="button"
-                  onClick={(e) => openPop(e, { kind: "routine", date: key, routineId: it.routine.id })}
-                  className="min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent"
-                >
-                  <RoutineChip item={it} status={routineStatus(it, key, today)} fill />
-                </button>
-              ))}
-              {untimedTasks.length > 0 && (
-                <button
-                  type="button"
-                  onClick={(e) => openPop(e, { kind: "tasks", date: key, ids: untimedTasks.map((t) => t.id) })}
-                  className="min-w-0 rounded text-left transition-[filter] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent"
-                >
-                  <TasksChip tasks={untimedTasks} />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      <div ref={scroller} className="hidden max-h-[32rem] overflow-y-auto sm:block lg:h-0 lg:max-h-none lg:min-h-[20rem] lg:flex-1">
-        {allBlocks.length === 0 && (
-          <div className="pointer-events-none sticky top-2 z-20 h-0">
-            <p className="mx-auto w-fit rounded-full bg-background/90 px-3 py-1 text-xs text-muted shadow-sm">Nothing at a set time this week. Click a time to add a task there.</p>
-          </div>
-        )}
-        <div className="relative grid grid-cols-[3rem_repeat(7,minmax(0,1fr))]" style={{ height: hours.length * HOUR_PX }}>
-          <div className="relative">
-            {hours.map((h, i) => (
-              <span key={h} className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums text-muted" style={{ top: i * HOUR_PX }}>
-                {i === 0 ? "" : formatTime(h * 60).replace(":00", "")}
-              </span>
-            ))}
-          </div>
-          {perDay.map(({ key, blocks }) => (
-            <div
-              key={key}
-              className={`relative cursor-cell border-l border-surface-hover ${key === selected ? "bg-accent/5" : ""}`}
-              onPointerMove={(e) => {
-                if (e.pointerType !== "mouse") return;
-                if (e.target !== e.currentTarget) {
-                  if (ghost) setGhost(null);
-                  return;
-                }
-                const min = slotAt(e, firstHour);
-                if (ghost?.key !== key || ghost.min !== min) setGhost({ key, min });
-              }}
-              onPointerLeave={() => setGhost(null)}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) openSlotMenu(e, key, slotAt(e, firstHour));
-              }}
-            >
-              {hours.map((h, i) => (
-                <div key={h} className="pointer-events-none absolute inset-x-0 border-t border-surface-hover/60" style={{ top: i * HOUR_PX }} />
-              ))}
-              {ghost?.key === key && (
-                <div
-                  className="pointer-events-none absolute inset-x-0.5 flex items-start gap-1 rounded-md border border-dashed border-accent/60 bg-accent/10 px-1 py-0.5 text-[11px] font-semibold text-accent"
-                  style={{ top: ((ghost.min - firstHour * 60) / 60) * HOUR_PX + 1, height: HOUR_PX / 2 - 2 }}
-                >
-                  <PlusIcon className="mt-px h-3 w-3 shrink-0" /> <span className="truncate">{formatTime(ghost.min)}</span>
-                </div>
-              )}
-              {blocks.map((b) => {
-                const top = ((b.start - firstHour * 60) / 60) * HOUR_PX;
-                const height = Math.max(18, ((b.end - b.start) / 60) * HOUR_PX - 2);
-                const complete = b.total > 0 && b.done === b.total;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={(e) => openPop(e, b.target)}
-                    title={`${b.title}: ${formatTime(b.start)} – ${formatTime(b.end)}${b.tasks.length ? `\n${b.tasks.join(", ")}` : ""}`}
-                    className={`absolute z-[1] overflow-hidden rounded-md px-1 py-0.5 text-left text-[11px] leading-tight transition-[filter,box-shadow] hover:z-[2] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${b.skipped ? "opacity-40 line-through" : ""}`}
-                    style={{
-                      top,
-                      height,
-                      left: `calc(${(b.lane / b.lanes) * 100}% + 1px)`,
-                      width: `calc(${100 / b.lanes}% - 2px)`,
-                      background: `color-mix(in srgb, ${b.color} ${complete ? 45 : 22}%, var(--surface))`,
-                      boxShadow: `inset 3px 0 0 ${b.color}`,
-                    }}
-                  >
-                    <span className="flex items-center gap-1 font-semibold">
-                      {b.icon !== undefined && <RoutineIcon icon={b.icon} color={b.colorIdx ?? 0} size="xs" />}
-                      {complete && <CheckIcon className="h-3 w-3 shrink-0" />}
-                      <span className="truncate">{b.title}</span>
-                    </span>
-                    {height > 34 && (
-                      <span className="block truncate text-muted">
-                        {formatTime(b.start)}
-                        {b.total > 1 && b.done > 0 && !complete && ` · ${b.done}/${b.total}`}
-                      </span>
-                    )}
-                    {height > 52 && b.tasks.length > 0 && <span className="block truncate">{b.tasks.join(" · ")}</span>}
-                    {b.total > 1 && b.done > 0 && (
-                      <span className="absolute inset-x-0 bottom-0 h-0.5" style={{ background: `linear-gradient(90deg, ${b.color} ${(b.done / b.total) * 100}%, transparent 0)` }} />
-                    )}
-                  </button>
-                );
-              })}
-              {key === today && nowMin >= firstHour * 60 && nowMin <= lastHour * 60 && (
-                <div className="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-danger" style={{ top: ((nowMin - firstHour * 60) / 60) * HOUR_PX }}>
-                  <span className="absolute -left-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-      {pop && <WeekPopover target={pop.target} anchor={pop.anchor} log={log} onClose={() => setPop(null)} onOpenDay={onOpenDay} />}
-      {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      <TimeGrid
+        log={log}
+        days={perDay}
+        selected={selected}
+        onSelect={onSelect}
+        onOpen={openPop}
+        onOpenDay={onOpenDay}
+        onAddTask={onAddTask}
+        className="hidden sm:flex lg:min-h-0 lg:flex-1"
+      />
+      {pop && <WeekPopover target={pop.target} anchor={pop.anchor} log={log} onClose={close} onOpenDay={onOpenDay} />}
+    </div>
+  );
+}
+
+/** One day as a time grid, like a column of the week but roomier: drag routines and tasks onto a
+    time, tap one to tick it off or start it, tap a free time to add something. */
+export function DayView({
+  log,
+  date,
+  onSelect,
+  onAddTask,
+}: {
+  log: Log;
+  date: string;
+  onSelect: (date: string) => void;
+  onAddTask: (date: string, time: string | null) => void;
+}) {
+  const { data } = log;
+  const today = todayKey();
+  const day = useMemo(() => dayInfo(data, date, today), [data, date, today]);
+  const { pop, open, close } = usePopover(onSelect);
+  return (
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
+      <TimeGrid log={log} days={[day]} selected={date} onSelect={onSelect} onOpen={open} onAddTask={onAddTask} single className="flex lg:min-h-0 lg:flex-1" />
+      {pop && <WeekPopover target={pop.target} anchor={pop.anchor} log={log} onClose={close} />}
     </div>
   );
 }
@@ -643,7 +1032,21 @@ function DayGoal({ dayKey, today, minutes, pct, status }: { dayKey: string; toda
 }
 
 /** A routine on the phone list: its icon, name, time and how much is done. Opens the popover. */
-function AgendaPill({ item, dayKey, today, onOpen }: { item: DayRoutine; dayKey: string; today: string; onOpen: (e: React.MouseEvent, target: WeekTarget) => void }) {
+function AgendaPill({
+  item,
+  dayKey,
+  today,
+  onOpen,
+  className = "",
+  dragProps,
+}: {
+  item: DayRoutine;
+  dayKey: string;
+  today: string;
+  onOpen: (e: React.MouseEvent, target: WeekTarget) => void;
+  className?: string;
+  dragProps?: React.HTMLAttributes<HTMLButtonElement>;
+}) {
   const { routine, occurrence } = item;
   const color = colorOf(routine.color);
   const span = routineSpan(routine, occurrence);
@@ -654,7 +1057,8 @@ function AgendaPill({ item, dayKey, today, onOpen }: { item: DayRoutine; dayKey:
     <button
       type="button"
       onClick={(e) => onOpen(e, { kind: "routine", date: dayKey, routineId: routine.id })}
-      className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98] ${skipped ? "opacity-50" : ""}`}
+      {...dragProps}
+      className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98] ${skipped ? "opacity-50" : ""} ${className}`}
       style={{ background: `color-mix(in srgb, ${color} ${total > 0 && done === total ? 30 : 15}%, transparent)` }}
     >
       <RoutineIcon icon={routine.icon} color={routine.color} size="sm" />
@@ -668,13 +1072,26 @@ function AgendaPill({ item, dayKey, today, onOpen }: { item: DayRoutine; dayKey:
 }
 
 /** A day's own tasks on the phone list, as one pill. */
-function AgendaTasksPill({ tasks, dayKey, onOpen }: { tasks: { id: string; title: string; done: boolean }[]; dayKey: string; onOpen: (e: React.MouseEvent, target: WeekTarget) => void }) {
+function AgendaTasksPill({
+  tasks,
+  dayKey,
+  onOpen,
+  className = "",
+  dragProps,
+}: {
+  tasks: { id: string; title: string; done: boolean }[];
+  dayKey: string;
+  onOpen: (e: React.MouseEvent, target: WeekTarget) => void;
+  className?: string;
+  dragProps?: React.HTMLAttributes<HTMLButtonElement>;
+}) {
   const done = tasks.filter((t) => t.done).length;
   return (
     <button
       type="button"
       onClick={(e) => onOpen(e, { kind: "tasks", date: dayKey, ids: tasks.map((t) => t.id) })}
-      className="flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98]"
+      {...dragProps}
+      className={`flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl py-1.5 pl-1.5 pr-2 text-left active:scale-[0.98] ${className}`}
       style={{ background: `color-mix(in srgb, ${TASK_COLOR} ${done === tasks.length ? 30 : 15}%, transparent)` }}
     >
       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white" style={{ background: TASK_COLOR }}>
