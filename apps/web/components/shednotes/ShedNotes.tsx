@@ -1,7 +1,7 @@
 "use client";
 
 import type { EditorView } from "@codemirror/view";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -59,7 +59,11 @@ type Prompt =
   | { kind: "move"; note: NoteMeta }
   | { kind: "rename"; note: NoteMeta }
   | { kind: "new-folder"; parent: string }
-  | { kind: "rename-folder"; path: string };
+  | { kind: "rename-folder"; path: string }
+  | { kind: "move-folder"; path: string };
+
+const leafOf = (path: string) => path.slice(path.lastIndexOf("/") + 1);
+const parentOf = (path: string) => (path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "");
 
 /**
  * Shed Notes: markdown notes like Obsidian — a list of notes in folders on the left, the open note
@@ -75,6 +79,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const moveMut = useMutation(api.shedNotes.move);
   const renameMut = useMutation(api.shedNotes.rename);
   const renameFolderMut = useMutation(api.shedNotes.renameFolder);
+  const createFolderMut = useMutation(api.shedNotes.createFolder);
+  const deleteFolderMut = useMutation(api.shedNotes.deleteFolder);
+  const folderList = useQuery(api.shedNotes.folders);
+  const [deletingFolder, setDeletingFolder] = useState<string | null>(null);
 
   const [current, setCurrent] = useState<string | null>(initialId || null);
   const [back, setBack] = useState<string[]>([]);
@@ -242,8 +250,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       move: (note: NoteMeta) => setPrompt({ kind: "move", note }),
       remove: (note: NoteMeta) => setDeleting(note),
       renameFolder: (path: string) => setPrompt({ kind: "rename-folder", path }),
+      moveFolderPrompt: (path: string) => setPrompt({ kind: "move-folder", path }),
+      deleteFolder: (path: string) => setDeletingFolder(path),
+      moveNoteTo: (id: string, folder: string) => void moveMut({ id: id as Id<"shedNotes">, folder }).catch((e) => setNotice(errorText(e))),
+      moveFolderTo: (path: string, parent: string) =>
+        void renameFolderMut({ from: path, to: parent ? `${parent}/${leafOf(path)}` : leafOf(path) }).catch((e) => setNotice(errorText(e))),
     }),
-    [open, createNote],
+    [open, createNote, moveMut, renameFolderMut],
   );
 
   async function submitPrompt(value: string) {
@@ -253,8 +266,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     try {
       if (p.kind === "move") await moveMut({ id: p.note.id as Id<"shedNotes">, folder: value });
       else if (p.kind === "rename") await renameMut({ id: p.note.id as Id<"shedNotes">, title: value });
-      else if (p.kind === "new-folder") await createNote(undefined, p.parent ? `${p.parent}/${value}` : value);
-      else await renameFolderMut({ from: p.path, to: value });
+      // A new folder is just a folder (it can stay empty).
+      else if (p.kind === "new-folder") await createFolderMut({ path: p.parent ? `${p.parent}/${value}` : value });
+      // Renaming keeps it where it is; Move takes the folder to put it in.
+      else if (p.kind === "rename-folder") {
+        const parent = parentOf(p.path);
+        await renameFolderMut({ from: p.path, to: parent ? `${parent}/${value}` : value });
+      } else await renameFolderMut({ from: p.path, to: value ? `${value}/${leafOf(p.path)}` : leafOf(p.path) });
     } catch (e) {
       setNotice(errorText(e));
     }
@@ -282,7 +300,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             <GearIcon className="h-4 w-4" />
           </button>
         </div>
-        <NoteList key={listQuery?.n ?? 0} notes={notes} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
+        <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
       </aside>
 
       <section className={`min-h-0 min-w-0 flex-1 flex-col ${current ? "flex" : "hidden lg:flex"}`}>
@@ -386,13 +404,40 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       )}
       {prompt && (
         <PromptDialog
-          title={prompt.kind === "move" ? "Move to folder" : prompt.kind === "rename" ? "Rename note" : prompt.kind === "new-folder" ? "New folder" : "Rename folder"}
-          initialValue={prompt.kind === "move" ? prompt.note.folder : prompt.kind === "rename" ? prompt.note.title : prompt.kind === "rename-folder" ? prompt.path : ""}
-          placeholder={prompt.kind === "move" ? "Folder (blank for the top level), e.g. Scales/Major" : prompt.kind === "new-folder" ? "Folder name" : undefined}
-          confirmLabel={prompt.kind === "move" ? "Move" : prompt.kind === "new-folder" ? "Make folder" : "Rename"}
-          allowEmpty={prompt.kind === "move"}
+          title={
+            prompt.kind === "move"
+              ? "Move to folder"
+              : prompt.kind === "rename"
+                ? "Rename note"
+                : prompt.kind === "new-folder"
+                  ? prompt.parent
+                    ? `New folder in ${leafOf(prompt.parent)}`
+                    : "New folder"
+                  : prompt.kind === "move-folder"
+                    ? `Move "${leafOf(prompt.path)}" into…`
+                    : "Rename folder"
+          }
+          initialValue={
+            prompt.kind === "move" ? prompt.note.folder : prompt.kind === "rename" ? prompt.note.title : prompt.kind === "rename-folder" ? leafOf(prompt.path) : prompt.kind === "move-folder" ? parentOf(prompt.path) : ""
+          }
+          placeholder={prompt.kind === "move" || prompt.kind === "move-folder" ? "Folder (blank for the top level), e.g. Scales/Major" : prompt.kind === "new-folder" ? "Folder name" : undefined}
+          confirmLabel={prompt.kind === "move" || prompt.kind === "move-folder" ? "Move" : prompt.kind === "new-folder" ? "Make folder" : "Rename"}
+          allowEmpty={prompt.kind === "move" || prompt.kind === "move-folder"}
           onSubmit={(v) => void submitPrompt(v)}
           onCancel={() => setPrompt(null)}
+        />
+      )}
+      {deletingFolder !== null && (
+        <ConfirmDialog
+          title={`Delete the folder "${leafOf(deletingFolder)}"?`}
+          message={`What's in it (notes and folders) moves up to ${parentOf(deletingFolder) ? `"${leafOf(parentOf(deletingFolder))}"` : "the top level"}. No notes are deleted.`}
+          confirmLabel="Delete folder"
+          onConfirm={() => {
+            const path = deletingFolder;
+            setDeletingFolder(null);
+            deleteFolderMut({ path }).catch((e) => setNotice(errorText(e)));
+          }}
+          onCancel={() => setDeletingFolder(null)}
         />
       )}
       {deleting && (

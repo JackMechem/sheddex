@@ -6,7 +6,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import Select from "@/components/Select";
 import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, NoteIcon } from "@/components/tools";
 import { FONTS, getFont } from "@/lib/fonts";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
@@ -250,12 +249,26 @@ export default function NotePane({
             ))}
           </div>
           <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} keys={keysFor("view:toggle-vim", config.keybindings)} />
-          <Select
-            value={note.view?.font ?? ""}
-            options={[{ value: "", label: "Site font" }, ...FONTS.map((f) => ({ value: f.id, label: `${f.label} · ${f.kind.toLowerCase()}` }))]}
-            onChange={(font) => void setView({ id: id as Id<"shedNotes">, font: font || null })}
-            className="w-36 shrink-0 text-xs"
-          />
+          <button
+            type="button"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const current = note.view?.font ?? "";
+              setMenu({
+                x: Math.max(8, r.right - 220),
+                y: r.bottom + 4,
+                items: [{ value: "", label: "Site font" }, ...FONTS.map((f) => ({ value: f.id, label: `${f.label} · ${f.kind.toLowerCase()}` }))].map((o) => ({
+                  label: `${o.value === current ? "✓ " : ""}${o.label}`,
+                  onSelect: () => void setView({ id: id as Id<"shedNotes">, font: o.value || null }),
+                })),
+              });
+            }}
+            aria-label="Font for this note"
+            title={`Font for this note: ${note.view?.font ? getFont(note.view.font).label : "the site font"}`}
+            className={`${iconBtn} px-2 font-serif text-sm font-bold ${note.view?.font ? "text-accent" : ""}`}
+          >
+            Aa
+          </button>
           <button
             type="button"
             onClick={toggleFullWidth}

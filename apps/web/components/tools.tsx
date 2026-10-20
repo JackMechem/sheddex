@@ -443,6 +443,45 @@ export function FileIcon({ className }: { className?: string }) {
 }
 
 /** A page with lines — a PDF or document. */
+/** A folder (closed). */
+export function FolderIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+
+/** A folder, open. */
+export function FolderOpenIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 17V7a2 2 0 012-2h4l2 2h7a2 2 0 012 2v1" />
+      <path d="M3 17l2.2-6.2A2 2 0 017.1 9.5H20a1.5 1.5 0 011.4 2l-2 5.6A2 2 0 0117.5 19H5a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+
+/** A folder with a plus: new folder. */
+export function FolderPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <path d="M12 10.5v5M9.5 13h5" />
+    </svg>
+  );
+}
+
+/** A page with a plus: new note. */
+export function NotePlusIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5M12 11v6M9 14h6" />
+    </svg>
+  );
+}
+
 /** Score Writer: a staff with a note on it. */
 export function ScoreIcon({ className }: { className?: string }) {
   return (

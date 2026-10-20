@@ -185,3 +185,21 @@ same note; clicking a dashed link made "Ear training plan" in "Practice" and ope
 Ctrl/⌘-Alt-F); the note's choice overrides the general `readableLineLength`, and the font applies
 to the title and the editor (`NoteEditor`'s `fontFamily`). Checked in the harness: full width and
 Lora stick to one note and not another, Ctrl+Alt+F toggles.
+
+**Folders: empty folders, clearer tree, drag and drop (2026-10-20):**
+- `shedNoteFolders` (userId, path): folders made with New folder, so they can be empty (account
+  deletion cascades it). The tree is these plus every note's `folder`. `shedNotes.createFolder`,
+  `renameFolder` (also a move: everything inside goes along, subfolders and notes; refuses to put
+  a folder inside itself), `deleteFolder` (what's inside moves up to the parent; no note is
+  deleted), `folders` (the list).
+- `NoteList.tsx` rewritten: folder icons (open/closed), bold names, counts, a guide line down
+  each folder's contents, "Empty" for an empty folder; on every folder row New note here, New
+  folder inside and ⋮ (rename — name only; move — the folder to go into; delete). New folder no
+  longer makes a note.
+- Drag and drop (HTML5, mouse): notes onto folders, folders into folders, and onto the "Drop here
+  for the top level" strip at the bottom. Phones use Move in the ⋮ menus.
+- The note toolbar's font menu became an "Aa" button (it was wrapping the toolbar).
+- Checked in the harness: empty folder, subfolder and note from the row buttons, a note dragged
+  into a folder, a folder (with its note) into another, a folder into its own subfolder refused,
+  a note to the top level, deleting a folder moving its contents up. Not checked with real mouse
+  drags (Playwright's dragTo is flaky on this list; the HTML drag events were checked directly).

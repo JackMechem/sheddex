@@ -244,16 +244,90 @@ export const move = mutation({
   },
 });
 
-/** Renames a folder (and its subfolders) by moving every note in it. */
+async function folderRows(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
+  return ctx.db
+    .query("shedNoteFolders")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+}
+
+const inside = (path: string, folder: string) => folder === path || folder.startsWith(`${path}/`);
+
+/** Every folder made on its own (paths like "Practice/Scales"); notes' folders come with `list`. */
+export const folders = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    return (await folderRows(ctx, userId)).map((f) => f.path);
+  },
+});
+
+/** Makes a folder (it can stay empty). "A/B" makes B inside A. */
+export const createFolder = mutation({
+  args: { path: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await me(ctx);
+    const path = cleanFolder(args.path);
+    if (!path) throw new Error("Give the folder a name.");
+    const rows = await folderRows(ctx, userId);
+    if (rows.length >= 2000) throw new Error("That's as many folders as an account can hold.");
+    if (rows.some((r) => r.path === path)) return path;
+    await ctx.db.insert("shedNoteFolders", { userId, path, createdAt: Date.now() });
+    return path;
+  },
+});
+
+/** Renames or moves a folder — everything in it (subfolders and notes) goes along: "A/B" → "C/B"
+    moves B into C. A folder can't go inside itself. */
 export const renameFolder = mutation({
   args: { from: v.string(), to: v.string() },
   handler: async (ctx, args) => {
     const userId = await me(ctx);
     const from = cleanFolder(args.from);
     const to = cleanFolder(args.to);
-    if (!from || from === to) return;
+    if (!from || !to || from === to) return;
+    if (inside(from, to)) throw new Error("A folder can't go inside itself.");
     for (const n of await allNotes(ctx, userId)) {
-      if (n.folder === from || n.folder.startsWith(`${from}/`)) await ctx.db.patch(n._id, { folder: to + n.folder.slice(from.length) });
+      if (inside(from, n.folder)) await ctx.db.patch(n._id, { folder: to + n.folder.slice(from.length) });
+    }
+    const rows = await folderRows(ctx, userId);
+    const taken = new Set(rows.filter((r) => !inside(from, r.path)).map((r) => r.path));
+    for (const r of rows) {
+      if (!inside(from, r.path)) continue;
+      const next = to + r.path.slice(from.length);
+      if (taken.has(next)) await ctx.db.delete(r._id);
+      else {
+        await ctx.db.patch(r._id, { path: next });
+        taken.add(next);
+      }
+    }
+    if (!taken.has(to)) await ctx.db.insert("shedNoteFolders", { userId, path: to, createdAt: Date.now() });
+  },
+});
+
+/** Deletes a folder. What's inside (notes and subfolders) moves up into its parent — nothing is lost. */
+export const deleteFolder = mutation({
+  args: { path: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await me(ctx);
+    const path = cleanFolder(args.path);
+    if (!path) return;
+    const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+    const up = (p: string) => (p === path ? parent : cleanFolder(`${parent}/${p.slice(path.length + 1)}`));
+    for (const n of await allNotes(ctx, userId)) {
+      if (inside(path, n.folder)) await ctx.db.patch(n._id, { folder: up(n.folder) });
+    }
+    const rows = await folderRows(ctx, userId);
+    const taken = new Set(rows.filter((r) => !inside(path, r.path)).map((r) => r.path));
+    for (const r of rows) {
+      if (!inside(path, r.path)) continue;
+      const next = r.path === path ? null : up(r.path);
+      if (!next || taken.has(next)) await ctx.db.delete(r._id);
+      else {
+        await ctx.db.patch(r._id, { path: next });
+        taken.add(next);
+      }
     }
   },
 });

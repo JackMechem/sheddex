@@ -677,6 +677,14 @@ export default defineSchema({
     .index("by_user_title", ["userId", "titleKey"])
     .searchIndex("search_body", { searchField: "body", filterFields: ["userId"] }),
 
+  /** Shed Notes folders that exist on their own (so a folder can be empty). A note's `folder`
+      also makes its folders exist; this table holds the ones made with New folder. */
+  shedNoteFolders: defineTable({
+    userId: v.id("users"),
+    path: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   /** A Shed Note attached to something outside Shed Notes: a day, a routine on a day, or a tune
       (`target` from `packages/core/shedNotes.ts`'s `targetKey`). `label` is what it was called
       when linked, shown if the thing itself is gone. */
