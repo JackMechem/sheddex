@@ -34,6 +34,8 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
   spellcheck: true,
   keybindings: [
     // Finding and moving around
+    // Mod-Space first (on a Mac, ⌘+Space is usually Spotlight's — Mod-p works everywhere).
+    { key: "Mod-Space", command: "app:command-palette" },
     { key: "Mod-p", command: "app:command-palette" },
     { key: "Mod-o", command: "app:quick-switcher" },
     { key: "Mod-Shift-f", command: "app:search" },

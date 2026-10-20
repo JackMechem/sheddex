@@ -116,7 +116,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Vim", text: "Vim keys in every note: normal, insert and visual modes, motions, :commands. Off to start with." },
       { name: "Links", text: "Beside a note: what it's attached to, the notes that link to it (backlinks) and the notes it links to." },
       { name: "Search", text: "Press / (outside a note) or Ctrl/⌘-Shift-F to search every note's title and text; Enter opens the one you pick." },
-      { name: "Command palette", text: "Ctrl/⌘-P lists every command with its key; Ctrl/⌘-O finds or makes a note by name. Every command has a key: hover a button to see it, or open the settings file's Reference." },
+      { name: "Command palette", text: "Ctrl/⌘-Space (or Ctrl/⌘-P — on a Mac ⌘-Space is usually Spotlight) lists every command with its key; Ctrl/⌘-O finds or makes a note by name. Every command has a key: hover a button to see it, or open the settings file's Reference." },
       { name: "Settings file", text: "The gear opens shed-notes.json: keybindings, vim mappings (like imap jk <Esc>), your own :commands, and options such as font size and line numbers. Reference lists every command." },
     ],
     tips: ["Renaming a note fixes the [[links]] to it in your other notes.", "Ctrl/⌘-click a link in Source view to follow it."],
