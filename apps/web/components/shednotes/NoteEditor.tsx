@@ -155,7 +155,9 @@ export default function NoteEditor({
     applyVimConfig(config);
     const keys = config.keybindings.map((b) => ({
       key: b.key,
-      preventDefault: true,
+      // Keys with Ctrl/Alt/⌘ never reach the browser (Ctrl-P mustn't print); a plain or Shift key
+      // that does nothing here (Shift-Enter off a link) still types as usual.
+      preventDefault: /(^|-)(mod|ctrl|c|meta|cmd|m|alt|a)-/i.test(b.key),
       run: (v: EditorView) => runCommand(b.command, { view: v, actions: actionsRef.current }),
     }));
     view.dispatch({

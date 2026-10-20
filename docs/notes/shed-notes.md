@@ -341,3 +341,10 @@ Same day, also Jack's pick: search (`app:search`) defaults to `Alt-f` instead of
 (`/` outside a note still works). Option-F on a Mac types "ƒ", so it matches via `e.code` (KeyF).
 Checked in the harness (opens from the list and inside the editor, no text typed). Not checked:
 whether Chrome on Windows/Linux lets the page take Alt-F before its own menu.
+
+Same day: **Shift-Enter** also follows the link under the cursor (`editor:follow-link`, next to
+Mod-Enter). The editor's keymap had `preventDefault: true` on every binding, which would have
+swallowed Shift-Enter everywhere; now only keys with Ctrl/Alt/⌘ always stop the browser, and a
+plain/Shift key whose command does nothing falls through (Shift-Enter off a link makes a new
+line). Checked in the harness: on `[[Scales]]` it opens Scales; at the end of a line it adds a
+line. Not checked in vim mode.

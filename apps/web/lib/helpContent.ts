@@ -129,7 +129,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Export and import", text: "The ⤓ button by the search: Export all saves a .zip of every note as a Markdown file, in its folders. Import takes that .zip back (titles, folders and fonts come back exactly), or any folder or .zip of Markdown files, like an Obsidian vault. You choose what happens when a title is already yours: skip, replace or keep both." },
       { name: "Settings file", text: "The gear opens shed-notes.json: keybindings, vim mappings (like imap jk <Esc>), your own :commands, and options such as font size and line numbers. Reference lists every command." },
     ],
-    tips: ["Renaming a note fixes the [[links]] to it in your other notes.", "Ctrl/⌘-click a link in Source view to follow it."],
+    tips: ["Renaming a note fixes the [[links]] to it in your other notes.", "With the cursor on a link, Shift-Enter (or Ctrl/⌘-Enter) opens that note. Ctrl/⌘-click works too in Source view."],
   },
   {
     id: "score-writer",

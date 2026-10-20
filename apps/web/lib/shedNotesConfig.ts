@@ -44,6 +44,7 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "Mod-Alt-ArrowLeft", command: "app:go-back" },
     { key: "Mod-Alt-ArrowRight", command: "app:go-forward" },
     { key: "Mod-Enter", command: "editor:follow-link" },
+    { key: "Shift-Enter", command: "editor:follow-link" },
     // Notes
     { key: "Alt-n", command: "note:new" },
     { key: "F2", command: "note:rename" },
