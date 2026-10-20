@@ -82,7 +82,9 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   every commit with his security key, which you can't touch; don't change that config — the flag
   keeps his own commits signed. Write detailed messages: a short first line (what changed, in
   plain words), a blank line, then what and why, and anything not verified. End with the
-  `Co-Authored-By` line. One commit per coherent change; don't commit half-done work, secrets or
+  `Co-Authored-By` line. When the work is for a piece of feedback, put its ID in the message
+  (`Fixes FB-12` when it fixes it, just `FB-12` otherwise) so the admin inbox links it (see
+  "GitHub webhook" in `docs/guides/deploying.md`). One commit per coherent change; don't commit half-done work, secrets or
   `.env*` files. Never push (that needs his key) — tell him when there's something to push.
 
 ## Repo layout

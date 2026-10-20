@@ -1,7 +1,9 @@
 import { v } from "convex/values";
 import { assertUploadsOpen, siteFlags } from "./lib/site";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import type { WorkLink } from "./lib/github";
 
 /**
  * "Send feedback": bug reports, feature ideas, anything else, and reports of a post or profile.
@@ -59,7 +61,9 @@ export const submit = mutation({
     }
     const email = (a.email ?? "").trim().toLowerCase();
     const user = userId ? await ctx.db.get(userId) : null;
+    const number = await nextNumber(ctx);
     await ctx.db.insert("feedback", {
+      number,
       ...(userId ? { userId } : {}),
       ...(EMAIL_RE.test(email) ? { email: email.slice(0, 200) } : user?.email ? { email: user.email } : {}),
       kind: a.kind,
@@ -72,8 +76,31 @@ export const submit = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    return { number };
   },
 });
+
+/** Gives every feedback without an ID one, oldest first, after the highest so far (from before
+    IDs existed — runs once, the first time it's needed). */
+export async function ensureNumbers(ctx: MutationCtx) {
+  const unnumbered = await ctx.db
+    .query("feedback")
+    .withIndex("by_number", (q) => q.eq("number", undefined))
+    .first();
+  if (!unnumbered) return;
+  const top = await ctx.db.query("feedback").withIndex("by_number").order("desc").first();
+  let n = top?.number ?? 0;
+  for (const row of await ctx.db.query("feedback").withIndex("by_createdAt").collect()) {
+    if (row.number === undefined) await ctx.db.patch(row._id, { number: ++n });
+  }
+}
+
+/** The next feedback ID (FB-<n>): one more than the highest so far. */
+export async function nextNumber(ctx: MutationCtx): Promise<number> {
+  await ensureNumbers(ctx);
+  const top = await ctx.db.query("feedback").withIndex("by_number").order("desc").first();
+  return (top?.number ?? 0) + 1;
+}
 
 /** An upload URL for a screenshot (signed in only). */
 export const generateUploadUrl = mutation({
@@ -96,6 +123,42 @@ export const mine = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
       .take(50);
-    return rows.map((r) => ({ id: r._id, kind: r.kind, message: r.message, status: r.status, target: r.target ?? null, createdAt: r.createdAt, updatedAt: r.updatedAt }));
+    return rows.map((r) => ({ id: r._id, number: r.number ?? null, kind: r.kind, message: r.message, status: r.status, target: r.target ?? null, createdAt: r.createdAt, updatedAt: r.updatedAt }));
+  },
+});
+
+/** Adds (or updates, by URL) a commit or PR on a feedback. */
+export async function addWorkLink(ctx: MutationCtx, row: Doc<"feedback">, link: WorkLink) {
+  const links = row.links ?? [];
+  const existing = links.find((l) => l.url === link.url);
+  const next = existing
+    ? links.map((l) => (l.url === link.url ? { ...l, title: link.title || l.title, ...(link.merged !== undefined ? { merged: link.merged } : {}) } : l))
+    : [...links, link].slice(-30);
+  await ctx.db.patch(row._id, { links: next, updatedAt: Date.now() });
+}
+
+const linkArg = v.object({
+  kind: v.union(v.literal("commit"), v.literal("pr")),
+  ref: v.string(),
+  url: v.string(),
+  title: v.string(),
+  merged: v.optional(v.boolean()),
+  at: v.number(),
+});
+
+/** From the GitHub webhook: work that mentions FB-<number>. `done` marks it done (a fix reached
+    main); otherwise new/seen feedback moves to "planned" (someone's on it). */
+export const linkWork = internalMutation({
+  args: { number: v.number(), link: linkArg, done: v.boolean() },
+  handler: async (ctx, { number, link, done }) => {
+    await ensureNumbers(ctx);
+    const row = await ctx.db
+      .query("feedback")
+      .withIndex("by_number", (q) => q.eq("number", number))
+      .first();
+    if (!row) return;
+    await addWorkLink(ctx, row, { ...link, title: link.title.slice(0, 200) });
+    if (done) await ctx.db.patch(row._id, { status: "done" });
+    else if (row.status === "new" || row.status === "seen") await ctx.db.patch(row._id, { status: "planned" });
   },
 });

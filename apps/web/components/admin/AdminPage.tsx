@@ -4,7 +4,7 @@ import { useConvexAuth } from "@convex-dev/auth/react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -313,6 +313,12 @@ type Status = (typeof STATUSES)[number]["id"];
 function Inbox() {
   const rows = useQuery(api.admin.feedbackList, {});
   const update = useMutation(api.admin.updateFeedback);
+  const ensureNumbers = useMutation(api.admin.ensureFeedbackNumbers);
+  // Feedback from before IDs existed gets its FB-number the first time the inbox opens.
+  const unnumbered = !!rows?.some((r) => r.number === null);
+  useEffect(() => {
+    if (unnumbered) void ensureNumbers({});
+  }, [unnumbered, ensureNumbers]);
   const remove = useMutation(api.admin.deleteFeedback);
   const removePost = useMutation(api.admin.removePost);
   const [view, setView] = useState<"open" | Status | "all">("open");
@@ -327,7 +333,7 @@ function Inbox() {
       (r) =>
         (view === "all" || (view === "open" ? r.status === "new" || r.status === "seen" : r.status === view)) &&
         (kind === "all" || r.kind === kind) &&
-        (!t || `${r.message} ${r.email ?? ""} ${r.from?.username ?? ""} ${r.page ?? ""} ${r.target?.label ?? ""}`.toLowerCase().includes(t)),
+        (!t || `fb-${r.number ?? ""} ${r.message} ${r.email ?? ""} ${r.from?.username ?? ""} ${r.page ?? ""} ${r.target?.label ?? ""} ${r.links.map((l) => `${l.ref} ${l.title}`).join(" ")}`.toLowerCase().includes(t.replace(/^fb\s+/, "fb-"))),
     );
   }, [rows, view, kind, q]);
 
@@ -385,6 +391,7 @@ function Inbox() {
           list.map((f) => (
             <article key={f.id} className={`flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 ring-1 ${f.status === "new" ? "ring-indigo-500/40" : "ring-foreground/5"}`}>
               <div className="flex flex-wrap items-center gap-2">
+                {f.number !== null && <FeedbackId number={f.number} />}
                 <KindBadge kind={f.kind} />
                 {f.status === "new" && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-bold text-white">New</span>}
                 <span className="min-w-0 text-xs text-muted [overflow-wrap:anywhere]">
@@ -472,6 +479,7 @@ function Inbox() {
                   </span>
                 )}
               </div>
+              <WorkLinks id={f.id} links={f.links} />
               <div className="flex flex-wrap items-center gap-2 border-t border-foreground/5 pt-3">
                 <div className="flex flex-wrap gap-1 rounded-full bg-background p-1">
                   {STATUSES.map((s) => (
@@ -518,6 +526,84 @@ function deviceOf(ua: string) {
               : "Unknown device";
   const browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
   return `${os}${browser ? ` · ${browser}` : ""}`;
+}
+
+/** "FB-12": the feedback's ID — click to copy it (for a commit message or PR). */
+function FeedbackId({ number }: { number: number }) {
+  const [copied, setCopied] = useState(false);
+  const id = `FB-${number}`;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      }}
+      title="Copy the ID — put it in a commit message or PR to link them (“Fixes FB-12” marks it done on main)"
+      className="rounded-full bg-background px-2 py-0.5 font-mono text-[11px] font-bold text-foreground hover:bg-surface-hover"
+    >
+      {copied ? "Copied" : id}
+    </button>
+  );
+}
+
+type WorkLink = { kind: "commit" | "pr"; ref: string; url: string; title: string; merged?: boolean; at: number };
+
+/** The commits and pull requests linked to a feedback, and a field to link one by hand. */
+function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
+  const add = useMutation(api.admin.addFeedbackLink);
+  const removeLink = useMutation(api.admin.removeFeedbackLink);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  async function submit() {
+    if (!value.trim()) return;
+    try {
+      await add({ id, input: value });
+      setValue("");
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message.replace(/^[\s\S]*?Uncaught Error:\s*/, "").split("\n")[0]);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      {links.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {links.map((l) => (
+            <li key={l.url} className="group flex min-w-0 items-center gap-2 text-xs">
+              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${l.kind === "pr" ? (l.merged ? "bg-violet-500/15 text-violet-600 dark:text-violet-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300") : "bg-background text-muted"}`}>
+                {l.kind === "pr" ? (l.merged ? "PR merged" : "PR") : "Commit"}
+              </span>
+              <a href={l.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-semibold text-foreground hover:underline">
+                {l.ref}
+              </a>
+              <span className="min-w-0 flex-1 truncate text-muted">{l.title}</span>
+              <button type="button" onClick={() => void removeLink({ id, url: l.url })} aria-label={`Unlink ${l.ref}`} className="shrink-0 rounded-full px-1.5 text-muted opacity-60 hover:bg-background hover:text-danger hover:opacity-100">
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && void submit()}
+          placeholder="Link a commit or PR: hash, #12 or a GitHub link"
+          aria-label="Link a commit or pull request"
+          className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+        />
+        {value.trim() && (
+          <button type="button" onClick={() => void submit()} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover">
+            Link
+          </button>
+        )}
+      </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
 }
 
 function NoteField({ id, note }: { id: Id<"feedback">; note: string }) {

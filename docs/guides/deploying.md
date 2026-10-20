@@ -111,3 +111,27 @@ Web reads `NEXT_PUBLIC_CONVEX_URL` (and optionally `NEXT_PUBLIC_SITE_URL`); mobi
 Admin → **Mayday** (owner only): maintenance mode, Community off, pause posting / sign-ups /
 uploads / feedback, an announcement banner, and "sign everyone out". Details:
 `docs/notes/launch-admin-analytics.md`.
+
+
+## GitHub webhook: linking commits and PRs to feedback
+
+Every piece of feedback has an ID, shown as `FB-12` in the admin inbox (click it to copy). A commit
+message or a pull request title or description that mentions `FB-12` is linked to it in the
+inbox; "Fixes FB-12" (also fix/fixed/closes/resolves) marks it **Done** when it reaches `main`
+(pushed to main, or a PR merged into main). Mentioned without "fixes", new/seen feedback moves to
+**Planned**. Links can also be added by hand on each card (a hash, `#12`, or a GitHub link).
+
+Set up once for each deployment (dev and prod):
+1. Make a secret: `openssl rand -hex 32`.
+2. From `packages/convex`: `npx convex env set GITHUB_WEBHOOK_SECRET <secret>` (add `--prod` for
+   production).
+3. GitHub → the repo → Settings → Webhooks → Add webhook:
+   - Payload URL: `https://<deployment>.convex.site/github-webhook` (the deployment's
+     `CONVEX_SITE_URL`; prod's for soniroll.com).
+   - Content type: `application/json`; Secret: the same secret.
+   - Events: "Let me select individual events" → **Pushes** and **Pull requests**.
+4. GitHub sends a ping; the webhook's Recent Deliveries should show `200`. Without the secret set
+   the endpoint answers `503`; with a wrong one, `401`.
+
+GitHub lists at most 20 commits in one push, so a push with more than 20 only links those 20 (a
+PR mentioning the ID covers the rest).

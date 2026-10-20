@@ -234,3 +234,21 @@ Verified:
 - A faint chevron at the page's top-left (`SidebarToggle`) hides and shows the sidebar.
 - The resize handle is a 16px grab strip with a faint pill; double-click resets the width.
 - Width: min 220, default 244.
+
+
+### Feedback IDs and linked commits/PRs (2026-10-20)
+
+- `feedback.number` (index `by_number`) → shown as `FB-<n>`: assigned on submit (`nextNumber`),
+  and older feedback is numbered oldest-first by `ensureNumbers` (run from submit and, once, by the
+  admin inbox via `admin.ensureFeedbackNumbers`). The sender sees it after sending and on
+  `/feedback`.
+- `feedback.links`: commits and PRs (`kind`, `ref`, `url`, `title`, `merged`). Added by hand on the
+  admin card (`admin.addFeedbackLink` parses a hash, `#12` or a GitHub link —
+  `packages/convex/lib/github.ts`), removed with ×, searchable.
+- GitHub webhook `POST /github-webhook` (`http.ts`): HMAC-checked with `GITHUB_WEBHOOK_SECRET`;
+  push and pull_request events; `FB-n` links, "fixes FB-n" on main marks done
+  (`feedback.linkWork`). Setup in `docs/guides/deploying.md`.
+- Checked: 13 Node checks on the parsing and the signature; the route answers 503 on dev (no
+  secret yet); the inbox in the harness (IDs assigned oldest first, linking a hash and `#7`, the
+  error for junk, search by ID, 1200 and 390 with no overflow). Not checked: a real GitHub
+  delivery (the webhook isn't set up), signed in on the real admin page.

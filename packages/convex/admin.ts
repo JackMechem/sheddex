@@ -5,6 +5,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { roleOf, staffMe, type Role } from "./lib/roles";
 import { DEFAULT_FLAGS, siteFlags, type SiteFlags } from "./lib/site";
+import { parseWorkRef } from "./lib/github";
+import { addWorkLink, ensureNumbers } from "./feedback";
 
 /**
  * The admin panel (/admin): feedback and reports, every community post (remove), every account
@@ -120,6 +122,8 @@ export const feedbackList = query({
         if (r.userId && !people.has(r.userId)) people.set(r.userId, await personOf(ctx, r.userId));
         return {
           id: r._id,
+          number: r.number ?? null,
+          links: r.links ?? [],
           kind: r.kind,
           message: r.message,
           status: r.status,
@@ -145,6 +149,38 @@ export const updateFeedback = mutation({
   handler: async (ctx, { id, status, adminNote }) => {
     await mustAdmin(ctx);
     await ctx.db.patch(id, { ...(status ? { status } : {}), ...(adminNote !== undefined ? { adminNote: adminNote.slice(0, 4000) } : {}), updatedAt: Date.now() });
+  },
+});
+
+/** Gives older feedback its ID (the admin page runs this once when it sees one without). */
+export const ensureFeedbackNumbers = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await mustAdmin(ctx);
+    await ensureNumbers(ctx);
+  },
+});
+
+/** Links a commit or PR to a feedback by hand: a hash, "#12", or a GitHub link. */
+export const addFeedbackLink = mutation({
+  args: { id: v.id("feedback"), input: v.string(), title: v.optional(v.string()) },
+  handler: async (ctx, { id, input, title }) => {
+    await mustAdmin(ctx);
+    const row = await ctx.db.get(id);
+    if (!row) throw new Error("That feedback is gone.");
+    const parsed = parseWorkRef(input, (title ?? "").trim().slice(0, 200));
+    if (!parsed) throw new Error("Paste a commit hash, a PR number like #12, or a GitHub commit or pull request link.");
+    await addWorkLink(ctx, row, { ...parsed, at: Date.now() });
+  },
+});
+
+export const removeFeedbackLink = mutation({
+  args: { id: v.id("feedback"), url: v.string() },
+  handler: async (ctx, { id, url }) => {
+    await mustAdmin(ctx);
+    const row = await ctx.db.get(id);
+    if (!row) return;
+    await ctx.db.patch(id, { links: (row.links ?? []).filter((l) => l.url !== url), updatedAt: Date.now() });
   },
 });
 

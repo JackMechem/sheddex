@@ -503,11 +503,28 @@ export default defineSchema({
     target: v.optional(v.object({ type: v.union(v.literal("post"), v.literal("profile")), id: v.string(), label: v.string() })),
     status: v.union(v.literal("new"), v.literal("seen"), v.literal("planned"), v.literal("done"), v.literal("closed")),
     adminNote: v.optional(v.string()),
+    /** Its ID, shown as FB-<number> (1, 2, 3… in the order they came in). */
+    number: v.optional(v.number()),
+    /** Commits and pull requests that work on it — added on the admin page, or by the GitHub
+        webhook when a commit message or PR mentions FB-<number>. */
+    links: v.optional(
+      v.array(
+        v.object({
+          kind: v.union(v.literal("commit"), v.literal("pr")),
+          ref: v.string(),
+          url: v.string(),
+          title: v.string(),
+          merged: v.optional(v.boolean()),
+          at: v.number(),
+        }),
+      ),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_createdAt", ["createdAt"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_number", ["number"]),
 
   recordings: defineTable({
     userId: v.id("users"),
