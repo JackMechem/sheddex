@@ -17,7 +17,7 @@ import NoteEditor from "./NoteEditor";
 const SAVE_LABEL = { saved: "Saved", saving: "Saving…", unsaved: "Editing", error: "Not saved" } as const;
 
 /** Formatting buttons — for phones and anyone who'd rather click. */
-const FORMAT: { label: string; title: string; command: string; className?: string }[] = [
+export const FORMAT: { label: string; title: string; command: string; className?: string }[] = [
   { label: "B", title: "Bold", command: "editor:toggle-bold", className: "font-extrabold" },
   { label: "I", title: "Italic", command: "editor:toggle-italic", className: "italic font-serif" },
   { label: "S", title: "Strikethrough", command: "editor:toggle-strikethrough", className: "line-through" },

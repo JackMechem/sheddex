@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import { findWikiLinks, parseTargetKey, titleKey } from "@jam-practice/core/shedNotes";
-import { CalendarIcon, CloseIcon, DocumentIcon, LinkIcon, NoteIcon } from "@/components/tools";
+import { CalendarIcon, CloseIcon, DocumentIcon, GraduationCapIcon, LinkIcon, NoteIcon } from "@/components/tools";
 import type { NoteMeta } from "@/lib/useShedNotes";
 
 /** Where an attachment lives on the site. */
@@ -13,6 +13,7 @@ export function targetHref(target: string): string | null {
   const t = parseTargetKey(target);
   if (!t) return null;
   if (t.kind === "tune") return `/tunes/tune?id=${encodeURIComponent(t.tuneId)}`;
+  if (t.kind === "lesson") return `/lessons/notes?lesson=${encodeURIComponent(t.lessonId)}`;
   return `/shed-log?date=${t.date}`;
 }
 
@@ -65,15 +66,15 @@ export default function LinksPanel({
     <div className="flex flex-col gap-5">
       <Section title="Attached to" count={note.attached.length}>
         {note.attached.length === 0 ? (
-          <p className="text-xs text-muted">Attach this note to a routine or a day in the Shed Log (Add notes), or to a tune.</p>
+          <p className="text-xs text-muted">Attach this note to a routine or a day in the Shed Log (Add notes), a tune, or your lessons.</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {note.attached.map((a) => {
               const href = targetHref(a.target);
-              const tune = a.target.startsWith("tune:");
+              const Icon = a.target.startsWith("tune:") ? NoteIcon : a.target.startsWith("lesson:") ? GraduationCapIcon : CalendarIcon;
               return (
                 <li key={a.target} className="group flex items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5">
-                  {tune ? <NoteIcon className="h-3.5 w-3.5 shrink-0 text-accent" /> : <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-accent" />}
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-accent" />
                   {href ? (
                     <Link href={href} className="min-w-0 flex-1 truncate text-sm hover:underline">
                       {a.label}

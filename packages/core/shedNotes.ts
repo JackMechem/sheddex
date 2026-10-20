@@ -91,7 +91,7 @@ function codeRanges(text: string): [number, number][] {
 /** A line or two of plain text for lists and chips: markdown marks dropped, notation skipped. */
 export function noteSnippet(text: string, max = 160): string {
   const plain = text
-    .replace(/^(```|~~~)\s*(abc|music)[^\n]*\n[\s\S]*?^\1\s*$/gim, " ♪ ")
+    .replace(/^(```|~~~)\s*(abc|music|score)[^\n]*\n[\s\S]*?^\1\s*$/gim, " ♪ ")
     .replace(/^(```|~~~)[^\n]*$/gm, " ")
     .replace(/\[\[([^[\]\n]+?)\]\]/g, (_, inner: string) => {
       const p = parseLinkInner(inner);
@@ -144,7 +144,9 @@ export function cleanFolder(folder: string): string {
 export type NoteTarget =
   | { kind: "day"; date: string }
   | { kind: "routine"; date: string; routineId: string }
-  | { kind: "tune"; tuneId: string };
+  | { kind: "tune"; tuneId: string }
+  /** Lessons with a teacher or student (a `lessonStudents` id). */
+  | { kind: "lesson"; lessonId: string };
 
 export function targetKey(t: NoteTarget): string {
   switch (t.kind) {
@@ -154,6 +156,8 @@ export function targetKey(t: NoteTarget): string {
       return `day:${t.date}/routine:${t.routineId}`;
     case "tune":
       return `tune:${t.tuneId}`;
+    case "lesson":
+      return `lesson:${t.lessonId}`;
   }
 }
 
@@ -164,5 +168,7 @@ export function parseTargetKey(key: string): NoteTarget | null {
   if (m) return { kind: "day", date: m[1] };
   m = /^tune:(.+)$/.exec(key);
   if (m) return { kind: "tune", tuneId: m[1] };
+  m = /^lesson:(.+)$/.exec(key);
+  if (m) return { kind: "lesson", lessonId: m[1] };
   return null;
 }

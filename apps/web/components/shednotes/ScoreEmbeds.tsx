@@ -1,26 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useQuery } from "convex/react";
+import { useEffect, useMemo, useRef } from "react";
+import { api } from "@jam-practice/convex/_generated/api";
+import { cleanScore } from "@/lib/bassTranscription";
 import { createPortal } from "react-dom";
 import type { EditorView } from "@codemirror/view";
 import Score from "@/components/notation/Score";
 import { ScoreIcon } from "@/components/tools";
-import { useScore } from "@/lib/useScores";
 import { actionsFacet } from "./livePreview";
 import { useEmbeds } from "./embedStore";
 
 const noop = () => {};
 
 /** Renders the scores in one editor's ```score blocks into their widgets (see `embedStore`). */
-export default function ScoreEmbeds({ owner }: { owner: string }) {
+export default function ScoreEmbeds({ owner, lessonId }: { owner: string; lessonId?: string }) {
   const embeds = useEmbeds().filter((e) => e.owner === owner);
-  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.scoreId} view={e.view} />, e.el, e.key))}</>;
+  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.scoreId} view={e.view} lessonId={lessonId} />, e.el, e.key))}</>;
 }
 
 /** A score in a note: its title, Edit (the notation editor) and the score itself, read-only. */
-function ScoreEmbed({ scoreId, view }: { scoreId: string; view: EditorView }) {
-  const score = useScore(scoreId || null);
+function ScoreEmbed({ scoreId, view, lessonId }: { scoreId: string; view: EditorView; lessonId?: string }) {
+  const row = useQuery(api.scores.get, scoreId ? { id: scoreId, ...(lessonId ? { lessonId } : {}) } : "skip");
+  const data = row?.data;
+  const score = useMemo(() => (data ? cleanScore(data) : row === null ? null : undefined), [data, row]);
+  // Someone else's score (a teacher's, in lesson notes) is shown, not edited.
+  const canEdit = !!row && !row.readOnly && !view.state.readOnly;
   const box = useRef<HTMLDivElement>(null);
 
   // The score draws after CodeMirror measured the widget — tell it the height changed.
@@ -39,7 +45,7 @@ function ScoreEmbed({ scoreId, view }: { scoreId: string; view: EditorView }) {
       <div className="flex items-center gap-2 text-sm">
         <ScoreIcon className="h-4 w-4 shrink-0 text-accent" />
         <span className="min-w-0 flex-1 truncate font-semibold">{score ? score.title : score === null ? "Score not found" : "Loading…"}</span>
-        {score && (
+        {score && canEdit && (
           <>
             <button type="button" onClick={edit} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold hover:bg-surface-hover">
               Edit
@@ -53,7 +59,7 @@ function ScoreEmbed({ scoreId, view }: { scoreId: string; view: EditorView }) {
       {score === null ? (
         <p className="text-xs text-muted">This score was deleted from Score Writer.</p>
       ) : score ? (
-        <div onDoubleClick={edit}>
+        <div onDoubleClick={canEdit ? edit : undefined}>
           <Score transcription={score} cursor={null} playing={null} mode="select" onSelect={noop} onAdd={noop} onReplace={noop} onChordClick={noop} />
         </div>
       ) : (

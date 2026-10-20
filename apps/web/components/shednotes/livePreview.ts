@@ -58,8 +58,10 @@ class CheckboxWidget extends WidgetType {
     box.className = "cm-task-box";
     box.checked = this.checked;
     box.setAttribute("aria-label", this.checked ? "Done" : "Not done");
+    box.disabled = view.state.readOnly;
     box.addEventListener("mousedown", (e) => {
       e.preventDefault();
+      if (view.state.readOnly) return;
       const pos = view.posAtDOM(box);
       const line = view.state.doc.lineAt(pos);
       const at = line.text.indexOf("[", pos - line.from);

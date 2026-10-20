@@ -38,6 +38,9 @@ export default function NoteEditor({
   placeholder = "",
   lint,
   className = "",
+  readOnly = false,
+  lessonId,
+  bottomSpace = "40vh",
 }: {
   initialText: string;
   language?: "markdown" | "json";
@@ -51,6 +54,12 @@ export default function NoteEditor({
   /** Extra problems to underline (the settings file's). */
   lint?: (text: string) => Diagnostic[];
   className?: string;
+  /** Shown, not edited (a student reading lesson notes). */
+  readOnly?: boolean;
+  /** Lesson notes: the scores in them are the teacher's, read through this lesson. */
+  lessonId?: string;
+  /** Room below the last line (a full-height editor scrolls past the end; one in a page doesn't). */
+  bottomSpace?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const owner = useId();
@@ -106,6 +115,9 @@ export default function NoteEditor({
           c.look.of([]),
           c.attrs.of([]),
           c.notes.of([]),
+          EditorState.readOnly.of(readOnly),
+          EditorView.editable.of(!readOnly),
+          EditorView.theme({ ".cm-content": { paddingBottom: bottomSpace } }),
           ...lang,
           EditorView.updateListener.of((u) => {
             if (u.docChanged) onChangeRef.current(u.state.doc.toString());
@@ -140,7 +152,7 @@ export default function NoteEditor({
     }));
     view.dispatch({
       effects: [
-        c.vim.reconfigure(config.vimMode ? vim({ status: true }) : []),
+        c.vim.reconfigure(config.vimMode && !readOnly ? vim({ status: true }) : []),
         c.keys.reconfigure(Prec.highest(keymap.of(keys))),
         c.live.reconfigure(liveFacet.of(language === "markdown" && config.livePreview)),
         c.gutter.reconfigure(config.lineNumbers || language === "json" ? lineNumbers() : []),
@@ -162,14 +174,14 @@ export default function NoteEditor({
         ),
       ],
     });
-  }, [config, language]);
+  }, [config, language, readOnly]);
 
   // Vim's status bar is drawn as a floating pill (styles in editorSetup.ts): the editor carries the
   // mode as data-vim-mode, and the mode label gets a class to restyle.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    if (!config.vimMode) {
+    if (!config.vimMode || readOnly) {
       delete view.dom.dataset.vimMode;
       return;
     }
@@ -183,7 +195,7 @@ export default function NoteEditor({
     });
     const label = cm.state.vimPlugin?.statusButton;
     if (label) label.className = "cm-vim-mode";
-  }, [config.vimMode]);
+  }, [config.vimMode, readOnly]);
 
   // The note list → link colours and `[[` suggestions.
   useEffect(() => {
@@ -196,7 +208,7 @@ export default function NoteEditor({
   return (
     <>
       <div ref={host} className={`min-h-0 ${className}`} />
-      {language === "markdown" && <ScoreEmbeds owner={owner} />}
+      {language === "markdown" && <ScoreEmbeds owner={owner} lessonId={lessonId} />}
     </>
   );
 }

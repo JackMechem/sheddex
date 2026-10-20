@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { hiddenSessions } from "./lessons";
 
 /**
  * Score Writer's scores — written with the shared notation editor, private to their owner, and
@@ -52,17 +53,37 @@ export const list = query({
   },
 });
 
-/** One score with its music; null when it's gone or not yours. */
+/** Whether `userId` may read the teacher's score `scoreId` because it's in a note of the lesson
+    `lessonId` they're part of (students: not in a lesson that's still hidden from them). */
+async function sharedInLesson(ctx: QueryCtx, userId: Id<"users">, ownerId: Id<"users">, scoreId: string, lessonId: string) {
+  const id = ctx.db.normalizeId("lessonStudents", lessonId);
+  if (!id) return false;
+  const lesson = await ctx.db.get(id);
+  if (!lesson || lesson.teacherId !== ownerId) return false;
+  const student = lesson.studentId === userId;
+  if (!student && lesson.teacherId !== userId) return false;
+  const hidden = student ? await hiddenSessions(ctx, id) : new Set<string>();
+  const items = await ctx.db
+    .query("lessonItems")
+    .withIndex("by_lesson", (q) => q.eq("lessonId", id))
+    .collect();
+  return items.some((it) => it.kind === "note" && !(it.sessionId && hidden.has(it.sessionId)) && it.body.includes(scoreId));
+}
+
+/** One score with its music; null when it's gone or you can't see it. Yours, or — with `lessonId`
+    — a teacher's score shown in that lesson's notes (`readOnly` then). */
 export const get = query({
-  args: { id: v.string() },
-  handler: async (ctx, { id }) => {
+  args: { id: v.string(), lessonId: v.optional(v.string()) },
+  handler: async (ctx, { id, lessonId }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const scoreId = ctx.db.normalizeId("scores", id);
     if (!scoreId) return null;
     const row = await ctx.db.get(scoreId);
-    if (!row || row.userId !== userId) return null;
-    return { id: row._id as string, data: row.data, updatedAt: row.updatedAt };
+    if (!row) return null;
+    const mine = row.userId === userId;
+    if (!mine && !(lessonId && (await sharedInLesson(ctx, userId, row.userId, scoreId, lessonId)))) return null;
+    return { id: row._id as string, data: row.data, updatedAt: row.updatedAt, readOnly: !mine };
   },
 });
 
