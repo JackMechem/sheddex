@@ -150,6 +150,7 @@ const linkArg = v.object({
   url: v.string(),
   title: v.string(),
   merged: v.optional(v.boolean()),
+  state: v.optional(v.string()),
   at: v.number(),
 });
 

@@ -525,6 +525,8 @@ export default defineSchema({
           url: v.string(),
           title: v.string(),
           merged: v.optional(v.boolean()),
+          /** A PR's last known state: "open", "closed" or "merged". */
+          state: v.optional(v.string()),
           at: v.number(),
         }),
       ),
