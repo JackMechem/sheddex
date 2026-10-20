@@ -867,7 +867,9 @@ function usePopover(onSelect: (date: string) => void) {
   const open = (e: React.MouseEvent, target: WeekTarget) => {
     e.stopPropagation();
     onSelect(target.date);
-    setPop({ target, anchor: (e.currentTarget as HTMLElement).getBoundingClientRect() });
+    // Open where it was clicked; a keyboard press (no pointer position) opens beside the whole button.
+    const anchor = e.detail > 0 ? new DOMRect(e.clientX, e.clientY, 0, 0) : (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPop({ target, anchor });
   };
   return { pop, open, close: () => setPop(null) };
 }
