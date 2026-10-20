@@ -238,7 +238,7 @@ export const COMMANDS: Command[] = [
   { id: "view:toggle-live-preview", name: "Switch between live preview and source", needs: "setConfig", run: toggle("livePreview") },
   { id: "view:toggle-full-width", name: "Full width for this note", needs: "toggleFullWidth", run: act("toggleFullWidth", (a) => a.toggleFullWidth!()) },
   { id: "view:toggle-note-list", name: "Show or hide the note list", needs: "toggleNoteList", run: act("toggleNoteList", (a) => a.toggleNoteList!()) },
-  { id: "view:toggle-links-panel", name: "Show or hide the links panel", needs: "toggleLinksPanel", run: act("toggleLinksPanel", (a) => a.toggleLinksPanel!()) },
+  { id: "view:toggle-links-panel", name: "Move the links panel beside or under the note", needs: "toggleLinksPanel", run: act("toggleLinksPanel", (a) => a.toggleLinksPanel!()) },
   { id: "view:toggle-line-numbers", name: "Show or hide line numbers", needs: "setConfig", run: toggle("lineNumbers") },
   { id: "view:toggle-readable-width", name: "Readable line length (the default for every note)", needs: "setConfig", run: toggle("readableLineLength") },
   { id: "view:toggle-spellcheck", name: "Turn spellcheck on or off", needs: "setConfig", run: toggle("spellcheck") },

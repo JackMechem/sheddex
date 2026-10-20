@@ -60,7 +60,7 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "Alt-w", command: "note:close" },
     { key: "Mod-s", command: "note:save" },
     // How it looks
-    { key: "Mod-e", command: "view:toggle-live-preview" },
+    { key: "Ctrl-`", command: "view:toggle-live-preview" },
     { key: "Mod-Alt-v", command: "view:toggle-vim" },
     { key: "Mod-Alt-b", command: "view:toggle-note-list" },
     { key: "Mod-Alt-l", command: "view:toggle-links-panel" },

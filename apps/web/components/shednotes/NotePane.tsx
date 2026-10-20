@@ -51,8 +51,8 @@ export const FORMAT: { label: string; title: string; command: string; className?
 
 /** Folds a side panel away (desktop): the note list on the left, the links on the right. */
 export function PanelButton({ side, open, onClick, className = "", keys }: { side: "left" | "right"; open: boolean; onClick: () => void; className?: string; keys?: string }) {
-  const what = side === "left" ? "the note list" : "the links panel";
-  const label = `${open ? "Hide" : "Show"} ${what}`;
+  // The links panel never hides: closed, it sits under the note (as on a phone).
+  const label = side === "left" ? `${open ? "Hide" : "Show"} the note list` : open ? "Move the links under the note" : "Move the links beside the note";
   const title = keys ? `${label} (${keys})` : label;
   const x = side === "left" ? 9 : 15;
   // The chevron points the way the panel will move.
@@ -307,7 +307,7 @@ export default function NotePane({
     // A container: the links sit beside the note only when this pane has room for both (not by
     // screen width — the sidebar and the note list take some of it).
     <div className="@container flex min-h-0 flex-1 flex-col">
-    <div className="flex min-h-0 flex-1 flex-col gap-3 @4xl:flex-row @4xl:gap-6">
+    <div className={`flex min-h-0 flex-1 flex-col gap-3 ${linksOpen ? "@4xl:flex-row @4xl:gap-6" : ""}`}>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={onBackToList} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover lg:hidden">
@@ -417,8 +417,12 @@ export default function NotePane({
         </div>
       </div>
 
-      <aside className={`${mine ? "" : "!hidden"} shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[40%] lg:overflow-y-auto @4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1 ${linksOpen ? "" : "lg:hidden"}`}>
-        <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => actions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
+      {/* Beside the note when there's room and it's open; otherwise under it. */}
+      <aside className={`${mine ? "" : "!hidden"} shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[35%] lg:overflow-y-auto ${linksOpen ? "@4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1" : ""}`}>
+        {/* Under the note, lined up with its text column. */}
+        <div className={linksOpen ? "@4xl:!max-w-none" : ""} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto" }}>
+          <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => actions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
+        </div>
       </aside>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>

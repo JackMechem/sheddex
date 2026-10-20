@@ -364,3 +364,13 @@ hints show at the end (first key only, none under 640px).
 the item so an item can open a submenu. Other menus look the same. New icons in `tools.tsx`:
 `KeyboardIcon`, `CommandIcon`. Checked in the harness at 1300 light and 390 dark (Vim toggles
 from the menu, font list picks Lora). Not checked signed in.
+
+## 2026-10-20: links under the note when the panel is closed; Ctrl-` for live preview
+
+- The right-hand panel button no longer hides the links panel: closed, the panel moves under the
+  note (as on a phone), lined up with the note's text column (unless full width), up to 35% of
+  the height with its own scroll. The button reads "Move the links under/beside the note"; the
+  `view:toggle-links-panel` command's name matches. Same stored `linksHidden` setting.
+- Live preview's default key is `Ctrl-`` ` (Ctrl on a Mac too, since ⌘-` switches windows),
+  replacing Mod-e. Checked in the harness: toggles inside the editor (no backtick typed) and
+  outside it.
