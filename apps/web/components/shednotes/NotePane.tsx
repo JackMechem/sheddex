@@ -27,6 +27,7 @@ export const FORMAT: { label: string; title: string; command: string; className?
   { label: "☐ Task", title: "Checklist item", command: "editor:toggle-checklist" },
   { label: "[[ ]]", title: "Link to a note", command: "editor:insert-wikilink" },
   { label: "Quote", title: "Quote", command: "editor:toggle-quote" },
+  { label: "Table", title: "Insert a table (Tab moves between cells)", command: "editor:insert-table" },
 ];
 
 /** Folds a side panel away (desktop): the note list on the left, the links on the right. */

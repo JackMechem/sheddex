@@ -4,6 +4,7 @@ import type { EditorView } from "@codemirror/view";
 import { WIKILINK_RE, parseLinkInner } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type Block, findBlocks, scoreIdOf } from "./livePreview";
+import { NEW_TABLE } from "./tables";
 
 /**
  * Every command Shed Notes can run, by id — the same ids work in the settings file's
@@ -18,6 +19,8 @@ export type NoteActions = {
   openCommandPalette?: () => void;
   /** Opens (or, with `create`, makes) the note with this title. */
   openNoteByTitle?: (title: string, opts?: { create?: boolean; newTab?: boolean }) => void;
+  /** Opens a page of the site ("/tunes") — in place, through the app's router. */
+  openPath?: (path: string) => void;
   /** The notation editor on a Score Writer score (`null`: a new one); `onDone` gets its id once
       it's saved. */
   openScore?: (scoreId: string | null, onDone: (scoreId: string) => void) => void;
@@ -146,15 +149,16 @@ export function linkAt(view: EditorView, pos: number): { kind: "wiki"; target: s
       return target ? { kind: "wiki", target } : null;
     }
   }
-  for (const m of line.text.matchAll(/\[[^\]\n]*\]\(([^)\s]+)\)|https?:\/\/[^\s)>\]]+/g)) {
+  for (const m of line.text.matchAll(/\[[^\]\n]*\]\(([^)\s]+)\)|https?:\/\/[^\s)>\]]+|www\.[^\s)>\]]+/g)) {
     const from = m.index ?? 0;
     if (at >= from && at <= from + m[0].length) return { kind: "url", url: m[1] ?? m[0] };
   }
   return null;
 }
 
-export function openUrl(url: string) {
+export function openUrl(url: string, actions: NoteActions = {}) {
   if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
+  else if (url.startsWith("/")) (actions.openPath ?? ((p: string) => window.location.assign(p)))(url);
 }
 
 /** The notation block (```score or ```abc) the cursor is in. */
@@ -227,6 +231,21 @@ export const COMMANDS: Command[] = [
     }),
   },
   {
+    id: "editor:insert-table",
+    name: "Insert a table",
+    editor: true,
+    run: ed((v) => {
+      const line = v.state.doc.lineAt(v.state.selection.main.head);
+      const pre = line.text.trim() ? "\n\n" : line.number > 1 && v.state.doc.line(line.number - 1).text.trim() ? "\n" : "";
+      const at = line.text.trim() ? line.to : line.from;
+      // The cursor lands on the first header cell's text, selected, ready to type over.
+      const first = at + pre.length + 2;
+      v.dispatch({ changes: { from: at, insert: `${pre}${NEW_TABLE}\n` }, selection: { anchor: first, head: first + "Column 1".length }, userEvent: "input" });
+      v.focus();
+      return true;
+    }),
+  },
+  {
     id: "editor:insert-horizontal-rule",
     name: "Divider line",
     editor: true,
@@ -260,7 +279,7 @@ export const COMMANDS: Command[] = [
       if (!view) return false;
       const link = linkAt(view, view.state.selection.main.head);
       if (!link) return false;
-      if (link.kind === "url") openUrl(link.url);
+      if (link.kind === "url") openUrl(link.url, ctx.actions);
       else ctx.actions.openNoteByTitle?.(link.target, { create: true });
       return true;
     },

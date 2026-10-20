@@ -1,6 +1,7 @@
 "use client";
 
 import type { EditorView } from "@codemirror/view";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import ScoreDialog from "@/components/notation/ScoreDialog";
 import { type NoteActions, runCommand } from "@/components/shednotes/commands";
@@ -30,6 +31,7 @@ export default function LessonNoteEditor({
   onChange?: (markdown: string) => void;
   placeholder?: string;
 }) {
+  const router = useRouter();
   const cfg = useNotesConfig();
   const { config: settings, setValue } = cfg;
   const viewRef = useRef<EditorView | null>(null);
@@ -37,6 +39,7 @@ export default function LessonNoteEditor({
   // The editor reads its actions through a ref, so a new object each render is fine.
   const actions: NoteActions = {
     openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
+    openPath: (path) => router.push(path),
     setConfig: (key, value) => void setValue(key, value),
     config: () => settings,
   };

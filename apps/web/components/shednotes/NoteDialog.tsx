@@ -72,6 +72,10 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
             .catch((e) => setNotice(errorText(e)));
       },
       openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
+      openPath: (path) => {
+        flush();
+        router.push(path);
+      },
       setConfig: (key, value) => {
         if (!cfg.setValue(key, value)) setNotice("Fix the settings file first — it isn't valid JSON right now.");
       },

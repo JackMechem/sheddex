@@ -136,3 +136,21 @@ and both panels hiding (with the stored flags). Not on a real phone.
   (capped at 40% of the height, scrolling). The toolbar wraps, "Saved" and the folder path hide
   when it's tight, and the title is an auto-growing textarea that wraps instead of being cut off.
   Before this, at about 1400 px with the sidebar and note list open, the toolbar ran over the links.
+
+**Tables, links, page pills (2026-10-20):**
+- Tables (`components/shednotes/tables.ts`): a `StateField` finds GFM tables by lines (skipping
+  code fences) and draws each as an HTML table (alignment from the dashes line; bold, italic,
+  strikethrough, code and links in cells, escaped first) while the cursor is elsewhere; clicking a
+  cell puts the cursor in it. With the cursor in it, the source lines get `cm-table-src` (fixed-
+  width, nothing adding width). Tab / Shift+Tab (`Prec.high`) re-pads every column
+  (`formatTable`) and selects the next / previous cell's text; Tab in the last cell adds a row.
+  "Table" in the formatting row (`editor:insert-table`) inserts a 3-column starter.
+- Links: a link opens on a plain click whenever it's drawn as a link (`data-live`), Ctrl/⌘-click
+  any time — before, a click near where the cursor was did nothing. Bare `https://…` (GFM `URL`)
+  and `<…>` autolinks are links too. `openHref`: web in a new tab, site paths ("/tunes") through
+  `NoteActions.openPath` (the router), mailto/tel as they are.
+- `[[note]]` links and links to site pages are `cm-page-pill`: accent-tinted rounded pills with a
+  page icon (a CSS mask); a missing note is a dashed pill.
+- Checked in the editor harness: the table drawn with its alignments, all five kinds of link
+  opening the right way with the cursor on their line, cell click → source, Tab tidying and
+  selecting, a new row from the last cell. Not on a phone.

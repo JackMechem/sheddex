@@ -16,6 +16,7 @@ import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteActions, runCommand } from "./commands";
 import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion } from "./editorSetup";
 import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview";
+import { tables } from "./tables";
 import ScoreEmbeds from "./ScoreEmbeds";
 import { ownerFacet } from "./embedStore";
 import { applyVimConfig, registerVimEditor } from "./vimSetup";
@@ -92,7 +93,7 @@ export default function NoteEditor({
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions), ownerFacet.of(owner)];
+        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions), ownerFacet.of(owner)];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({

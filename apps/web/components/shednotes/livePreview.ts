@@ -129,13 +129,32 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
               if (marks.length < 2 || !url) return;
               const textFrom = marks[0].to;
               const textTo = marks[1].from;
+              const href = state.sliceDoc(url.from, url.to);
+              const editing = touches(state, node.from, node.to);
+              // A link to a page of the site ("/tunes") is a pill, like a link to a note.
+              const page = href.startsWith("/") && !editing;
               if (textTo > textFrom) {
-                out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(url.from, url.to) } }).range(textFrom, textTo));
+                out.push(Decoration.mark({ class: `cm-md-link${page ? " cm-page-pill" : ""}`, attributes: { "data-url": href, ...(editing ? {} : { "data-live": "1" }) } }).range(textFrom, textTo));
               }
-              if (touches(state, node.from, node.to)) return;
+              if (editing) return;
               out.push(hide.range(marks[0].from, marks[0].to));
               out.push(hide.range(marks[1].from, node.to));
               return false;
+            }
+            case "Autolink": {
+              // <https://…>
+              const url = node.getChild("URL");
+              if (!url) return false;
+              const editing = touches(state, node.from, node.to);
+              out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(url.from, url.to), ...(editing ? {} : { "data-live": "1" }) } }).range(url.from, url.to));
+              if (!editing) for (const m of node.getChildren("LinkMark")) out.push(hide.range(m.from, m.to));
+              return false;
+            }
+            case "URL": {
+              // A bare https://… address (GFM autolink) — a link of its own.
+              if (node.parent?.name === "Link" || node.parent?.name === "Autolink" || node.parent?.name === "Image") return;
+              out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(node.from, node.to), "data-live": "1" } }).range(node.from, node.to));
+              return;
             }
             case "Blockquote": {
               for (let pos = node.from; pos <= node.to; ) {
@@ -203,7 +222,8 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
           const bar = m[1].indexOf("|");
           const shownFrom = alias ? start + 2 + bar + 1 : start + 2;
           out.push(hide.range(start, shownFrom));
-          out.push(Decoration.mark({ class: cls, attributes: attrs }).range(shownFrom, end - 2));
+          // Shown as a pill with a page icon (a link to a note that doesn't exist yet: dashed).
+          out.push(Decoration.mark({ class: `${cls} cm-page-pill`, attributes: { ...attrs, "data-live": "1" } }).range(shownFrom, end - 2));
           out.push(hide.range(end - 2, end));
         } else {
           out.push(Decoration.mark({ class: cls, attributes: attrs }).range(start, end));
@@ -417,23 +437,31 @@ const notationField = StateField.define<{ blocks: Block[]; decos: DecorationSet 
   provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
 });
 
-/** Clicking a `[[link]]` opens it (in source mode, with Ctrl/⌘); a markdown link opens its URL. */
+/** Opens a link's address: the web in a new tab, a page of the site in place, email/phone links
+    as they are. */
+export function openHref(href: string, actions: NoteActions) {
+  if (/^https?:\/\//i.test(href)) window.open(href, "_blank", "noopener,noreferrer");
+  else if (href.startsWith("/")) {
+    if (actions.openPath) actions.openPath(href);
+    else window.location.assign(href);
+  } else if (/^(mailto|tel):/i.test(href)) window.location.assign(href);
+  else if (/^www\./i.test(href)) window.open(`https://${href}`, "_blank", "noopener,noreferrer");
+}
+
+/** Clicking a link opens it — when it's showing as a link (live preview, cursor not inside it);
+    Ctrl/⌘-click opens it any time (and in source mode). Clicking a link whose source is showing
+    puts the cursor there instead, to edit it. */
 const linkClicks = EditorView.domEventHandlers({
   mousedown(e, view) {
     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-wikilink], [data-url]");
     if (!el || e.button !== 0) return false;
-    const live = view.state.facet(liveFacet);
     const mod = e.metaKey || e.ctrlKey;
-    if (!live && !mod) return false;
-    // In live preview, a link the cursor is in shows its source — clicking there edits it.
-    if (live && !mod && el.closest(".cm-line") && view.state.selection.ranges.some((r) => {
-      const pos = view.posAtDOM(el);
-      return r.from <= pos + el.textContent!.length + 4 && r.to >= pos - 4;
-    })) return false;
+    if (!mod && !(view.state.facet(liveFacet) && el.dataset.live)) return false;
     e.preventDefault();
+    const actions = view.state.facet(actionsFacet)();
     const target = el.dataset.wikilink;
-    if (target) view.state.facet(actionsFacet)().openNoteByTitle?.(target, { create: true });
-    else if (el.dataset.url && /^https?:\/\//i.test(el.dataset.url)) window.open(el.dataset.url, "_blank", "noopener,noreferrer");
+    if (target) actions.openNoteByTitle?.(target, { create: true });
+    else if (el.dataset.url) openHref(el.dataset.url, actions);
     return true;
   },
 });

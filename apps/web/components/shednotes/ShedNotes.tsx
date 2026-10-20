@@ -2,6 +2,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { useMutation } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
@@ -65,6 +66,7 @@ type Prompt =
  * music notation, and the settings file sets keys, vim mappings and commands.
  */
 export default function ShedNotes({ initialId }: { initialId?: string }) {
+  const router = useRouter();
   const notes = useNoteList();
   const cfg = useNotesConfig();
   const createMut = useMutation(api.shedNotes.create);
@@ -148,6 +150,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         else if (o?.create) void createNote(title);
       },
       openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
+      openPath: (path) => router.push(path),
       setConfig: (key, value) => setConfig(key, value),
       config: () => cfg.config,
       openSettings: () => open(SETTINGS_ID),
@@ -173,7 +176,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         syncUrl(next);
       },
     }),
-    [createNote, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems],
+    [createNote, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router],
   );
   useEffect(() => {
     commandItemsRef.current = () =>
