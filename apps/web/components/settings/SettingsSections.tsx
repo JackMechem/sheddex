@@ -81,6 +81,7 @@ export function GeneralSettings() {
       </SettingsCard>
       <SettingsCard title="Features" description="Turn off the parts of soniroll you don't use. Nothing is deleted, and you can turn them back on any time.">
         <SwitchRow label="Shed Log" checked={site.shedLog} onChange={(shedLog) => update({ shedLog })} hint="Your practice log: its place in the sidebar, today's practice on the dashboard and the streak by your name." />
+        <SwitchRow label="Shed Notes" checked={site.shedNotes} onChange={(shedNotes) => update({ shedNotes })} hint="Your notes: hides their card in the sidebar. Notes attached to routines, days and tunes still show there." />
         <SwitchRow label="Community" checked={site.community} onChange={(community) => update({ community })} hint="Posts from other musicians. Hides it from the sidebar." />
         <SwitchRow label="Lessons" checked={site.lessons} onChange={(lessons) => update({ lessons })} hint="For teachers and students. Hides it from the sidebar and the dashboard." />
       </SettingsCard>

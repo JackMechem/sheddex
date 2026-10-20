@@ -4,6 +4,7 @@ import { ChartPaper } from "@/components/library/chartView";
 import { Chip, Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/library/ui";
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useConvexAuth } from "@convex-dev/auth/react";
+import AttachedNotes from "@/components/shednotes/AttachedNotes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -360,6 +361,13 @@ function Hub({
             />
             <p className="text-xs text-muted">Saved as you type.</p>
           </section>
+
+          {isAuthenticated && (
+            <section className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
+              <h2 className="font-bold">Shed Notes</h2>
+              <AttachedNotes target={{ kind: "tune", tuneId: tune.id }} label={tune.name || "Untitled tune"} newTitle={tune.name || "Untitled tune"} />
+            </section>
+          )}
         </div>
       </div>
 

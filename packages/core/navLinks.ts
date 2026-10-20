@@ -96,6 +96,13 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Practice tools",
   },
   {
+    href: "/shed-notes",
+    label: "Shed Notes",
+    description:
+      "Notes for your practice in markdown: link them together with [[ ]], write music notation in them, attach them to Shed Log routines and tunes, and use vim keys if you like.",
+    category: "Practice tools",
+  },
+  {
     href: "/practice-timer",
     label: "Practice Timer",
     description:

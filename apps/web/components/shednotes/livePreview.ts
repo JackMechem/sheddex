@@ -1,0 +1,420 @@
+import { syntaxTree } from "@codemirror/language";
+import { type EditorState, Facet, type Range, StateField } from "@codemirror/state";
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from "@codemirror/view";
+import type { SyntaxNode } from "@lezer/common";
+import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
+import type { NoteActions } from "./commands";
+
+/**
+ * Obsidian-style live preview for the markdown editor: the text stays markdown, but marks hide
+ * (`**`, `#`, `[[ ]]`, `> `, link URLs) wherever the cursor isn't, headings get their size, list
+ * dashes become bullets, `- [ ]` becomes a checkbox you can click, `---` a rule, and ```abc
+ * blocks show as notation (their source comes back while the cursor is inside). Off (`live`
+ * false), it's plain source with only the link and tag colours.
+ */
+
+/** Live preview on or off. */
+export const liveFacet = Facet.define<boolean, boolean>({ combine: (v) => v[0] ?? true });
+/** The note titles that exist (title keys), so `[[links]]` to missing notes look different. */
+export const titlesFacet = Facet.define<Set<string>, Set<string>>({ combine: (v) => v[0] ?? new Set() });
+/** The page's actions (open a note, the notation dialog), read when a link is clicked. */
+export const actionsFacet = Facet.define<() => NoteActions, () => NoteActions>({ combine: (v) => v[0] ?? (() => ({})) });
+
+const touches = (state: EditorState, from: number, to: number) => state.selection.ranges.some((r) => r.from <= to && r.to >= from);
+const touchesLines = (state: EditorState, from: number, to: number) => touches(state, state.doc.lineAt(from).from, state.doc.lineAt(to).to);
+
+const hide = Decoration.replace({});
+
+function inCode(state: EditorState, pos: number): boolean {
+  for (let n: SyntaxNode | null = syntaxTree(state).resolveInner(pos, 1); n; n = n.parent) {
+    if (n.name === "InlineCode" || n.name === "FencedCode" || n.name === "CodeBlock" || n.name === "CodeText") return true;
+  }
+  return false;
+}
+
+class BulletWidget extends WidgetType {
+  eq() {
+    return true;
+  }
+  toDOM() {
+    const s = document.createElement("span");
+    s.className = "cm-bullet";
+    s.textContent = "•";
+    return s;
+  }
+}
+
+class CheckboxWidget extends WidgetType {
+  constructor(readonly checked: boolean) {
+    super();
+  }
+  eq(other: CheckboxWidget) {
+    return other.checked === this.checked;
+  }
+  toDOM(view: EditorView) {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.className = "cm-task-box";
+    box.checked = this.checked;
+    box.setAttribute("aria-label", this.checked ? "Done" : "Not done");
+    box.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const pos = view.posAtDOM(box);
+      const line = view.state.doc.lineAt(pos);
+      const at = line.text.indexOf("[", pos - line.from);
+      if (at < 0) return;
+      const from = line.from + at + 1;
+      view.dispatch({ changes: { from, to: from + 1, insert: this.checked ? " " : "x" }, userEvent: "input.toggle" });
+    });
+    return box;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+class RuleWidget extends WidgetType {
+  eq() {
+    return true;
+  }
+  toDOM() {
+    const s = document.createElement("span");
+    s.className = "cm-rule";
+    return s;
+  }
+}
+
+function addMarks(view: EditorView, out: Range<Decoration>[]) {
+  const { state } = view;
+  const live = state.facet(liveFacet);
+  const titles = state.facet(titlesFacet);
+  const tree = syntaxTree(state);
+
+  for (const { from, to } of view.visibleRanges) {
+    if (live) {
+      tree.iterate({
+        from,
+        to,
+        enter: (ref) => {
+          const node = ref.node;
+          const name = node.name;
+          if (name.startsWith("ATXHeading")) {
+            const level = Number(name.slice(10)) || 1;
+            out.push(Decoration.line({ class: `cm-h cm-h${level}` }).range(state.doc.lineAt(node.from).from));
+            const mark = node.getChild("HeaderMark");
+            if (mark && !touchesLines(state, node.from, node.to)) {
+              const end = state.sliceDoc(mark.to, mark.to + 1) === " " ? mark.to + 1 : mark.to;
+              out.push(hide.range(mark.from, end));
+            }
+            return;
+          }
+          switch (name) {
+            case "Emphasis":
+            case "StrongEmphasis":
+            case "Strikethrough":
+            case "InlineCode": {
+              if (name === "InlineCode") out.push(Decoration.mark({ class: "cm-inline-code" }).range(node.from, node.to));
+              if (touches(state, node.from, node.to)) return;
+              for (let c = node.firstChild; c; c = c.nextSibling) {
+                if (c.name === "EmphasisMark" || c.name === "StrikethroughMark" || c.name === "CodeMark") out.push(hide.range(c.from, c.to));
+              }
+              return;
+            }
+            case "Link": {
+              const marks = node.getChildren("LinkMark");
+              const url = node.getChild("URL");
+              if (marks.length < 2 || !url) return;
+              const textFrom = marks[0].to;
+              const textTo = marks[1].from;
+              if (textTo > textFrom) {
+                out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(url.from, url.to) } }).range(textFrom, textTo));
+              }
+              if (touches(state, node.from, node.to)) return;
+              out.push(hide.range(marks[0].from, marks[0].to));
+              out.push(hide.range(marks[1].from, node.to));
+              return false;
+            }
+            case "Blockquote": {
+              for (let pos = node.from; pos <= node.to; ) {
+                const line = state.doc.lineAt(pos);
+                out.push(Decoration.line({ class: "cm-quote" }).range(line.from));
+                pos = line.to + 1;
+              }
+              return;
+            }
+            case "QuoteMark": {
+              if (touchesLines(state, node.from, node.to)) return;
+              const end = state.sliceDoc(node.to, node.to + 1) === " " ? node.to + 1 : node.to;
+              out.push(hide.range(node.from, end));
+              return;
+            }
+            case "ListMark": {
+              const item = node.parent;
+              const list = item?.parent;
+              if (!item || list?.name !== "BulletList") return;
+              const task = item.getChild("Task");
+              const marker = task?.getChild("TaskMarker");
+              if (marker) {
+                const checked = /x/i.test(state.sliceDoc(marker.from, marker.to));
+                if (checked) out.push(Decoration.line({ class: "cm-task-done" }).range(state.doc.lineAt(node.from).from));
+                if (touches(state, node.from, marker.to)) return;
+                out.push(Decoration.replace({ widget: new CheckboxWidget(checked) }).range(node.from, marker.to));
+                return;
+              }
+              if (touches(state, node.from, node.to)) return;
+              out.push(Decoration.replace({ widget: new BulletWidget() }).range(node.from, node.to));
+              return;
+            }
+            case "HorizontalRule": {
+              if (touchesLines(state, node.from, node.to)) return;
+              out.push(Decoration.replace({ widget: new RuleWidget() }).range(node.from, node.to));
+              return;
+            }
+            case "FencedCode": {
+              const info = node.getChild("CodeInfo");
+              if (info && /^(abc|music)$/i.test(state.sliceDoc(info.from, info.to).trim())) return false;
+              for (let pos = node.from; pos <= node.to; ) {
+                const line = state.doc.lineAt(pos);
+                out.push(Decoration.line({ class: "cm-codeblock" }).range(line.from));
+                pos = line.to + 1;
+              }
+              return false;
+            }
+          }
+        },
+      });
+    }
+
+    // `[[links]]`, ==highlights== and #tags, line by line (not part of the markdown grammar).
+    for (let pos = from; pos <= to; ) {
+      const line = state.doc.lineAt(pos);
+      for (const m of line.text.matchAll(WIKILINK_RE)) {
+        const start = line.from + (m.index ?? 0);
+        const end = start + m[0].length;
+        if (inCode(state, start)) continue;
+        const { target, alias } = parseLinkInner(m[1]);
+        if (!target) continue;
+        const cls = `cm-wikilink${titles.has(titleKey(target)) ? "" : " cm-wikilink-missing"}`;
+        const attrs = { "data-wikilink": target };
+        if (live && !touches(state, start, end)) {
+          const bar = m[1].indexOf("|");
+          const shownFrom = alias ? start + 2 + bar + 1 : start + 2;
+          out.push(hide.range(start, shownFrom));
+          out.push(Decoration.mark({ class: cls, attributes: attrs }).range(shownFrom, end - 2));
+          out.push(hide.range(end - 2, end));
+        } else {
+          out.push(Decoration.mark({ class: cls, attributes: attrs }).range(start, end));
+        }
+      }
+      for (const m of line.text.matchAll(/==([^=\n]+)==/g)) {
+        const start = line.from + (m.index ?? 0);
+        const end = start + m[0].length;
+        if (inCode(state, start)) continue;
+        out.push(Decoration.mark({ class: "cm-highlight" }).range(start, end));
+        if (live && !touches(state, start, end)) {
+          out.push(hide.range(start, start + 2));
+          out.push(hide.range(end - 2, end));
+        }
+      }
+      for (const m of line.text.matchAll(/(^|[\s(])(#[\p{L}\p{N}_/-]*\p{L}[\p{L}\p{N}_/-]*)/gu)) {
+        const start = line.from + (m.index ?? 0) + m[1].length;
+        if (inCode(state, start)) continue;
+        // A heading's own `# ` never matches (the tag needs a letter right after the #).
+        out.push(Decoration.mark({ class: "cm-tag" }).range(start, start + m[2].length));
+      }
+      pos = line.to + 1;
+    }
+  }
+}
+
+const marksPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = this.build(view);
+    }
+    update(u: ViewUpdate) {
+      if (
+        u.docChanged ||
+        u.viewportChanged ||
+        u.selectionSet ||
+        syntaxTree(u.startState) !== syntaxTree(u.state) ||
+        u.startState.facet(liveFacet) !== u.state.facet(liveFacet) ||
+        u.startState.facet(titlesFacet) !== u.state.facet(titlesFacet)
+      ) {
+        this.decorations = this.build(u.view);
+      }
+    }
+    build(view: EditorView) {
+      const out: Range<Decoration>[] = [];
+      addMarks(view, out);
+      return Decoration.set(out, true);
+    }
+  },
+  { decorations: (v) => v.decorations },
+);
+
+// ---------------------------------------------------------------- notation blocks
+
+type Block = { from: number; to: number; bodyFrom: number; abc: string };
+
+function findBlocks(state: EditorState): Block[] {
+  const out: Block[] = [];
+  const doc = state.doc;
+  for (let n = 1; n <= doc.lines; n++) {
+    const open = doc.line(n);
+    const fence = /^(```|~~~)\s*(\S*)/.exec(open.text);
+    if (!fence) continue;
+    let close = 0;
+    for (let e = n + 1; e <= doc.lines; e++) {
+      if (new RegExp(`^${fence[1]}\\s*$`).test(doc.line(e).text)) {
+        close = e;
+        break;
+      }
+    }
+    if (!close) break;
+    if (/^(abc|music)$/i.test(fence[2])) {
+      const bodyFrom = n + 1 < close ? doc.line(n + 1).from : open.to;
+      const abc = n + 1 < close ? doc.sliceString(doc.line(n + 1).from, doc.line(close - 1).to) : "";
+      out.push({ from: open.from, to: doc.line(close).to, bodyFrom, abc });
+    }
+    n = close;
+  }
+  return out;
+}
+
+/** abcjs is big — loaded the first time a note shows notation. */
+let abcjsPromise: Promise<typeof import("abcjs")> | null = null;
+export function loadAbcjs() {
+  abcjsPromise ??= import("abcjs");
+  return abcjsPromise;
+}
+
+/** Draws ABC into `el` (theme-coloured), with abcjs's first warning under it. */
+export function renderNotation(el: HTMLElement, abc: string) {
+  el.replaceChildren();
+  if (!abc.trim()) {
+    const p = document.createElement("p");
+    p.className = "cm-abc-empty";
+    p.textContent = "Empty notation";
+    el.append(p);
+    return;
+  }
+  const paper = document.createElement("div");
+  paper.className = "cm-abc-paper";
+  el.append(paper);
+  void loadAbcjs().then((abcjs) => {
+    const tunes = abcjs.renderAbc(paper, abc, { responsive: "resize", foregroundColor: "currentColor", add_classes: true, paddingleft: 0, paddingright: 0, paddingtop: 4, paddingbottom: 4 });
+    const warning = tunes[0]?.warnings?.[0];
+    if (warning) {
+      const p = document.createElement("p");
+      p.className = "cm-abc-warning";
+      p.textContent = warning.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ");
+      el.append(p);
+    }
+  });
+}
+
+class NotationWidget extends WidgetType {
+  constructor(
+    readonly abc: string,
+    readonly editing: boolean,
+    readonly bodyFrom: number,
+  ) {
+    super();
+  }
+  eq(other: NotationWidget) {
+    return other.abc === this.abc && other.editing === this.editing;
+  }
+  get estimatedHeight() {
+    return 140;
+  }
+  toDOM(view: EditorView) {
+    const wrap = document.createElement("div");
+    wrap.className = `cm-abc${this.editing ? " cm-abc-editing" : ""}`;
+    const body = document.createElement("div");
+    wrap.append(body);
+    renderNotation(body, this.abc);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cm-abc-edit";
+    btn.textContent = "Edit notation";
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const pos = view.posAtDOM(wrap);
+      const actions = view.state.facet(actionsFacet)();
+      const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
+      if (!block || !actions.openNotation) return;
+      actions.openNotation(block.abc, (abc) => {
+        const fresh = findBlocks(view.state).find((b) => b.from === block.from);
+        if (!fresh) return;
+        view.dispatch({ changes: { from: fresh.from, to: fresh.to, insert: "```abc\n" + abc.trim() + "\n```" }, userEvent: "input" });
+      });
+    });
+    wrap.append(btn);
+    if (!this.editing) {
+      // Clicking the notation puts the cursor in its source, which shows it.
+      wrap.addEventListener("mousedown", (e) => {
+        if ((e.target as HTMLElement).closest("button")) return;
+        e.preventDefault();
+        const pos = view.posAtDOM(wrap);
+        const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
+        if (block) view.dispatch({ selection: { anchor: block.bodyFrom } });
+        view.focus();
+      });
+    }
+    return wrap;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
+  if (!state.facet(liveFacet)) return Decoration.none;
+  const out: Range<Decoration>[] = [];
+  for (const b of blocks) {
+    const editing = touches(state, b.from, b.to);
+    if (editing) out.push(Decoration.widget({ widget: new NotationWidget(b.abc, true, b.bodyFrom), block: true, side: 1 }).range(b.to));
+    else out.push(Decoration.replace({ widget: new NotationWidget(b.abc, false, b.bodyFrom), block: true }).range(b.from, b.to));
+  }
+  return Decoration.set(out, true);
+}
+
+const notationField = StateField.define<{ blocks: Block[]; decos: DecorationSet }>({
+  create(state) {
+    const blocks = findBlocks(state);
+    return { blocks, decos: notationDecos(state, blocks) };
+  },
+  update(value, tr) {
+    const liveChanged = tr.startState.facet(liveFacet) !== tr.state.facet(liveFacet);
+    if (!tr.docChanged && !tr.selection && !liveChanged) return value;
+    const blocks = tr.docChanged ? findBlocks(tr.state) : value.blocks;
+    return { blocks, decos: notationDecos(tr.state, blocks) };
+  },
+  provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
+});
+
+/** Clicking a `[[link]]` opens it (in source mode, with Ctrl/⌘); a markdown link opens its URL. */
+const linkClicks = EditorView.domEventHandlers({
+  mousedown(e, view) {
+    const el = (e.target as HTMLElement).closest<HTMLElement>("[data-wikilink], [data-url]");
+    if (!el || e.button !== 0) return false;
+    const live = view.state.facet(liveFacet);
+    const mod = e.metaKey || e.ctrlKey;
+    if (!live && !mod) return false;
+    // In live preview, a link the cursor is in shows its source — clicking there edits it.
+    if (live && !mod && el.closest(".cm-line") && view.state.selection.ranges.some((r) => {
+      const pos = view.posAtDOM(el);
+      return r.from <= pos + el.textContent!.length + 4 && r.to >= pos - 4;
+    })) return false;
+    e.preventDefault();
+    const target = el.dataset.wikilink;
+    if (target) view.state.facet(actionsFacet)().openNoteByTitle?.(target, { create: true });
+    else if (el.dataset.url && /^https?:\/\//i.test(el.dataset.url)) window.open(el.dataset.url, "_blank", "noopener,noreferrer");
+    return true;
+  },
+});
+
+export const livePreview = [marksPlugin, notationField, linkClicks];

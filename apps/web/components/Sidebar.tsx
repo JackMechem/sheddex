@@ -14,6 +14,7 @@ import { APP_VERSION, CHANNEL, VERSION_LABEL } from "@/lib/version";
 import { useChangelogUnseen } from "@/lib/useChangelogUnseen";
 import { DASHBOARD_PATH, LANDING_PATH } from "@/lib/landing";
 import PracticeLogNavCard from "@/components/practicelog/PracticeLogNavCard";
+import ShedNotesNavCard from "@/components/shednotes/ShedNotesNavCard";
 import DashboardNavCard from "@/components/DashboardNavCard";
 import { SupportRow, SUPPORT_PATH } from "@/components/support/SupportParts";
 import {
@@ -415,7 +416,7 @@ function NavItems({
   const peopleItems = libraryItems.filter((link) => link.href !== "/tunes");
   // The Shed Log isn't one tool among the others: it's its own card under Dashboard (and
   // only joins the list while searching, as a normal result).
-  const groups = groupByCategory(filtered.filter((link) => link.category !== "Community" && (searching || link.href !== "/shed-log")));
+  const groups = groupByCategory(filtered.filter((link) => link.category !== "Community" && (searching || (link.href !== "/shed-log" && link.href !== "/shed-notes"))));
   // A subset of `filtered`, in NAV_LINKS' own order (stable regardless of favoriting order) —
   // shown as a section of its own above the normal categories, where each item also still stays
   // in its own category below (a quick-access shortcut, not a "moved out of" relocation).
@@ -603,6 +604,7 @@ function NavItems({
           "Your shed",
           <>
             {site.shedLog && <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed onNavigate={onNavigate} />}
+            {site.shedNotes && <ShedNotesNavCard active={effectivePathname.startsWith("/shed-notes")} collapsed onNavigate={onNavigate} />}
             {shedItems.map(iconLink)}
           </>,
         )}
@@ -630,6 +632,7 @@ function NavItems({
               {/* Your shed: your own practice — the Shed Log and your library. */}
               <SectionHeading large={large}>Your shed</SectionHeading>
               {site.shedLog && <PracticeLogNavCard active={effectivePathname.startsWith("/shed-log")} collapsed={collapsed} large={large} onNavigate={onNavigate} />}
+              {site.shedNotes && <ShedNotesNavCard active={effectivePathname.startsWith("/shed-notes")} collapsed={collapsed} large={large} onNavigate={onNavigate} />}
               {shedItems.map((link) => renderTile(link, true))}
               {/* People: other musicians — Community, and your teachers or students. */}
               {peopleItems.length > 0 && (

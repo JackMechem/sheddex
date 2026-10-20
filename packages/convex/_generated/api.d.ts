@@ -38,6 +38,7 @@ import type * as profiles from "../profiles.js";
 import type * as recordings from "../recordings.js";
 import type * as routines from "../routines.js";
 import type * as setlists from "../setlists.js";
+import type * as shedNotes from "../shedNotes.js";
 import type * as site from "../site.js";
 import type * as syncedSettings from "../syncedSettings.js";
 import type * as tuneSongs from "../tuneSongs.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   recordings: typeof recordings;
   routines: typeof routines;
   setlists: typeof setlists;
+  shedNotes: typeof shedNotes;
   site: typeof site;
   syncedSettings: typeof syncedSettings;
   tuneSongs: typeof tuneSongs;

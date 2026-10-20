@@ -222,6 +222,8 @@ Web (`apps/web`):
   share, delete for any `StoredEntry`; `FileViewer`, `FilePreviewDialog`, `useFileUploader`,
   `TuneFiles`), `FileShareDialog`, `lib/files.ts` (`fileKind`, `formatBytes`, `downloadFile`).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
+- Notes: `components/shednotes/AttachedNotes.tsx` (Shed Notes on anything — a `NoteTarget` from
+  `packages/core/shedNotes.ts`), `NoteEditor` (CodeMirror markdown editor), `renderNotation` (abcjs).
 
 Mobile (`apps/mobile/src`): `ToolOptionsSheet` (tabbed options sheet — tool screens don't scroll;
 essentials on the main screen, the rest in the sheet), `FloatingTabBar` (+ `useTabBarSpace`),
@@ -250,6 +252,7 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
 | Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
+| Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |

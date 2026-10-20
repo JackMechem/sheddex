@@ -450,6 +450,24 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
   }
 }
 
+/* Shed Notes: notation drawn outside the editor (the notation dialog's preview), and the
+   "Edit notation" button always showing where there's no hover. */
+.cm-abc-dialog svg,
+.cm-abc-paper svg {
+  max-width: 100%;
+}
+.cm-abc-dialog .cm-abc-empty,
+.cm-abc-dialog .cm-abc-warning {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (hover: none) {
+  .cm-abc-edit {
+    opacity: 1 !important;
+  }
+}
+
 /* Settings → Appearance → "Less motion": like the device's reduce-motion setting, for everyone. */
 html.less-motion *,
 html.less-motion *::before,

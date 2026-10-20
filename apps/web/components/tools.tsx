@@ -667,6 +667,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/lessons": GraduationCapIcon,
   "/practice-timer": StopwatchIcon,
   "/shed-log": CalendarIcon,
+  "/shed-notes": DocumentIcon,
   "/metronome": MetronomeIcon,
   "/random-metric-modulation": MetricModulationIcon,
   "/tempo-trainer": TempoTrainerIcon,

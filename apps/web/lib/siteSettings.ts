@@ -57,6 +57,7 @@ export const SITE_DEFAULTS = {
 
   /** Whole features, shown in the sidebar and on the dashboard. */
   shedLog: true,
+  shedNotes: true,
   community: true,
   lessons: true,
 

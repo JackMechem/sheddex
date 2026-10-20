@@ -614,4 +614,35 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_player", ["playerId"]),
+
+  /** Shed Notes: one markdown note per row, private to its owner. `titleKey` is the lowercased
+      title (titles are unique per account, and `[[links]]` find notes by it); `links` holds the
+      title keys this note's `[[links]]` point at, so backlinks are a lookup; `tags` its #tags. */
+  shedNotes: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    titleKey: v.string(),
+    folder: v.string(),
+    body: v.string(),
+    links: v.array(v.string()),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_title", ["userId", "titleKey"])
+    .searchIndex("search_body", { searchField: "body", filterFields: ["userId"] }),
+
+  /** A Shed Note attached to something outside Shed Notes: a day, a routine on a day, or a tune
+      (`target` from `packages/core/shedNotes.ts`'s `targetKey`). `label` is what it was called
+      when linked, shown if the thing itself is gone. */
+  shedNoteLinks: defineTable({
+    userId: v.id("users"),
+    noteId: v.id("shedNotes"),
+    target: v.string(),
+    label: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user_target", ["userId", "target"])
+    .index("by_note", ["noteId"]),
 });

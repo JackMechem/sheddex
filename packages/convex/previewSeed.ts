@@ -2,6 +2,7 @@ import { createAccount } from "@convex-dev/auth/server";
 import { toDateKey, type DayLog, type PracticeLogData, type Routine } from "@jam-practice/core/practiceLog";
 import { toPublicTune } from "@jam-practice/core/profileTunes";
 import { TUNES_TO_LEARN_KEY } from "@jam-practice/core/tunesToLearn";
+import { findTags, linkKeys, targetKey, titleKey } from "@jam-practice/core/shedNotes";
 import type { Tune } from "@jam-practice/core/types";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -127,6 +128,28 @@ export const fill = internalMutation({
       ],
     });
     await setSetting(ctx, userId, "jam-practice-practice-log", practiceLog(now, known[0].name));
+
+    // Shed Notes: two linked notes (one with notation), the warm-up one attached to today's routine.
+    const notes = [
+      {
+        title: "Warm-up ideas",
+        folder: "Practice",
+        body: "# Warm-up ideas\n\nStart slow, then push the tempo. Scales go with [[Autumn Leaves voicings]].\n\n- [x] Long tones\n- [ ] Scales in all keys\n\n```abc\nX:1\nM:4/4\nL:1/8\nK:C\nC D E F G A B c | c B A G F E D C |]\n```\n\n#warmup",
+      },
+      {
+        title: "Autumn Leaves voicings",
+        folder: "Tunes",
+        body: "Rootless voicings for the A section. Back to [[Warm-up ideas]].\n\n> Keep the left hand light.",
+      },
+    ];
+    const noteIds: Id<"shedNotes">[] = [];
+    for (const n of notes) {
+      noteIds.push(
+        await ctx.db.insert("shedNotes", { userId, title: n.title, titleKey: titleKey(n.title), folder: n.folder, body: n.body, links: linkKeys(n.body), tags: findTags(n.body), createdAt: now, updatedAt: now }),
+      );
+    }
+    const today = toDateKey(new Date(now));
+    await ctx.db.insert("shedNoteLinks", { userId, noteId: noteIds[0], target: targetKey({ kind: "routine", date: today, routineId: "demo-routine-warmup" }), label: "Daily warm-up", createdAt: now });
 
     // A second musician, with a Community post, who follows (and is followed by) the demo account.
     const mayaId = await ctx.db.insert("users", { name: "Maya Chen", email: MAYA_EMAIL });

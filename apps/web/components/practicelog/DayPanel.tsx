@@ -7,6 +7,7 @@ import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { AttachmentList } from "@/components/practicelog/Attachments";
 import RecordClip from "@/components/practicelog/RecordClip";
 import RoutineCard from "@/components/practicelog/RoutineCard";
+import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import RoutineIcon from "@/components/practicelog/RoutineIcon";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import { SHARE_PROGRESS_EVENT, burstAt } from "@/components/practicelog/Celebrations";
@@ -208,14 +209,18 @@ export default function DayPanel({
 
       <DaySection icon={<PencilIcon className="h-4 w-4" />} title="Notes">
         <div className="flex flex-col gap-3 rounded-2xl bg-surface p-4">
-          <textarea
-            value={day.notes ?? ""}
-            onChange={(e) => log.updateDay(date, (d) => ({ ...d, notes: e.target.value }))}
-            rows={3}
-            aria-label="Notes for the day"
-            placeholder="What you worked on, how it went"
-            className="resize-y rounded-xl bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-accent lg:text-sm"
-          />
+          {!!day.notes && (
+            <LegacyNotes
+              text={day.notes}
+              onChange={(notes) => log.updateDay(date, (d) => ({ ...d, notes }))}
+              onClear={() => log.updateDay(date, (d) => { const n = { ...d }; delete n.notes; return n; })}
+              target={{ kind: "day", date }}
+              label={formatLongDate(date)}
+              newTitle={`Practice · ${formatLongDate(date)}`}
+              placeholder="What you worked on, how it went"
+            />
+          )}
+          <AttachedNotes target={{ kind: "day", date }} label={formatLongDate(date)} newTitle={`Practice · ${formatLongDate(date)}`} />
           <AttachmentList items={day.attachments ?? []} onChange={(attachments) => log.updateDay(date, (d) => ({ ...d, attachments }))} />
         </div>
       </DaySection>
