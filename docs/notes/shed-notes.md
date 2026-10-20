@@ -348,3 +348,19 @@ swallowed Shift-Enter everywhere; now only keys with Ctrl/Alt/⌘ always stop th
 plain/Shift key whose command does nothing falls through (Shift-Enter off a link makes a new
 line). Checked in the harness: on `[[Scales]]` it opens Scales; at the end of a line it adds a
 line. Not checked in vim mode.
+
+## 2026-10-20: the note toolbar folded into ⋮
+
+Jack asked for the note header's Preview/Source switch, Share, Vim switch, font (Aa) and full
+width to move into the ⋮ menu, and for every ⋮ item to have an icon. The header is now just
+back/forward, the save state, ⋮ and the links-panel button. The menu, in groups: Live preview ✓,
+Vim keys ✓, Line numbers ✓, Full width ✓ (640px+ only), Font: X… (opens the font list in its
+place, each font's "Aa" drawn in that font) · Share…, Rename, Move to folder, Apply/Change
+template…, Export as PDF · Command palette, Open a note…, Settings file · Delete note. Shortcut
+hints show at the end (first key only, none under 640px).
+
+`ContextMenu` gained optional `checked` (a ✓, role menuitemcheckbox), `hint`, `divider` and a
+`width` on `MenuState`; it scrolls when taller than the window, and now closes *before* running
+the item so an item can open a submenu. Other menus look the same. New icons in `tools.tsx`:
+`KeyboardIcon`, `CommandIcon`. Checked in the harness at 1300 light and 390 dark (Vim toggles
+from the menu, font list picks Lora). Not checked signed in.

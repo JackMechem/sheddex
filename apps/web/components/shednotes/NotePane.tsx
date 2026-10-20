@@ -6,7 +6,25 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, NoteIcon, UsersIcon } from "@/components/tools";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CommandIcon,
+  DotsVerticalIcon,
+  DownloadIcon,
+  EyeIcon,
+  FolderIcon,
+  GearIcon,
+  KeyboardIcon,
+  ListIcon,
+  MaximizeIcon,
+  NoteIcon,
+  NotePlusIcon,
+  PencilIcon,
+  SearchIcon,
+  TrashIcon,
+  UsersIcon,
+} from "@/components/tools";
 import { FONTS, getFont } from "@/lib/fonts";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
@@ -221,27 +239,61 @@ export default function NotePane({
     runCommand(command, { view: viewRef.current, actions: paneActions });
   }
 
+  // Everything about the note lives in its ⋮ menu: how it's shown (preview, Vim, font, width),
+  // then the note itself, then the app. Each item has an icon, and its key when it has one.
   function openMenu(e: React.MouseEvent) {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const at = { x: r.right - 260, y: r.bottom + 4, width: 260 };
+    // The first key only, and none on phones (no keyboard).
+    const hint = (command: string) => (window.innerWidth >= 640 ? keysFor(command, config.keybindings).split(" or ")[0] : "") || undefined;
+    const icon = "h-4 w-4";
+    const fontName = note?.view?.font ? getFont(note.view.font).label : "Site font";
+    const template = note?.templateId ? (templates.find((t) => t.id === note.templateId)?.name ?? "deleted") : null;
     setMenu({
-      x: r.right - 220,
-      y: r.bottom + 4,
+      ...at,
       items: [
-        { label: "Command palette", onSelect: () => actions.openCommandPalette?.() },
-        { label: "Open a note…", onSelect: () => actions.openQuickSwitcher?.() },
-        { label: config.lineNumbers ? "Hide line numbers" : "Show line numbers", onSelect: () => setConfig("lineNumbers", !config.lineNumbers) },
+        { label: "Live preview", icon: <EyeIcon className={icon} />, checked: config.livePreview, hint: hint("view:toggle-live-preview"), onSelect: () => setConfig("livePreview", !config.livePreview) },
+        { label: "Vim keys", icon: <KeyboardIcon className={icon} />, checked: config.vimMode, hint: hint("view:toggle-vim"), onSelect: () => setConfig("vimMode", !config.vimMode) },
+        { label: "Line numbers", icon: <ListIcon className={icon} />, checked: config.lineNumbers, onSelect: () => setConfig("lineNumbers", !config.lineNumbers) },
         ...(mine
           ? [
-              { label: "Share…", onSelect: () => actions.shareNote?.() },
-              { label: "Rename", onSelect: () => paneActions.renameNote?.() },
-              { label: "Move to folder", onSelect: () => actions.moveNote?.() },
+              // Wide screens only: on a phone the note is always the full width.
+              ...(window.innerWidth >= 640 ? [{ label: "Full width", icon: <MaximizeIcon className={icon} />, checked: fullWidth, hint: hint("view:toggle-full-width"), onSelect: toggleFullWidth }] : []),
+              { label: `Font: ${fontName}…`, icon: <span className="w-4 text-center font-serif text-[11px] font-bold leading-4">Aa</span>, onSelect: () => openFontMenu(at) },
             ]
           : []),
-        ...(mine ? [{ label: note?.templateId ? `Change template (now ${templates.find((t) => t.id === note.templateId)?.name ?? "deleted"})…` : "Apply a template…", onSelect: () => actions.applyTemplate?.() }] : []),
-        { label: "Export as PDF", onSelect: () => actions.exportPdf?.() },
-        { label: "Settings file", onSelect: () => actions.openSettings?.() },
-        ...(mine ? [{ label: "Delete note", danger: true, onSelect: () => actions.deleteNote?.() }] : []),
+        ...(mine
+          ? [
+              { label: "Share…", icon: <UsersIcon className={icon} />, hint: hint("note:share"), divider: true, onSelect: () => actions.shareNote?.() },
+              { label: "Rename", icon: <PencilIcon className={icon} />, onSelect: () => paneActions.renameNote?.() },
+              { label: "Move to folder", icon: <FolderIcon className={icon} />, onSelect: () => actions.moveNote?.() },
+              { label: template ? `Change template (now ${template})…` : "Apply a template…", icon: <NotePlusIcon className={icon} />, hint: hint("note:apply-template"), onSelect: () => actions.applyTemplate?.() },
+            ]
+          : []),
+        { label: "Export as PDF", icon: <DownloadIcon className={icon} />, hint: hint("note:export-pdf"), divider: !mine, onSelect: () => actions.exportPdf?.() },
+        { label: "Command palette", icon: <CommandIcon className={icon} />, hint: hint("app:command-palette"), divider: true, onSelect: () => actions.openCommandPalette?.() },
+        { label: "Open a note…", icon: <SearchIcon className={icon} />, hint: hint("app:quick-switcher"), onSelect: () => actions.openQuickSwitcher?.() },
+        { label: "Settings file", icon: <GearIcon className={icon} />, hint: hint("app:open-settings"), onSelect: () => actions.openSettings?.() },
+        ...(mine ? [{ label: "Delete note", icon: <TrashIcon className={icon} />, danger: true, divider: true, onSelect: () => actions.deleteNote?.() }] : []),
       ],
+    });
+  }
+
+  // The font list, in place of the ⋮ menu: each font's "Aa" drawn in that font.
+  function openFontMenu(at: { x: number; y: number; width: number }) {
+    const current = note?.view?.font ?? "";
+    setMenu({
+      ...at,
+      items: [{ value: "", label: "Site font", stack: undefined as string | undefined }, ...FONTS.map((f) => ({ value: f.id, label: `${f.label} · ${f.kind.toLowerCase()}`, stack: f.stack }))].map((o) => ({
+        label: o.label,
+        icon: (
+          <span className="w-4 text-center text-[11px] font-semibold leading-4" style={o.stack ? { fontFamily: o.stack } : undefined}>
+            Aa
+          </span>
+        ),
+        checked: o.value === current,
+        onSelect: () => void setView({ id: id as Id<"shedNotes">, font: o.value || null }),
+      })),
     });
   }
 
@@ -278,53 +330,6 @@ export default function NotePane({
           <span className={`hidden shrink-0 text-xs @xl:inline ${canEdit ? "" : "!hidden"} ${saveState === "error" ? "font-semibold text-danger" : "text-muted"}`} title={saveError ?? undefined}>
             {SAVE_LABEL[saveState]}
           </span>
-          <div className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
-            {([true, false] as const).map((live) => (
-              <button key={String(live)} type="button" onClick={() => setConfig("livePreview", live)} title={withKeys(live ? "Live preview" : "Source", "view:toggle-live-preview")} aria-pressed={config.livePreview === live} className={`rounded-full px-2.5 py-1 ${config.livePreview === live ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}>
-                {live ? "Preview" : "Source"}
-              </button>
-            ))}
-          </div>
-          {mine && (
-            <button type="button" onClick={() => actions.shareNote?.()} aria-label="Share" title={withKeys("Share this note", "note:share")} className={iconBtn}>
-              <UsersIcon className="h-4 w-4" />
-            </button>
-          )}
-          <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} keys={keysFor("view:toggle-vim", config.keybindings)} />
-          {mine && (
-          <button
-            type="button"
-            onClick={(e) => {
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const current = note.view?.font ?? "";
-              setMenu({
-                x: Math.max(8, r.right - 220),
-                y: r.bottom + 4,
-                items: [{ value: "", label: "Site font" }, ...FONTS.map((f) => ({ value: f.id, label: `${f.label} · ${f.kind.toLowerCase()}` }))].map((o) => ({
-                  label: `${o.value === current ? "✓ " : ""}${o.label}`,
-                  onSelect: () => void setView({ id: id as Id<"shedNotes">, font: o.value || null }),
-                })),
-              });
-            }}
-            aria-label="Font for this note"
-            title={`Font for this note: ${note.view?.font ? getFont(note.view.font).label : "the site font"}`}
-            className={`${iconBtn} px-2 font-serif text-sm font-bold ${note.view?.font ? "text-accent" : ""}`}
-          >
-            Aa
-          </button>
-          )}
-          {mine && (
-          <button
-            type="button"
-            onClick={toggleFullWidth}
-            aria-pressed={fullWidth}
-            aria-label={fullWidth ? "Readable width" : "Full width"}
-            title={withKeys(fullWidth ? "Back to the readable width" : "Full width for this note", "view:toggle-full-width")}
-            className={`${iconBtn} hidden sm:block ${fullWidth ? "text-accent" : ""}`}
-          >
-            {fullWidth ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
-          </button>
-          )}
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>

@@ -847,3 +847,21 @@ export function SparkIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function KeyboardIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8" />
+    </svg>
+  );
+}
+
+export function CommandIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M9 6v12M15 6v12M6 9h12M6 15h12" />
+      <path d="M9 9H6.5A2.5 2.5 0 1 1 9 6.5zM15 9h2.5A2.5 2.5 0 1 0 15 6.5zM9 15H6.5A2.5 2.5 0 1 0 9 17.5zM15 15h2.5a2.5 2.5 0 1 1-2.5 2.5z" />
+    </svg>
+  );
+}

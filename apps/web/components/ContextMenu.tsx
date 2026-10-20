@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
+import { CheckIcon } from "@/components/tools";
 
-export type MenuItem = { label: string; onSelect: () => void; danger?: boolean; icon?: React.ReactNode };
-export type MenuState = { x: number; y: number; items: MenuItem[] };
+export type MenuItem = {
+  label: string;
+  onSelect: () => void;
+  danger?: boolean;
+  icon?: React.ReactNode;
+  /** A setting that's on (a ✓ at the end). */
+  checked?: boolean;
+  /** Its keyboard shortcut, shown faintly at the end. */
+  hint?: string;
+  /** A thin line above it, starting a new group. */
+  divider?: boolean;
+};
+export type MenuState = { x: number; y: number; items: MenuItem[]; width?: number };
 
 const MENU_WIDTH = 208;
 
@@ -29,34 +41,40 @@ export default function ContextMenu({ menu, onClose }: { menu: MenuState; onClos
     };
   }, [onClose]);
 
-  const height = menu.items.length * 36 + 12;
-  const left = Math.max(8, Math.min(menu.x, window.innerWidth - MENU_WIDTH - 8));
+  const width = Math.min(menu.width ?? MENU_WIDTH, window.innerWidth - 16);
+  const height = Math.min(menu.items.length * 36 + 12, window.innerHeight - 16);
+  const left = Math.max(8, Math.min(menu.x, window.innerWidth - width - 8));
   const top = Math.max(8, Math.min(menu.y, window.innerHeight - height - 8));
 
   return (
     <div
       data-context-menu
       role="menu"
-      className="fixed z-[70] flex flex-col gap-0.5 rounded-xl bg-surface p-1.5 text-left text-sm shadow-lg ring-1 ring-foreground/10"
-      style={{ left, top, width: MENU_WIDTH }}
+      className="fixed z-[70] flex flex-col gap-0.5 overflow-y-auto rounded-xl bg-surface p-1.5 text-left text-sm shadow-lg ring-1 ring-foreground/10"
+      style={{ left, top, width, maxHeight: window.innerHeight - 16 }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {menu.items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          onClick={() => {
-            item.onSelect();
-            onClose();
-          }}
-          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
-            item.danger ? "text-danger" : ""
-          }`}
-        >
-          {item.icon && <span className="shrink-0">{item.icon}</span>}
-          <span className="min-w-0">{item.label}</span>
-        </button>
+        <div key={item.label} className={item.divider ? "mt-1 border-t border-foreground/10 pt-1" : undefined}>
+          <button
+            type="button"
+            role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+            aria-checked={item.checked}
+            onClick={() => {
+              // Closed first, so an item can open another menu in its place (a submenu).
+              onClose();
+              item.onSelect();
+            }}
+            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-surface-hover ${
+              item.danger ? "text-danger" : ""
+            }`}
+          >
+            {item.icon && <span className="flex min-w-4 shrink-0 justify-center">{item.icon}</span>}
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.hint && <span className="shrink-0 text-xs text-muted">{item.hint}</span>}
+            {item.checked && <CheckIcon className="h-4 w-4 shrink-0 text-accent" />}
+          </button>
+        </div>
       ))}
     </div>
   );
