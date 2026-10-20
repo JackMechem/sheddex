@@ -9,7 +9,7 @@ import SwitchRow from "@/components/SwitchRow";
 import ToolLayout from "@/components/ToolLayout";
 import ChartLinkPicker from "@/components/library/ChartLinkPicker";
 import BassPlayersTab from "@/components/bassgenius/BassPlayersTab";
-import TranscriptionScore from "@/components/bassgenius/TranscriptionScore";
+import TranscriptionScore from "@/components/notation/Score";
 import PhraseDialog from "@/components/bassgenius/PhraseDialog";
 import { Field, LevelRow, OptionsSheet, PanelSection } from "@/components/bassgenius/PlayPanel";
 import { TempoHero } from "@/components/MeterFields";

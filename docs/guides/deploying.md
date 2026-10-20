@@ -111,3 +111,47 @@ Web reads `NEXT_PUBLIC_CONVEX_URL` (and optionally `NEXT_PUBLIC_SITE_URL`); mobi
 Admin → **Mayday** (owner only): maintenance mode, Community off, pause posting / sign-ups /
 uploads / feedback, an announcement banner, and "sign everyone out". Details:
 `docs/notes/launch-admin-analytics.md`.
+
+
+## Feedback: the shared inbox, GitHub issues and the webhook
+
+Every piece of feedback has an ID (`FB-12`) and records the site version it was sent from. In the
+admin inbox, a bug or idea has **Create GitHub issue** (labelled `bug` / `enhancement`; the
+message, page, version, device and ID — never the sender's email or name; the screenshot only if
+you tick it) and **Link existing issue**. Nothing goes to GitHub on its own. Each card can also
+link commits and PRs (**Pick…** lists them from GitHub, fetched by your browser).
+
+**Production is the shared inbox.** Dev and previews send their bugs, ideas and notes there, and
+their admin inbox reads and changes production's list (reports about posts and profiles stay on
+the deployment they're about). Everything below goes on **production** unless it says otherwise —
+and production needs this code first (merge to `main` so Vercel runs `convex deploy`).
+
+Production's HTTP address: Convex dashboard → the production deployment → Settings → "HTTP
+Actions URL" (ends in `.convex.site`). Make secrets with
+`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Run the `npx convex
+env` commands from `packages/convex`.
+
+1. **GitHub token** (to make issues): GitHub → your profile picture → Settings → Developer
+   settings → Personal access tokens → **Fine-grained tokens** → Generate new token. Name it,
+   pick an expiry, Resource owner JackMechem, Repository access "Only select repositories" →
+   `soniroll`, Repository permissions → **Issues: Read and write**. Generate, copy, then
+   `npx convex env set GITHUB_TOKEN <token> --prod`.
+2. **Shared inbox:** make one secret.
+   - Production: `npx convex env set FEEDBACK_HUB_SECRET <secret> --prod`
+   - Dev: `npx convex env set FEEDBACK_HUB_URL https://<prod>.convex.site`,
+     `npx convex env set FEEDBACK_HUB_SECRET <secret>`, `npx convex env set FEEDBACK_SOURCE_NAME dev`
+   - Previews: Convex dashboard → the project → Settings → Environment Variables → "Default
+     environment variables" for preview deployments: the same `FEEDBACK_HUB_URL` and
+     `FEEDBACK_HUB_SECRET`, and `FEEDBACK_SOURCE_NAME` = `preview`.
+   Feedback already on dev stays there, marked "Only on this deployment", with a **Move to the
+   shared inbox** button.
+3. **Webhook** (links `FB-12` in commits and PRs; "Fixes FB-12" on main marks it Done; closing an
+   issue made from feedback marks it Done): make another secret,
+   `npx convex env set GITHUB_WEBHOOK_SECRET <secret> --prod`, then GitHub → the repo → Settings
+   → Webhooks → Add webhook: Payload URL `https://<prod>.convex.site/github-webhook`, Content
+   type `application/json`, the secret, "Let me select individual events" → **Pushes**, **Pull
+   requests**, **Issues**. Its Recent Deliveries should show the ping with `200` (`503` = the
+   secret isn't set, `401` = it doesn't match).
+
+GitHub lists at most 20 commits in one push, so a bigger push only links those 20 (a PR that
+mentions the ID covers the rest). **Pick…** is limited by GitHub to 60 lookups an hour per person.

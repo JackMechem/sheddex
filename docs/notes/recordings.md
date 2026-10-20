@@ -142,3 +142,12 @@ average, so a one-sided mic comes out half as loud) and records that. Verified i
 with a fake right-only stereo input: off → 2 channels (0 / 0.707 RMS), Right → 1 channel 0.708,
 Mix → 0.354, Left → silence. Takes already recorded one-sided aren't changed.
 
+
+**Takes without a song scrub now (2026-10-20):** a take recorded in the browser is WebM with no
+duration or seek index, so the browser's `<audio>` couldn't scrub it (reported on Mac Firefox: the
+playhead stuck at the end). Takes without a song now play in `components/recordings/TakePlayer.tsx`:
+Play/Pause, a `.slider` scrubber and the times, decoding the file on the first Play with
+`loadAudio` and playing it on a one-track `TimelinePlayer` (stored `durationSec` shows the length
+before then). Used on the recording page, the recording cards and the save dialog. Checked in
+headless Chromium with a MediaRecorder WebM made on the page: play, scrub, stop at the end. Not
+checked in Firefox itself.

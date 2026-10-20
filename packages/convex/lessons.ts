@@ -98,7 +98,7 @@ async function submissionView(ctx: QueryCtx, s: Doc<"lessonSubmissions"> | null)
 }
 
 /** Lessons the student can't see yet (booked ones, until they start). */
-async function hiddenSessions(ctx: QueryCtx, lessonId: Id<"lessonStudents">) {
+export async function hiddenSessions(ctx: QueryCtx, lessonId: Id<"lessonStudents">) {
   const now = Date.now();
   const rows = await ctx.db
     .query("lessonSessions")

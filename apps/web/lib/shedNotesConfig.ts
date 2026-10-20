@@ -1,0 +1,161 @@
+/**
+ * Shed Notes' settings file: one JSON text, stored in the account (`syncedSettings`, key
+ * `jam-practice-shed-notes`), edited as a file inside Shed Notes and nowhere else (the Vim switch
+ * in the toolbar just rewrites `vimMode` in it). The text is kept exactly as typed, so a mistake
+ * never loses anything: until it parses again, the last good settings stay in use.
+ */
+
+export type Keybinding = { key: string; command: string };
+
+export type ShedNotesConfig = {
+  vimMode: boolean;
+  livePreview: boolean;
+  lineNumbers: boolean;
+  readableLineLength: boolean;
+  fontSize: number;
+  spellcheck: boolean;
+  keybindings: Keybinding[];
+  vim: {
+    /** What `<leader>` means in mappings. */
+    leader: string;
+    /** vimrc lines: `imap jk <Esc>`, `nnoremap <leader>n :new<CR>`, `unmap Q`. */
+    mappings: string[];
+    /** Your own `:` commands: name → a Shed Notes command id. */
+    exCommands: Record<string, string>;
+  };
+};
+
+export const DEFAULT_CONFIG: ShedNotesConfig = {
+  vimMode: false,
+  livePreview: true,
+  lineNumbers: false,
+  readableLineLength: true,
+  fontSize: 16,
+  spellcheck: true,
+  keybindings: [
+    { key: "Mod-p", command: "app:command-palette" },
+    { key: "Mod-o", command: "app:quick-switcher" },
+    { key: "Alt-n", command: "note:new" },
+    { key: "Mod-b", command: "editor:toggle-bold" },
+    { key: "Mod-i", command: "editor:toggle-italic" },
+    { key: "Mod-Shift-x", command: "editor:toggle-strikethrough" },
+    { key: "Mod-`", command: "editor:toggle-code" },
+    { key: "Mod-k", command: "editor:insert-wikilink" },
+    { key: "Mod-l", command: "editor:toggle-checklist" },
+    { key: "Mod-Shift-m", command: "editor:insert-notation" },
+    { key: "Mod-Enter", command: "editor:follow-link" },
+    { key: "Mod-e", command: "view:toggle-live-preview" },
+  ],
+  vim: {
+    leader: "<Space>",
+    mappings: ["nmap j gj", "nmap k gk"],
+    exCommands: { notation: "editor:insert-notation", palette: "app:command-palette" },
+  },
+};
+
+export const DEFAULT_CONFIG_TEXT = JSON.stringify(DEFAULT_CONFIG, null, 2);
+
+export type ConfigResult = { config: ShedNotesConfig; errors: string[] };
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/** Parses the settings text. Unknown keys are reported; missing ones take the defaults. With a
+    JSON syntax error, `config` is null and `errors` says where. */
+export function parseConfig(text: string): { config: ShedNotesConfig | null; errors: string[] } {
+  let raw: unknown;
+  try {
+    raw = text.trim() ? JSON.parse(text) : {};
+  } catch (e) {
+    return { config: null, errors: [String((e as Error).message)] };
+  }
+  if (!isObj(raw)) return { config: null, errors: ["The settings file must be one JSON object: { ... }"] };
+  const errors: string[] = [];
+  const known = new Set(Object.keys(DEFAULT_CONFIG));
+  for (const k of Object.keys(raw)) if (!known.has(k)) errors.push(`Unknown setting "${k}" (ignored).`);
+  const bool = (k: keyof ShedNotesConfig) => {
+    const v = raw[k];
+    if (v === undefined) return DEFAULT_CONFIG[k] as boolean;
+    if (typeof v !== "boolean") errors.push(`"${k}" should be true or false.`);
+    return typeof v === "boolean" ? v : (DEFAULT_CONFIG[k] as boolean);
+  };
+  let fontSize = DEFAULT_CONFIG.fontSize;
+  if (raw.fontSize !== undefined) {
+    if (typeof raw.fontSize === "number" && raw.fontSize >= 10 && raw.fontSize <= 32) fontSize = raw.fontSize;
+    else errors.push(`"fontSize" should be a number from 10 to 32.`);
+  }
+  let keybindings = DEFAULT_CONFIG.keybindings;
+  if (raw.keybindings !== undefined) {
+    if (!Array.isArray(raw.keybindings)) errors.push(`"keybindings" should be a list of { "key": ..., "command": ... }.`);
+    else {
+      keybindings = [];
+      raw.keybindings.forEach((b, i) => {
+        if (isObj(b) && typeof b.key === "string" && b.key.trim() && typeof b.command === "string") keybindings.push({ key: b.key.trim(), command: b.command.trim() });
+        else errors.push(`keybindings[${i}] needs a "key" and a "command".`);
+      });
+    }
+  }
+  const vim = { ...DEFAULT_CONFIG.vim };
+  if (raw.vim !== undefined) {
+    if (!isObj(raw.vim)) errors.push(`"vim" should be an object.`);
+    else {
+      for (const k of Object.keys(raw.vim)) if (!(k in DEFAULT_CONFIG.vim)) errors.push(`Unknown vim setting "${k}" (ignored).`);
+      if (raw.vim.leader !== undefined) {
+        if (typeof raw.vim.leader === "string" && raw.vim.leader) vim.leader = raw.vim.leader;
+        else errors.push(`"vim.leader" should be a key, like "<Space>" or ",".`);
+      }
+      if (raw.vim.mappings !== undefined) {
+        if (Array.isArray(raw.vim.mappings) && raw.vim.mappings.every((m) => typeof m === "string")) vim.mappings = raw.vim.mappings as string[];
+        else errors.push(`"vim.mappings" should be a list of lines like "imap jk <Esc>".`);
+      }
+      if (raw.vim.exCommands !== undefined) {
+        if (isObj(raw.vim.exCommands) && Object.values(raw.vim.exCommands).every((c) => typeof c === "string")) vim.exCommands = raw.vim.exCommands as Record<string, string>;
+        else errors.push(`"vim.exCommands" should map names to command ids: { "notation": "editor:insert-notation" }.`);
+      }
+    }
+  }
+  return {
+    config: {
+      vimMode: bool("vimMode"),
+      livePreview: bool("livePreview"),
+      lineNumbers: bool("lineNumbers"),
+      readableLineLength: bool("readableLineLength"),
+      spellcheck: bool("spellcheck"),
+      fontSize,
+      keybindings,
+      vim,
+    },
+    errors,
+  };
+}
+
+/** The settings text with one top-level setting changed (for the toolbar's switches). Null when
+    the text doesn't parse, so nothing is overwritten. */
+export function setConfigValue(text: string, key: keyof ShedNotesConfig, value: unknown): string | null {
+  let raw: unknown;
+  try {
+    raw = text.trim() ? JSON.parse(text) : {};
+  } catch {
+    return null;
+  }
+  if (!isObj(raw)) return null;
+  return JSON.stringify({ ...raw, [key]: value }, null, 2);
+}
+
+/** One vimrc line, parsed. */
+export type VimrcLine =
+  | { kind: "map"; lhs: string; rhs: string; mode: "normal" | "insert" | "visual" | undefined; noremap: boolean }
+  | { kind: "unmap"; lhs: string; mode: "normal" | "insert" | "visual" | undefined }
+  | { kind: "error"; message: string };
+
+const MODES: Record<string, "normal" | "insert" | "visual" | undefined> = { "": undefined, n: "normal", i: "insert", v: "visual", x: "visual" };
+
+export function parseVimrcLine(line: string, leader: string): VimrcLine | null {
+  const text = line.trim();
+  if (!text || text.startsWith('"')) return null;
+  const m = /^([nivx]?)(nore)?map\s+(\S+)\s+(.+)$/.exec(text);
+  const lead = (s: string) => s.replace(/<leader>/gi, leader);
+  if (m) return { kind: "map", mode: MODES[m[1]], noremap: !!m[2], lhs: lead(m[3]), rhs: lead(m[4].trim()) };
+  const u = /^([nivx]?)unmap\s+(\S+)$/.exec(text);
+  if (u) return { kind: "unmap", mode: MODES[u[1]], lhs: lead(u[2]) };
+  return { kind: "error", message: `Can't read vim mapping "${text}". Use map, nmap, imap, vmap, noremap, nnoremap, inoremap, vnoremap or unmap.` };
+}

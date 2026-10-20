@@ -109,55 +109,8 @@ export const stats = query({
 
 // ---------------------------------------------------------------- feedback
 
-export const feedbackList = query({
-  args: {},
-  handler: async (ctx) => {
-    await mustAdmin(ctx);
-    const rows = await ctx.db.query("feedback").withIndex("by_createdAt").order("desc").take(500);
-    const people = new Map<string, Awaited<ReturnType<typeof personOf>>>();
-    return Promise.all(
-      rows.map(async (r) => {
-        if (r.userId && !people.has(r.userId)) people.set(r.userId, await personOf(ctx, r.userId));
-        return {
-          id: r._id,
-          kind: r.kind,
-          message: r.message,
-          status: r.status,
-          adminNote: r.adminNote ?? "",
-          page: r.page ?? null,
-          userAgent: r.userAgent ?? null,
-          email: r.email ?? null,
-          target: r.target ?? null,
-          screenshotUrl: r.screenshotId ? await ctx.storage.getUrl(r.screenshotId) : null,
-          from: r.userId ? (people.get(r.userId) ?? null) : null,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        };
-      }),
-    );
-  },
-});
-
-const status = v.union(v.literal("new"), v.literal("seen"), v.literal("planned"), v.literal("done"), v.literal("closed"));
-
-export const updateFeedback = mutation({
-  args: { id: v.id("feedback"), status: v.optional(status), adminNote: v.optional(v.string()) },
-  handler: async (ctx, { id, status, adminNote }) => {
-    await mustAdmin(ctx);
-    await ctx.db.patch(id, { ...(status ? { status } : {}), ...(adminNote !== undefined ? { adminNote: adminNote.slice(0, 4000) } : {}), updatedAt: Date.now() });
-  },
-});
-
-export const deleteFeedback = mutation({
-  args: { id: v.id("feedback") },
-  handler: async (ctx, { id }) => {
-    await mustAdmin(ctx);
-    const row = await ctx.db.get(id);
-    if (!row) return;
-    if (row.screenshotId) await ctx.storage.delete(row.screenshotId);
-    await ctx.db.delete(id);
-  },
-});
+// The inbox itself (list, status, notes, links, GitHub issues) is in inbox.ts / inboxCore.ts,
+// which also reach the shared inbox on production.
 
 // ---------------------------------------------------------------- posts
 

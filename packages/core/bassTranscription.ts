@@ -68,7 +68,76 @@ export type Transcription = {
   /** Free notes about it. */
   comments: string;
   timeSignature: { top: number; bottom: number };
+  /** The staff's clef. Missing = "bass8" (every Bass Genius transcription). */
+  clef?: Clef;
+  /** Key signature as a count of sharps (positive) or flats (negative), -7…7. Missing = none. */
+  key?: number;
   measures: TMeasure[];
+};
+
+// ---- Staff: clef, range, key signature -------------------------------------
+
+/** "bass8": bass clef for bass guitar and upright, written an octave above where it sounds. */
+export type Clef = "treble" | "bass" | "bass8";
+
+export const CLEF_NAMES: Record<Clef, string> = { treble: "Treble", bass: "Bass", bass8: "Bass (bass guitar, upright)" };
+
+export type StaffInfo = {
+  clef: Clef;
+  /** Diatonic index (C0 = 0) of the written top line. */
+  topLineIndex: number;
+  /** Octaves the part is written above where it sounds (bass: 1). */
+  writtenShift: number;
+  low: number;
+  high: number;
+  /** Where rests sit (VexFlow key). */
+  restKey: string;
+  /** The MIDI note the first typed letter lands near. */
+  startMidi: number;
+};
+
+export const STAFFS: Record<Clef, StaffInfo> = {
+  // Piano left hand, cello, trombone…: as written, A0 to C5.
+  bass: { clef: "bass", topLineIndex: 3 * 7 + 5, writtenShift: 0, low: 21, high: 72, restKey: "d/3", startMidi: 48 },
+  // Bass guitar and upright are written an octave above where they sound; C1 (a low-C extension)
+  // to G4.
+  bass8: { clef: "bass", topLineIndex: 3 * 7 + 5, writtenShift: 1, low: 24, high: 67, restKey: "d/3", startMidi: 40 },
+  // Treble: as written, G2 (a guitar's low notes, written down there) to C7.
+  treble: { clef: "treble", topLineIndex: 5 * 7 + 3, writtenShift: 0, low: 43, high: 96, restKey: "b/4", startMidi: 67 },
+};
+
+export function staffOf(t: Pick<Transcription, "clef">): StaffInfo {
+  return STAFFS[t.clef ?? "bass8"];
+}
+
+const SHARP_ORDER: Step[] = ["F", "C", "G", "D", "A", "E", "B"];
+
+/** The alteration the key signature gives each letter. */
+export function keyAlters(key: number | undefined): Record<Step, Pitch["alter"]> {
+  const out = { C: 0, D: 0, E: 0, F: 0, G: 0, A: 0, B: 0 } as Record<Step, Pitch["alter"]>;
+  const k = Math.max(-7, Math.min(7, Math.round(key ?? 0)));
+  if (k > 0) for (const step of SHARP_ORDER.slice(0, k)) out[step] = 1;
+  if (k < 0) for (const step of [...SHARP_ORDER].reverse().slice(0, -k)) out[step] = -1;
+  return out;
+}
+
+/** Key signatures by count of sharps/flats: the major key's name and its relative minor. */
+export const KEY_NAMES: Record<number, { major: string; minor: string }> = {
+  [-7]: { major: "Cb", minor: "Ab" },
+  [-6]: { major: "Gb", minor: "Eb" },
+  [-5]: { major: "Db", minor: "Bb" },
+  [-4]: { major: "Ab", minor: "F" },
+  [-3]: { major: "Eb", minor: "C" },
+  [-2]: { major: "Bb", minor: "G" },
+  [-1]: { major: "F", minor: "D" },
+  0: { major: "C", minor: "A" },
+  1: { major: "G", minor: "E" },
+  2: { major: "D", minor: "B" },
+  3: { major: "A", minor: "F#" },
+  4: { major: "E", minor: "C#" },
+  5: { major: "B", minor: "G#" },
+  6: { major: "F#", minor: "D#" },
+  7: { major: "C#", minor: "A#" },
 };
 
 export type TranscriptionFile = {
@@ -137,13 +206,13 @@ export const LOWEST_MIDI = 24;
 export const HIGHEST_MIDI = 67;
 
 /** The octave of `step` that's closest to `nearMidi` (how a letter key picks its octave). */
-export function nearestPitch(step: Step, alter: Pitch["alter"], nearMidi: number): Pitch {
+export function nearestPitch(step: Step, alter: Pitch["alter"], nearMidi: number, range: { low: number; high: number } = { low: LOWEST_MIDI, high: HIGHEST_MIDI }): Pitch {
   let best: Pitch = { step, alter, octave: 2 };
   let bestDist = Infinity;
-  for (let octave = 0; octave <= 5; octave++) {
+  for (let octave = 0; octave <= 8; octave++) {
     const p: Pitch = { step, alter, octave };
     const m = midiOf(p);
-    if (m < LOWEST_MIDI || m > HIGHEST_MIDI) continue;
+    if (m < range.low || m > range.high) continue;
     const d = Math.abs(m - nearMidi);
     if (d < bestDist) {
       best = p;
@@ -507,6 +576,30 @@ export function cleanTranscription(raw: unknown): Transcription {
     timeSignature: { top: 4, bottom: 4 },
     measures: measures.length ? measures : [emptyMeasure()],
   };
+}
+
+/** A score from anywhere (Score Writer, a note, a file): like `cleanTranscription`, but keeps
+    the clef, key and any time signature. */
+export function cleanScore(raw: unknown): Transcription {
+  const t = cleanTranscription(raw);
+  const r = raw as Record<string, unknown>;
+  const ts = (r.timeSignature ?? {}) as { top?: unknown; bottom?: unknown };
+  const top = Number(ts.top);
+  const bottom = Number(ts.bottom);
+  if (Number.isInteger(top) && top >= 1 && top <= 16 && [2, 4, 8, 16].includes(bottom)) t.timeSignature = { top, bottom };
+  if (r.clef === "treble" || r.clef === "bass" || r.clef === "bass8") t.clef = r.clef;
+  const key = Number(r.key);
+  if (Number.isInteger(key) && key >= -7 && key <= 7 && key !== 0) t.key = key;
+  const beats = (t.timeSignature.top * 4) / t.timeSignature.bottom;
+  const rawMeasures = Array.isArray(r.measures) ? r.measures : [];
+  t.measures = t.measures.map((m, i) => {
+    const rawChords = ((rawMeasures[i] as { chords?: unknown } | undefined)?.chords ?? []) as { beat?: unknown; symbol?: unknown }[];
+    const chords = Array.isArray(rawChords)
+      ? rawChords.filter((c) => c && typeof c.symbol === "string").map((c) => ({ beat: Math.max(0, Math.min(beats - 0.25, Number(c.beat) || 0)), symbol: String(c.symbol).slice(0, 40) }))
+      : m.chords;
+    return { ...m, chords };
+  });
+  return t;
 }
 
 export type ImportedFile =

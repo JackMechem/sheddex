@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { createElement } from "react";
-import { CalendarIcon, FileIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
+import { CalendarIcon, DocumentIcon, FileIcon, GraduationCapIcon, HelpIcon, HomeIcon, MaximizeIcon, MicIcon, NAV_LINKS, SetlistIcon, UserIcon } from "@/components/tools";
 import { HELP_TOPICS, type HelpTopic } from "@/lib/helpContent";
 
 /** Pieces shared by the Help page and the first-visit intros (`ToolIntro`). */
@@ -12,6 +12,7 @@ type IconType = (props: { className?: string }) => React.JSX.Element;
 const EXTRA_ICONS: Record<string, IconType> = {
   dashboard: HomeIcon,
   "shed-log": CalendarIcon,
+  "shed-notes": DocumentIcon,
   "split-screen": MaximizeIcon,
   account: UserIcon,
   tunes: SetlistIcon,

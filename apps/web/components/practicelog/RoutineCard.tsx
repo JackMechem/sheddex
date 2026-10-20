@@ -11,6 +11,7 @@ import RecordClip from "@/components/practicelog/RecordClip";
 import RoutineTimePicker from "@/components/practicelog/RoutineTime";
 import { RecordingCard } from "@/components/recordings/RecordingParts";
 import Subtasks from "@/components/practicelog/Subtasks";
+import AttachedNotes, { LegacyNotes } from "@/components/shednotes/AttachedNotes";
 import { CheckIcon, CloseIcon, DotsVerticalIcon, PauseIcon, PlayIcon, PlusIcon, RepeatIcon, StopIcon } from "@/components/tools";
 import {
   type DayRoutine,
@@ -21,6 +22,7 @@ import {
   ROUTINE_COLORS,
   describeRepeat,
   formatMinutesShort,
+  formatShortDate,
   formatTime,
   isRoutineNow,
   routineStatus,
@@ -55,7 +57,6 @@ export default function RoutineCard({
   const { engine, startRoutine, runningTask } = useRoutineTimer();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [editingTime, setEditingTime] = useState(false);
-  const [showNotes, setShowNotes] = useState(!!occurrence.notes);
   const color = ROUTINE_COLORS[routine.color % ROUTINE_COLORS.length];
   const { done, total } = progressOf(routine, occurrence);
   const complete = total > 0 && done === total;
@@ -72,6 +73,8 @@ export default function RoutineCard({
   const skipped = !!occurrence.skipped;
   const mine = recordings?.filter((r) => r.routineId === routine.id) ?? [];
   const timeOverride = occurrence.startTime !== undefined;
+  const noteTarget = { kind: "routine" as const, date, routineId: routine.id };
+  const noteLabel = `${routine.name || "Untitled routine"} · ${formatShortDate(date)}`;
   const clock = useClockMinute();
   // Its time is now: outlined in its colour.
   const timeIsNow = !!clock && clock.today === date && isRoutineNow(item, clock.nowMin);
@@ -86,7 +89,6 @@ export default function RoutineCard({
         ...(timeOverride
           ? [{ label: "Use the routine's own time", onSelect: () => log.updateOccurrence(date, routine.id, (o) => { const n = { ...o }; delete n.startTime; return n; }) }]
           : []),
-        { label: showNotes ? "Hide notes" : "Notes for this day", onSelect: () => setShowNotes((v) => !v) },
         complete
           ? { label: "Uncheck every task", onSelect: () => log.setAllTasks(date, routine.id, false) }
           : { label: "Check every task", onSelect: () => log.setAllTasks(date, routine.id, true) },
@@ -314,13 +316,15 @@ export default function RoutineCard({
 
       {routine.attachments.length > 0 && <AttachmentList items={routine.attachments} />}
 
-      {showNotes && (
-        <textarea
-          value={occurrence.notes ?? ""}
-          onChange={(e) => log.updateOccurrence(date, routine.id, (o) => ({ ...o, notes: e.target.value }))}
-          rows={3}
+      {occurrence.notes !== undefined && occurrence.notes !== "" && (
+        <LegacyNotes
+          text={occurrence.notes}
+          onChange={(notes) => log.updateOccurrence(date, routine.id, (o) => ({ ...o, notes }))}
+          onClear={() => log.updateOccurrence(date, routine.id, (o) => { const n = { ...o }; delete n.notes; return n; })}
+          target={noteTarget}
+          label={noteLabel}
+          newTitle={noteLabel}
           placeholder={`How did ${routine.name || "it"} go today?`}
-          className="resize-y rounded-xl bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
       )}
 
@@ -331,14 +335,9 @@ export default function RoutineCard({
           ))}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      <AttachedNotes target={noteTarget} label={noteLabel} newTitle={noteLabel}>
         <RecordClip date={date} routineId={routine.id} routines={dayRoutines} compact />
-        {!showNotes && (
-          <button type="button" onClick={() => setShowNotes(true)} className="rounded-full bg-background px-2.5 py-1 text-xs font-medium hover:bg-surface-hover">
-            Add notes
-          </button>
-        )}
-      </div>
+      </AttachedNotes>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </article>
   );

@@ -33,7 +33,7 @@ It's hand-maintained, separate from the auto-generated Next.js warning in `apps/
 A free collection of music practice tools for Jack (a musician and developer) and, now, friends,
 family and other musicians: about 25 tools plus a tune/chord-chart library, setlists, files, a practice
 log (the Shed Log), a Community, Lessons for teachers and students, and an admin panel. Currently
-**v0.9.6 beta** (see versioning).
+**v0.10.0 beta** (see versioning).
 
 - **Web** (`apps/web`): Next.js (App Router, a newer version with breaking changes — read
   `node_modules/next/dist/docs/` before using an unfamiliar API) + Tailwind v4, almost all client
@@ -62,7 +62,9 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   older names in UI text (sheddex, jackshed, shed.io, Barn Tools). The repo
   folder and package names still say `jam-practice`, and storage keys start with `jam-practice-`
   — leave those alone, changing a key loses people's saved data.
-- GitHub: `git@github.com:JackMechem/sheddex.git` (the in-app GitHub links in `Home.tsx`, `Landing.tsx` and `app/terms` point at it).
+- GitHub: `git@github.com:JackMechem/sheddex.git` — the repo is now named **JackMechem/soniroll** on
+  GitHub (the old name redirects). The in-app GitHub links in `Home.tsx`, `Landing.tsx` and
+  `app/terms` point at it; the feedback ↔ commit tools use `REPO` in `packages/convex/lib/github.ts`.
 
 ## Working with Jack
 
@@ -82,7 +84,9 @@ log (the Shed Log), a Community, Lessons for teachers and students, and an admin
   every commit with his security key, which you can't touch; don't change that config — the flag
   keeps his own commits signed. Write detailed messages: a short first line (what changed, in
   plain words), a blank line, then what and why, and anything not verified. End with the
-  `Co-Authored-By` line. One commit per coherent change; don't commit half-done work, secrets or
+  `Co-Authored-By` line. When the work is for a piece of feedback, put its ID in the message
+  (`Fixes FB-12` when it fixes it, just `FB-12` otherwise) so the admin inbox links it (see
+  "GitHub webhook" in `docs/guides/deploying.md`). One commit per coherent change; don't commit half-done work, secrets or
   `.env*` files. Never push (that needs his key) — tell him when there's something to push.
 
 ## Repo layout
@@ -222,6 +226,10 @@ Web (`apps/web`):
   share, delete for any `StoredEntry`; `FileViewer`, `FilePreviewDialog`, `useFileUploader`,
   `TuneFiles`), `FileShareDialog`, `lib/files.ts` (`fileKind`, `formatBytes`, `downloadFile`).
 - Help: `lib/helpContent.ts` (a topic per tool, with options), `components/help/ToolIntro.tsx`.
+- Notation: `components/notation/ScoreEditor.tsx` (the one notation editor — never write another;
+  wrap it with a `header`) and `Score.tsx` (read-only view too); scores via `lib/useScores.ts`.
+- Notes: `components/shednotes/AttachedNotes.tsx` (Shed Notes on anything — a `NoteTarget` from
+  `packages/core/shedNotes.ts`), `NoteEditor` (CodeMirror markdown editor), `renderNotation` (abcjs).
 
 Mobile (`apps/mobile/src`): `ToolOptionsSheet` (tabbed options sheet — tool screens don't scroll;
 essentials on the main screen, the rest in the sheet), `FloatingTabBar` (+ `useTabBarSpace`),
@@ -250,6 +258,8 @@ Read the file(s) for an area before working on it. All are in `docs/notes/`.
 | Bass Genius (bass lines, players, transcriptions, comping, drums) | `bass-genius.md` |
 | Drum Generator, Syncopation | `drum-generator-and-syncopation.md` |
 | Shed Log (practice log, routines, goals, streaks, sharing, cards, the week view and its popover); tool stats, per-tool streaks, the Log button and the reward-look options (`LOG_BY_BUTTON`) | `shed-log.md` |
+| Score Writer (`/score-writer`) and the shared notation editor (`components/notation/`: `Score`, `ScoreEditor`, `ScoreDialog`) used by Score Writer, Shed Notes and Bass Genius; clefs, key signatures, re-barring | `score-writer.md` |
+| Shed Notes (markdown notes, CodeMirror live preview, vim, `[[links]]`/backlinks, abcjs notation, the JSON settings file, notes attached to routines/days/tunes) | `shed-notes.md` |
 | Help page, intros, title style, screenshots | `help-page.md`, `sidebar-library-and-chart-reading.md` |
 | Community, profiles, posts, banners, account page | `community-and-profiles.md`, `backend-convex.md`, `tools-slow-downer-recorder-community-home.md` |
 | Sidebar, tool categories, Tunes/Chord Charts redesign, full-width pages, chart reading | `sidebar-library-and-chart-reading.md` |

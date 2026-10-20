@@ -127,8 +127,11 @@ export default function ChordChart({
   fullscreen = false,
   hideHeader = false,
   activeBar = null,
+  scroll = false,
 }: {
   song: IRealSong;
+  /** Narrower than the chart: keep it full size and scroll sideways instead of shrinking it. */
+  scroll?: boolean;
   barsPerRow?: number;
   fullscreen?: boolean;
   /** Index into `song.bars` of the bar being played right now (Bass Genius) — highlighted. */
@@ -191,7 +194,7 @@ export default function ChordChart({
           </PageFit>
         </div>
       ) : (
-        <PageFit fitHeight={false}>
+        <PageFit fitHeight={false} scroll={scroll}>
           {rows.map((row, i) => (
             <Row
               key={i}
@@ -234,14 +237,17 @@ export default function ChordChart({
 export function PageFit({
   children,
   fitHeight,
+  scroll = false,
 }: {
   children: React.ReactNode;
   fitHeight: boolean;
+  scroll?: boolean;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const [overflowing, setOverflowing] = useState(false);
 
   useLayoutEffect(() => {
     const box = boxRef.current;
@@ -257,9 +263,11 @@ export function PageFit({
         if (availH <= 0) return;
         setScale(Math.min(MAX_SCALE, availW / natW, availH / natH));
       } else {
-        const s = Math.min(MAX_SCALE, availW / natW);
+        // Scroll mode: never smaller than natural size — wider than the box scrolls sideways.
+        const s = scroll ? Math.max(1, Math.min(MAX_SCALE, availW / natW)) : Math.min(MAX_SCALE, availW / natW);
         setScale(s);
         setContentHeight(natH * s);
+        setOverflowing(natW * s > availW + 1);
       }
     };
     recompute();
@@ -267,7 +275,7 @@ export function PageFit({
     observer.observe(box);
     observer.observe(content);
     return () => observer.disconnect();
-  }, [fitHeight]);
+  }, [fitHeight, scroll]);
 
   if (fitHeight) {
     return (
@@ -277,6 +285,17 @@ export function PageFit({
           className="absolute left-1/2 top-1/2 inline-flex flex-col items-start gap-4"
           style={{ transform: `translate(-50%, -50%) scale(${scale})`, transformOrigin: "center" }}
         >
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  if (overflowing) {
+    // Wider than the box (scroll mode on a narrow screen): full size, swiped sideways.
+    return (
+      <div ref={boxRef} className="relative w-full overflow-x-auto overscroll-x-contain rounded-xl bg-background">
+        <div ref={contentRef} className="inline-flex flex-col items-start gap-3 p-3" style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
           {children}
         </div>
       </div>

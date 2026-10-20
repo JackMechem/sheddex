@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import MixPlayer, { SavedMixPlayer } from "@/components/recordings/MixPlayer";
+import TakePlayer from "@/components/recordings/TakePlayer";
 import { CloseIcon, LinkIcon, MicIcon, NoteIcon, SearchIcon, TrashIcon } from "@/components/tools";
 import { sortByText } from "@jam-practice/core/sortText";
 import { errorText } from "@/lib/files";
@@ -48,7 +49,7 @@ export function RecordingCard({
         (songUrl ? (
           <SavedMixPlayer recording={recording} songUrl={songUrl} songName={songName} compact lazy />
         ) : (
-          <audio controls preload="none" src={recording.url} className="h-10 w-full" />
+          <TakePlayer url={recording.url} durationSec={recording.durationSec} compact />
         ))}
     </div>
   );
@@ -236,7 +237,7 @@ export function SaveTakeDialog({
         {song?.url ? (
           <MixPlayer takeUrl={url} songUrl={song.url} takeName={shownName} songName={song.name} mix={mix} onMixChange={setMix} />
         ) : (
-          <audio controls src={url} className="w-full" />
+          <TakePlayer url={url} durationSec={durationSec} />
         )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-muted">Name</span>
