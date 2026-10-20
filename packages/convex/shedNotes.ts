@@ -104,7 +104,14 @@ export const search = query({
       .query("shedNotes")
       .withSearchIndex("search_body", (s) => s.search("body", text).eq("userId", userId))
       .take(30);
-    return hits.map((n) => ({ id: n._id as string, title: n.title, folder: n.folder, snippet: noteSnippet(n.body) }));
+    // The bit of text around the first word searched for (what the search menu shows).
+    const words = text.toLowerCase().split(/\s+/).filter(Boolean);
+    return hits.map((n) => {
+      const lower = n.body.toLowerCase();
+      const at = Math.min(...words.map((w) => lower.indexOf(w)).filter((i) => i >= 0), Infinity);
+      const excerpt = Number.isFinite(at) ? noteSnippet(n.body.slice(Math.max(0, at - 50), at + 110), 150) : noteSnippet(n.body, 150);
+      return { id: n._id as string, title: n.title, folder: n.folder, snippet: excerpt };
+    });
   },
 });
 

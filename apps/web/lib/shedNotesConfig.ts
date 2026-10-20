@@ -33,18 +33,50 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
   fontSize: 16,
   spellcheck: true,
   keybindings: [
+    // Finding and moving around
     { key: "Mod-p", command: "app:command-palette" },
     { key: "Mod-o", command: "app:quick-switcher" },
+    { key: "Mod-Shift-f", command: "app:search" },
+    { key: "Mod-,", command: "app:open-settings" },
+    { key: "Mod-Alt-ArrowLeft", command: "app:go-back" },
+    { key: "Mod-Alt-ArrowRight", command: "app:go-forward" },
+    { key: "Mod-Enter", command: "editor:follow-link" },
+    // Notes
     { key: "Alt-n", command: "note:new" },
+    { key: "F2", command: "note:rename" },
+    { key: "Alt-m", command: "note:move" },
+    { key: "Mod-Alt-Backspace", command: "note:delete" },
+    { key: "Alt-w", command: "note:close" },
+    { key: "Mod-s", command: "note:save" },
+    // How it looks
+    { key: "Mod-e", command: "view:toggle-live-preview" },
+    { key: "Mod-Alt-v", command: "view:toggle-vim" },
+    { key: "Mod-Alt-b", command: "view:toggle-note-list" },
+    { key: "Mod-Alt-l", command: "view:toggle-links-panel" },
+    { key: "Mod-Alt-n", command: "view:toggle-line-numbers" },
+    { key: "Mod-Alt-r", command: "view:toggle-readable-width" },
+    { key: "Mod-Alt-s", command: "view:toggle-spellcheck" },
+    // Writing
     { key: "Mod-b", command: "editor:toggle-bold" },
     { key: "Mod-i", command: "editor:toggle-italic" },
     { key: "Mod-Shift-x", command: "editor:toggle-strikethrough" },
+    { key: "Mod-Shift-h", command: "editor:toggle-highlight" },
     { key: "Mod-`", command: "editor:toggle-code" },
-    { key: "Mod-k", command: "editor:insert-wikilink" },
+    { key: "Mod-Alt-1", command: "editor:set-heading-1" },
+    { key: "Mod-Alt-2", command: "editor:set-heading-2" },
+    { key: "Mod-Alt-3", command: "editor:set-heading-3" },
+    { key: "Mod-Alt-4", command: "editor:set-heading-4" },
+    { key: "Mod-Alt-5", command: "editor:set-heading-5" },
+    { key: "Mod-Alt-6", command: "editor:set-heading-6" },
+    { key: "Mod-Alt-0", command: "editor:remove-heading" },
     { key: "Mod-l", command: "editor:toggle-checklist" },
+    { key: "Mod-Shift-8", command: "editor:toggle-bullet-list" },
+    { key: "Mod-Shift-7", command: "editor:toggle-numbered-list" },
+    { key: "Mod-'", command: "editor:toggle-quote" },
+    { key: "Mod-k", command: "editor:insert-wikilink" },
+    { key: "Mod-Alt-h", command: "editor:insert-horizontal-rule" },
+    { key: "Mod-Alt-t", command: "editor:insert-table" },
     { key: "Mod-Shift-m", command: "editor:insert-notation" },
-    { key: "Mod-Enter", command: "editor:follow-link" },
-    { key: "Mod-e", command: "view:toggle-live-preview" },
   ],
   vim: {
     leader: "<Space>",
@@ -83,15 +115,20 @@ export function parseConfig(text: string): { config: ShedNotesConfig | null; err
     if (typeof raw.fontSize === "number" && raw.fontSize >= 10 && raw.fontSize <= 32) fontSize = raw.fontSize;
     else errors.push(`"fontSize" should be a number from 10 to 32.`);
   }
+  // Your keys go on top of the built-in ones: a key you list replaces that key's built-in
+  // command, and "command": "" turns the key off. (So new built-in keys reach files written
+  // before they existed.)
   let keybindings = DEFAULT_CONFIG.keybindings;
   if (raw.keybindings !== undefined) {
     if (!Array.isArray(raw.keybindings)) errors.push(`"keybindings" should be a list of { "key": ..., "command": ... }.`);
     else {
-      keybindings = [];
+      const mine: Keybinding[] = [];
       raw.keybindings.forEach((b, i) => {
-        if (isObj(b) && typeof b.key === "string" && b.key.trim() && typeof b.command === "string") keybindings.push({ key: b.key.trim(), command: b.command.trim() });
+        if (isObj(b) && typeof b.key === "string" && b.key.trim() && typeof b.command === "string") mine.push({ key: b.key.trim(), command: b.command.trim() });
         else errors.push(`keybindings[${i}] needs a "key" and a "command".`);
       });
+      const listed = new Set(mine.map((b) => b.key.toLowerCase()));
+      keybindings = [...DEFAULT_CONFIG.keybindings.filter((b) => !listed.has(b.key.toLowerCase())), ...mine.filter((b) => b.command)];
     }
   }
   const vim = { ...DEFAULT_CONFIG.vim };

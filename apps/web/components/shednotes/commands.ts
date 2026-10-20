@@ -16,6 +16,10 @@ import { NEW_TABLE } from "./tables";
 export type NoteActions = {
   newNote?: () => void;
   openQuickSwitcher?: () => void;
+  /** The search menu (titles and text of every note). */
+  openSearch?: () => void;
+  toggleNoteList?: () => void;
+  toggleLinksPanel?: () => void;
   openCommandPalette?: () => void;
   /** Opens (or, with `create`, makes) the note with this title. */
   openNoteByTitle?: (title: string, opts?: { create?: boolean; newTab?: boolean }) => void;
@@ -192,6 +196,7 @@ const toggle = (key: "vimMode" | "livePreview" | "lineNumbers" | "readableLineLe
 export const COMMANDS: Command[] = [
   { id: "app:command-palette", name: "Open the command palette", needs: "openCommandPalette", run: act("openCommandPalette", (a) => a.openCommandPalette!()) },
   { id: "app:quick-switcher", name: "Open a note (quick switcher)", needs: "openQuickSwitcher", run: act("openQuickSwitcher", (a) => a.openQuickSwitcher!()) },
+  { id: "app:search", name: "Search every note", needs: "openSearch", run: act("openSearch", (a) => a.openSearch!()) },
   { id: "app:open-settings", name: "Open the settings file", needs: "openSettings", run: act("openSettings", (a) => a.openSettings!()) },
   { id: "app:go-back", name: "Go back", needs: "goBack", run: act("goBack", (a) => a.goBack!()) },
   { id: "app:go-forward", name: "Go forward", needs: "goForward", run: act("goForward", (a) => a.goForward!()) },
@@ -203,6 +208,8 @@ export const COMMANDS: Command[] = [
   { id: "note:save", name: "Save now", needs: "save", run: act("save", (a) => a.save!()) },
   { id: "view:toggle-vim", name: "Turn vim mode on or off", needs: "setConfig", run: toggle("vimMode") },
   { id: "view:toggle-live-preview", name: "Switch between live preview and source", needs: "setConfig", run: toggle("livePreview") },
+  { id: "view:toggle-note-list", name: "Show or hide the note list", needs: "toggleNoteList", run: act("toggleNoteList", (a) => a.toggleNoteList!()) },
+  { id: "view:toggle-links-panel", name: "Show or hide the links panel", needs: "toggleLinksPanel", run: act("toggleLinksPanel", (a) => a.toggleLinksPanel!()) },
   { id: "view:toggle-line-numbers", name: "Show or hide line numbers", needs: "setConfig", run: toggle("lineNumbers") },
   { id: "view:toggle-readable-width", name: "Turn readable line length on or off", needs: "setConfig", run: toggle("readableLineLength") },
   { id: "view:toggle-spellcheck", name: "Turn spellcheck on or off", needs: "setConfig", run: toggle("spellcheck") },
@@ -298,4 +305,29 @@ export function runCommand(id: string, ctx: CommandContext, arg?: string): boole
 /** Commands that can run in this context (for the palette). */
 export function availableCommands(ctx: CommandContext): Command[] {
   return COMMANDS.filter((c) => (!c.editor || ctx.view) && (!c.needs || ctx.actions[c.needs]));
+}
+
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const KEY_NAMES: Record<string, string> = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Enter: "↵", Backspace: "⌫", Escape: "Esc", " ": "Space" };
+
+/** A key as it reads on this computer: "⌘⇧F" on a Mac, "Ctrl+Shift+F" elsewhere. */
+export function keyLabel(key: string): string {
+  const parts = key.split(/-(?!$)/);
+  const last = parts.pop()!;
+  const mods = parts.map((m) => {
+    const k = m.toLowerCase();
+    if (k === "mod") return IS_MAC ? "⌘" : "Ctrl";
+    if (k === "ctrl" || k === "c") return IS_MAC ? "⌃" : "Ctrl";
+    if (k === "meta" || k === "cmd" || k === "m") return IS_MAC ? "⌘" : "Meta";
+    if (k === "alt" || k === "a") return IS_MAC ? "⌥" : "Alt";
+    if (k === "shift" || k === "s") return IS_MAC ? "⇧" : "Shift";
+    return m;
+  });
+  const main = KEY_NAMES[last] ?? (last.length === 1 ? last.toUpperCase() : last);
+  return IS_MAC ? [...mods, main].join("") : [...mods, main].join("+");
+}
+
+/** The keys a command has in these settings, as labels ("" when none). */
+export function keysFor(id: string, bindings: { key: string; command: string }[]): string {
+  return bindings.filter((b) => b.command === id).map((b) => keyLabel(b.key)).join(" or ");
 }

@@ -154,3 +154,19 @@ and both panels hiding (with the stored flags). Not on a real phone.
 - Checked in the editor harness: the table drawn with its alignments, all five kinds of link
   opening the right way with the cursor on their line, cell click → source, Tab tidying and
   selecting, a new row from the last cell. Not on a phone.
+
+**Keys for everything, and a search menu (2026-10-20):**
+- `DEFAULT_CONFIG.keybindings` now gives every command a key (40; checked: none missing, no
+  duplicates). The settings file's `keybindings` are merged on top: a key listed there replaces
+  that key's built-in command, `"command": ""` turns it off — so files written before keep
+  getting new built-in keys. Keys show as "⌘⇧F" / "Ctrl+Shift+F" (`keyLabel`, `keysFor` in
+  `commands.ts`) in the palette, the Reference and the buttons' tooltips. Browser-reserved keys
+  (Ctrl-N/T/W, Ctrl-Shift-Q, Ctrl-1…9) are avoided; headings are Ctrl/⌘-Alt-1…6.
+- New commands: `app:search`, `view:toggle-note-list`, `view:toggle-links-panel`.
+- Search menu (`NoteSearch.tsx`): `/` outside a note (a capture-phase listener that stops the
+  site's tool search on this page; the tool search is still in the sidebar) or Ctrl/⌘-Shift-F.
+  Titles, folders and #tags match at once, text through `shedNotes.search`, which now returns
+  the excerpt around the first matching word; matches highlighted. A search button sits by the gear.
+- Checked in the full-page harness: / opens it (and types a slash inside a note), a text match
+  opens its note, Ctrl+Shift+F from the editor, heading / bullet / numbered / quote / table /
+  rename / note-list keys, palette key labels.

@@ -10,7 +10,7 @@ import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, NoteIcon } from "@
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteMeta, errorText, useNote } from "@/lib/useShedNotes";
-import { type NoteActions, runCommand } from "./commands";
+import { type NoteActions, keysFor, runCommand } from "./commands";
 import LinksPanel from "./LinksPanel";
 import NoteEditor from "./NoteEditor";
 
@@ -31,14 +31,15 @@ export const FORMAT: { label: string; title: string; command: string; className?
 ];
 
 /** Folds a side panel away (desktop): the note list on the left, the links on the right. */
-export function PanelButton({ side, open, onClick, className = "" }: { side: "left" | "right"; open: boolean; onClick: () => void; className?: string }) {
+export function PanelButton({ side, open, onClick, className = "", keys }: { side: "left" | "right"; open: boolean; onClick: () => void; className?: string; keys?: string }) {
   const what = side === "left" ? "the note list" : "the links panel";
   const label = `${open ? "Hide" : "Show"} ${what}`;
+  const title = keys ? `${label} (${keys})` : label;
   const x = side === "left" ? 9 : 15;
   // The chevron points the way the panel will move.
   const chevron = side === "left" ? (open ? "m15 10-2 2 2 2" : "m13 10 2 2-2 2") : open ? "m9 10 2 2-2 2" : "m11 10-2 2 2 2";
   return (
-    <button type="button" onClick={onClick} aria-label={label} aria-pressed={open} title={label} className={`shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground ${className}`}>
+    <button type="button" onClick={onClick} aria-label={label} aria-pressed={open} title={title} className={`shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground ${className}`}>
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <rect x="3" y="4" width="18" height="16" rx="2.5" />
         <path d={`M${x} 4v16`} />
@@ -48,14 +49,14 @@ export function PanelButton({ side, open, onClick, className = "" }: { side: "le
   );
 }
 
-export function VimSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+export function VimSwitch({ on, onChange, keys }: { on: boolean; onChange: (on: boolean) => void; keys?: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       onClick={() => onChange(!on)}
-      title={on ? "Vim keys are on" : "Vim keys are off"}
+      title={`${on ? "Vim keys are on" : "Vim keys are off"}${keys ? ` (${keys})` : ""}`}
       className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold ${on ? "bg-accent/15 text-accent" : "bg-surface text-muted hover:text-foreground"}`}
     >
       <span className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-accent" : "bg-foreground/20"}`}>
@@ -201,6 +202,10 @@ export default function NotePane({
     });
   }
 
+  const withKeys = (title: string, command: string) => {
+    const keys = keysFor(command, config.keybindings);
+    return keys ? `${title} (${keys})` : title;
+  };
   const iconBtn = "shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent";
 
   return (
@@ -213,7 +218,7 @@ export default function NotePane({
           <button type="button" onClick={onBackToList} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover lg:hidden">
             <ChevronLeftIcon className="h-4 w-4" /> Notes
           </button>
-          <PanelButton side="left" open={listOpen} onClick={onToggleList} className="hidden lg:block" />
+          <PanelButton side="left" open={listOpen} onClick={onToggleList} keys={keysFor("view:toggle-note-list", config.keybindings)} className="hidden lg:block" />
           <button type="button" onClick={() => actions.goBack?.()} disabled={!canBack} aria-label="Back" className={`${iconBtn} hidden lg:block`}>
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
@@ -227,16 +232,16 @@ export default function NotePane({
           </span>
           <div className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
             {([true, false] as const).map((live) => (
-              <button key={String(live)} type="button" onClick={() => setConfig("livePreview", live)} aria-pressed={config.livePreview === live} className={`rounded-full px-2.5 py-1 ${config.livePreview === live ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}>
+              <button key={String(live)} type="button" onClick={() => setConfig("livePreview", live)} title={withKeys(live ? "Live preview" : "Source", "view:toggle-live-preview")} aria-pressed={config.livePreview === live} className={`rounded-full px-2.5 py-1 ${config.livePreview === live ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}>
                 {live ? "Preview" : "Source"}
               </button>
             ))}
           </div>
-          <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} />
+          <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} keys={keysFor("view:toggle-vim", config.keybindings)} />
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>
-          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} className="hidden lg:block" />
+          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} keys={keysFor("view:toggle-links-panel", config.keybindings)} className="hidden lg:block" />
         </div>
 
         <textarea
@@ -262,11 +267,11 @@ export default function NotePane({
 
         <div className="flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden" style={config.readableLineLength ? { maxWidth: "46rem", marginInline: "auto", width: "100%" } : undefined}>
           {FORMAT.map((f) => (
-            <button key={f.command} type="button" title={f.title} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
+            <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
               {f.label}
             </button>
           ))}
-          <button type="button" title="Write music notation" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
+          <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
           </button>
         </div>

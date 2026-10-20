@@ -3,7 +3,7 @@
 import { useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { DEFAULT_CONFIG_TEXT, type ShedNotesConfig } from "@/lib/shedNotesConfig";
-import { COMMANDS, COMMAND_BY_ID, type NoteActions } from "./commands";
+import { COMMANDS, COMMAND_BY_ID, type NoteActions, keysFor } from "./commands";
 import NoteEditor from "./NoteEditor";
 import { applyVimConfig } from "./vimSetup";
 
@@ -14,7 +14,7 @@ const OPTIONS: [keyof ShedNotesConfig, string][] = [
   ["readableLineLength", "Keeps lines to a comfortable width on a wide screen."],
   ["fontSize", "The text size in notes, 10 to 32."],
   ["spellcheck", "The browser's spellcheck underline."],
-  ["keybindings", 'A list of { "key": "Mod-b", "command": "editor:toggle-bold" }. Mod is Ctrl (⌘ on a Mac); also Shift-, Alt-, Ctrl-, Meta-. Leave a key out to unbind it.'],
+  ["keybindings", 'A list of { "key": "Mod-b", "command": "editor:toggle-bold" }, added to the built-in keys (Reference shows them all): a key you list replaces that key\'s built-in command, and "command": "" turns a key off. Mod is Ctrl (⌘ on a Mac); also Shift-, Alt-, Ctrl-, Meta-.'],
   ["vim", 'leader: what <leader> is in mappings. mappings: vimrc lines (map, nmap, imap, vmap, noremap, nnoremap, inoremap, vnoremap, unmap). exCommands: { "name": "command id" } adds :name.'],
 ];
 
@@ -44,7 +44,7 @@ export default function SettingsPane({
   const unknown = config.keybindings.filter((b) => !COMMAND_BY_ID.has(b.command)).map((b) => `"${b.key}" runs "${b.command}", which isn't a Shed Notes command.`);
   const vimProblems = broken ? [] : applyVimConfig(config);
   const problems = [...errors, ...unknown, ...vimProblems];
-  const keyFor = (id: string) => config.keybindings.filter((b) => b.command === id).map((b) => b.key).join(", ");
+  const keyFor = (id: string) => keysFor(id, config.keybindings);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">

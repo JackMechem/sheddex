@@ -10,14 +10,15 @@ import { titleKey } from "@jam-practice/core/shedNotes";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
-import { DocumentIcon, GearIcon, PlusIcon } from "@/components/tools";
+import { DocumentIcon, GearIcon, PlusIcon, SearchIcon } from "@/components/tools";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { type NoteMeta, errorText, useNoteList, useNotesConfig } from "@/lib/useShedNotes";
-import { type NoteActions, availableCommands, runCommand } from "./commands";
+import { type NoteActions, availableCommands, keyLabel, runCommand } from "./commands";
 import ScoreDialog from "@/components/notation/ScoreDialog";
 import NoteList from "./NoteList";
 import NotePane from "./NotePane";
+import NoteSearch from "./NoteSearch";
 import Palette, { type PaletteItem } from "./Palette";
 import SettingsPane from "./SettingsPane";
 
@@ -84,6 +85,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [deleting, setDeleting] = useState<NoteMeta | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
   const [listQuery, setListQuery] = useState<{ q: string; n: number } | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [{ listHidden, linksHidden }, setPanels] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
@@ -143,6 +145,9 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     () => ({
       newNote: () => void createNote(),
       openQuickSwitcher: () => setPalette({ mode: "notes", items: noteItems() }),
+      openSearch: () => setSearching(true),
+      toggleNoteList: () => setPanels({ listHidden: !listHidden }),
+      toggleLinksPanel: () => setPanels({ linksHidden: !linksHidden }),
       openCommandPalette: () => setPalette({ mode: "commands", items: commandItems() }),
       openNoteByTitle: (title, o) => {
         const hit = byKey.get(titleKey(title));
@@ -176,17 +181,36 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         syncUrl(next);
       },
     }),
-    [createNote, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router],
+    [createNote, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden],
   );
   useEffect(() => {
     commandItemsRef.current = () =>
-      availableCommands({ view: viewRef.current, actions }).map((c) => ({ id: c.id, label: c.name, detail: c.id, hint: cfg.config.keybindings.find((b) => b.command === c.id)?.key }));
+      availableCommands({ view: viewRef.current, actions }).map((c) => ({ id: c.id, label: c.name, detail: c.id, hint: (() => {
+        const key = cfg.config.keybindings.find((b) => b.command === c.id)?.key;
+        return key ? keyLabel(key) : undefined;
+      })() }));
   }, [actions, cfg.config.keybindings]);
+
+  // "/" outside a note (and any text box) opens the search menu — instead of the site's tool
+  // search, which is still in the sidebar. Caught early, before the site's own "/" handler.
+  useEffect(() => {
+    const onSlash = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (palette || notation || prompt || deleting || searching) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable='true'], .cm-editor")) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setSearching(true);
+    };
+    window.addEventListener("keydown", onSlash, true);
+    return () => window.removeEventListener("keydown", onSlash, true);
+  }, [palette, notation, prompt, deleting, searching]);
 
   // App keys (the palette, the switcher, new note) work outside the editor too.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (palette || notation || prompt || deleting) return;
+      if (palette || notation || prompt || deleting || searching) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest(".cm-editor")) return;
       for (const b of cfg.config.keybindings) {
@@ -199,7 +223,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting]);
+  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting, searching]);
 
   const listActions = useMemo(
     () => ({
@@ -243,6 +267,9 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
             <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Shed Notes</span>
           </h1>
+          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Mod-Shift-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
+            <SearchIcon className="h-4 w-4" />
+          </button>
           <button type="button" onClick={() => open(SETTINGS_ID)} aria-label="Settings file" title="Settings file" className={`shrink-0 rounded-full p-2 ${current === SETTINGS_ID ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}>
             <GearIcon className="h-4 w-4" />
           </button>
@@ -324,6 +351,19 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
                 }
               : undefined
           }
+        />
+      )}
+      {searching && (
+        <NoteSearch
+          notes={notes}
+          onOpen={(id) => {
+            setSearching(false);
+            open(id);
+          }}
+          onClose={() => {
+            setSearching(false);
+            viewRef.current?.focus();
+          }}
         />
       )}
       {notation && (
