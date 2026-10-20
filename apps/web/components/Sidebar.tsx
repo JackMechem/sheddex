@@ -173,14 +173,9 @@ export function useSidebarShownWidth(): number {
   return collapsed ? COLLAPSED_WIDTH : width;
 }
 
-/**
- * The maximize button in the page's top-left corner (desktop): collapses the sidebar to its icon
- * strip so the page gets the room, and in the collapsed state shows a restore icon that brings it
- * back. Fixed-positioned against the sidebar's edge, since the page panel itself scrolls.
- */
-export function SidebarToggle() {
-  const { width, collapsed } = useSyncExternalStore(subscribeLayout, getLayout, getServerLayout);
-  const left = (collapsed ? COLLAPSED_WIDTH : width) + 8 + 10;
+/** Hides the sidebar down to its icon strip (in the header, after the ⋮ menu), or, collapsed,
+    brings it back (under the logo). */
+function SidebarCollapseButton({ collapsed }: { collapsed: boolean }) {
   const label = collapsed ? "Show the sidebar" : "Hide the sidebar";
   return (
     <button
@@ -188,8 +183,7 @@ export function SidebarToggle() {
       onClick={() => updateLayout({ collapsed: !collapsed })}
       aria-label={label}
       title={label}
-      style={{ left }}
-      className="fixed top-[18px] z-30 hidden h-6 w-6 items-center justify-center text-muted/50 transition-colors hover:text-foreground lg:flex"
+      className={`flex shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground ${collapsed ? "mx-auto mb-2 h-8 w-8" : "h-9 w-9"}`}
     >
       {/* Just a chevron: ‹ hides the sidebar, › brings it back. */}
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -973,9 +967,11 @@ export default function Sidebar() {
               </>
             )}
           </Flyout>
+          <SidebarCollapseButton collapsed={false} />
           </div>
           )}
         </div>
+        {collapsed && <SidebarCollapseButton collapsed />}
         {collapsed ? (
           <button
             type="button"
