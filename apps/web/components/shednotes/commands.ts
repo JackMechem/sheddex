@@ -19,6 +19,8 @@ export type NoteActions = {
   /** The search menu (titles and text of every note). */
   openSearch?: () => void;
   toggleNoteList?: () => void;
+  /** This note: full width, or the readable column. */
+  toggleFullWidth?: () => void;
   toggleLinksPanel?: () => void;
   openCommandPalette?: () => void;
   /** Makes a note with this title in the current note's folder, staying where you are (the
@@ -211,10 +213,11 @@ export const COMMANDS: Command[] = [
   { id: "note:save", name: "Save now", needs: "save", run: act("save", (a) => a.save!()) },
   { id: "view:toggle-vim", name: "Turn vim mode on or off", needs: "setConfig", run: toggle("vimMode") },
   { id: "view:toggle-live-preview", name: "Switch between live preview and source", needs: "setConfig", run: toggle("livePreview") },
+  { id: "view:toggle-full-width", name: "Full width for this note", needs: "toggleFullWidth", run: act("toggleFullWidth", (a) => a.toggleFullWidth!()) },
   { id: "view:toggle-note-list", name: "Show or hide the note list", needs: "toggleNoteList", run: act("toggleNoteList", (a) => a.toggleNoteList!()) },
   { id: "view:toggle-links-panel", name: "Show or hide the links panel", needs: "toggleLinksPanel", run: act("toggleLinksPanel", (a) => a.toggleLinksPanel!()) },
   { id: "view:toggle-line-numbers", name: "Show or hide line numbers", needs: "setConfig", run: toggle("lineNumbers") },
-  { id: "view:toggle-readable-width", name: "Turn readable line length on or off", needs: "setConfig", run: toggle("readableLineLength") },
+  { id: "view:toggle-readable-width", name: "Readable line length (the default for every note)", needs: "setConfig", run: toggle("readableLineLength") },
   { id: "view:toggle-spellcheck", name: "Turn spellcheck on or off", needs: "setConfig", run: toggle("spellcheck") },
   { id: "editor:toggle-bold", name: "Bold", editor: true, run: ed((v) => toggleWrap(v, "**")) },
   { id: "editor:toggle-italic", name: "Italic", editor: true, run: ed((v) => toggleWrap(v, "*")) },

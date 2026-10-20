@@ -42,6 +42,7 @@ export default function NoteEditor({
   readOnly = false,
   lessonId,
   bottomSpace = "40vh",
+  fontFamily,
 }: {
   initialText: string;
   language?: "markdown" | "json";
@@ -61,6 +62,8 @@ export default function NoteEditor({
   lessonId?: string;
   /** Room below the last line (a full-height editor scrolls past the end; one in a page doesn't). */
   bottomSpace?: string;
+  /** This note's font (a CSS font-family), else the site's. */
+  fontFamily?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const owner = useId();
@@ -161,6 +164,7 @@ export default function NoteEditor({
           EditorView.theme({
             ".cm-content": {
               fontSize: `${config.fontSize}px`,
+              ...(fontFamily && language === "markdown" ? { fontFamily } : {}),
               ...(config.readableLineLength && language === "markdown" ? { maxWidth: "46rem", marginInline: "auto", width: "100%" } : {}),
               ...(language === "json" ? { fontFamily: "var(--font-mono, ui-monospace), monospace", fontSize: `${Math.max(12, config.fontSize - 3)}px` } : {}),
             },
@@ -175,7 +179,7 @@ export default function NoteEditor({
         ),
       ],
     });
-  }, [config, language, readOnly]);
+  }, [config, language, readOnly, fontFamily]);
 
   // Vim's status bar is drawn as a floating pill (styles in editorSetup.ts): the editor carries the
   // mode as data-vim-mode, and the mode label gets a class to restyle.

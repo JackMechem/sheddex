@@ -178,3 +178,10 @@ staying on the current note. Clicking a link to a missing note now also makes it
 note's folder (was the top level). Lesson notes don't offer it (no `createLinkedNote` there).
 Checked in the harness: `[[Bass lines` → Create → note in "Practice", link inserted, still on the
 same note; clicking a dashed link made "Ear training plan" in "Practice" and opened it.
+
+**Per-note width and font (2026-10-20):** `shedNotes.view` ({ fullWidth?, font? }), set by
+`shedNotes.setView` (null clears; doesn't touch `updatedAt`). The note pane's toolbar has a font
+`Select` (the site's `FONTS`, or "Site font") and a full-width button (`view:toggle-full-width`,
+Ctrl/⌘-Alt-F); the note's choice overrides the general `readableLineLength`, and the font applies
+to the title and the editor (`NoteEditor`'s `fontFamily`). Checked in the harness: full width and
+Lora stick to one note and not another, Ctrl+Alt+F toggles.

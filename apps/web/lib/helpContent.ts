@@ -114,6 +114,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     options: [
       { name: "Preview / Source", text: "Preview hides the markdown marks except where your cursor is, shows checkboxes and draws notation. Source shows the plain text." },
       { name: "Vim", text: "Vim keys in every note: normal, insert and visual modes, motions, :commands. Off to start with." },
+      { name: "Full width and font", text: "Each note can be full width (the ⤢ button, or Ctrl/⌘-Alt-F) or keep the readable column, and have its own font (the font menu above the note). Notes you haven't changed follow your general settings." },
       { name: "Links", text: "Beside a note: what it's attached to, the notes that link to it (backlinks) and the notes it links to." },
       { name: "Search", text: "Press / (outside a note) or Ctrl/⌘-Shift-F to search every note's title and text; Enter opens the one you pick." },
       { name: "Command palette", text: "Ctrl/⌘-Space (or Ctrl/⌘-P — on a Mac ⌘-Space is usually Spotlight) lists every command with its key; Ctrl/⌘-O finds or makes a note by name. Every command has a key: hover a button to see it, or open the settings file's Reference." },

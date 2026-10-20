@@ -87,6 +87,7 @@ export const get = query({
       .collect();
     return {
       ...meta(note),
+      view: note.view ?? {},
       body: note.body,
       attached: attached.map((a) => ({ target: a.target, label: a.label })),
     };
@@ -210,6 +211,26 @@ export const rename = mutation({
     }
     await ctx.db.patch(note._id, { title, titleKey: key, updatedAt: now });
     return title;
+  },
+});
+
+/** How a note is shown: full width or not (null = follow the general setting), and its font
+    (null = the site's font). Doesn't change when it was last edited. */
+export const setView = mutation({
+  args: { id: v.id("shedNotes"), fullWidth: v.optional(v.union(v.boolean(), v.null())), font: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, a) => {
+    const userId = await me(ctx);
+    const note = await ownNote(ctx, userId, a.id);
+    const view = { ...(note.view ?? {}) };
+    if (a.fullWidth !== undefined) {
+      if (a.fullWidth === null) delete view.fullWidth;
+      else view.fullWidth = a.fullWidth;
+    }
+    if (a.font !== undefined) {
+      if (a.font === null) delete view.font;
+      else view.font = a.font.slice(0, 40);
+    }
+    await ctx.db.patch(a.id, { view });
   },
 });
 

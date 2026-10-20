@@ -56,6 +56,7 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "Mod-Alt-b", command: "view:toggle-note-list" },
     { key: "Mod-Alt-l", command: "view:toggle-links-panel" },
     { key: "Mod-Alt-n", command: "view:toggle-line-numbers" },
+    { key: "Mod-Alt-f", command: "view:toggle-full-width" },
     { key: "Mod-Alt-r", command: "view:toggle-readable-width" },
     { key: "Mod-Alt-s", command: "view:toggle-spellcheck" },
     // Writing

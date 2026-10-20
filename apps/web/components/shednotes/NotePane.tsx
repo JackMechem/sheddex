@@ -2,11 +2,13 @@
 
 import { useMutation } from "convex/react";
 import type { EditorView } from "@codemirror/view";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, NoteIcon } from "@/components/tools";
+import Select from "@/components/Select";
+import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, NoteIcon } from "@/components/tools";
+import { FONTS, getFont } from "@/lib/fonts";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteMeta, errorText, useNote } from "@/lib/useShedNotes";
@@ -138,16 +140,26 @@ export default function NotePane({
     }
   }, [focusTitle, loaded]);
 
+  // This note's width and font (its own choice, else the general setting / the site's font).
+  const setView = useMutation(api.shedNotes.setView);
+  const fullWidth = note?.view?.fullWidth ?? !config.readableLineLength;
+  const fontStack = note?.view?.font ? getFont(note.view.font).stack : undefined;
+  const editorConfig = useMemo(() => ({ ...config, readableLineLength: !fullWidth }), [config, fullWidth]);
+  const toggleFullWidth = useCallback(() => {
+    void setView({ id: id as Id<"shedNotes">, fullWidth: !fullWidth });
+  }, [setView, id, fullWidth]);
+
   const paneActions: NoteActions = useMemo(
     () => ({
       ...actions,
       save: flush,
+      toggleFullWidth,
       renameNote: () => {
         titleRef.current?.focus();
         titleRef.current?.select();
       },
     }),
-    [actions, flush],
+    [actions, flush, toggleFullWidth],
   );
   const titles = useMemo(() => notes.map((n) => ({ title: n.title, folder: n.folder })), [notes]);
 
@@ -238,6 +250,22 @@ export default function NotePane({
             ))}
           </div>
           <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} keys={keysFor("view:toggle-vim", config.keybindings)} />
+          <Select
+            value={note.view?.font ?? ""}
+            options={[{ value: "", label: "Site font" }, ...FONTS.map((f) => ({ value: f.id, label: `${f.label} · ${f.kind.toLowerCase()}` }))]}
+            onChange={(font) => void setView({ id: id as Id<"shedNotes">, font: font || null })}
+            className="w-36 shrink-0 text-xs"
+          />
+          <button
+            type="button"
+            onClick={toggleFullWidth}
+            aria-pressed={fullWidth}
+            aria-label={fullWidth ? "Readable width" : "Full width"}
+            title={withKeys(fullWidth ? "Back to the readable width" : "Full width for this note", "view:toggle-full-width")}
+            className={`${iconBtn} hidden sm:block ${fullWidth ? "text-accent" : ""}`}
+          >
+            {fullWidth ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
+          </button>
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>
@@ -262,10 +290,10 @@ export default function NotePane({
           }}
           aria-label="Note title"
           className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-extrabold tracking-tight outline-none sm:text-3xl"
-          style={config.readableLineLength ? { maxWidth: "46rem", marginInline: "auto" } : undefined}
+          style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto" }), ...(fontStack ? { fontFamily: fontStack } : {}) }}
         />
 
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden" style={config.readableLineLength ? { maxWidth: "46rem", marginInline: "auto", width: "100%" } : undefined}>
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden" style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
           {FORMAT.map((f) => (
             <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
               {f.label}
@@ -280,7 +308,8 @@ export default function NotePane({
           <NoteEditor
             key={id}
             initialText={note.body}
-            config={config}
+            config={editorConfig}
+            fontFamily={fontStack}
             notes={titles}
             actions={paneActions}
             onChange={setBody}

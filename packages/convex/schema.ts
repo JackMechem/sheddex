@@ -667,6 +667,9 @@ export default defineSchema({
     body: v.string(),
     links: v.array(v.string()),
     tags: v.array(v.string()),
+    /** How this note is shown: full width (else your general setting), and its font (an id from
+        the web app's FONTS; missing = the site's font). */
+    view: v.optional(v.object({ fullWidth: v.optional(v.boolean()), font: v.optional(v.string()) })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
