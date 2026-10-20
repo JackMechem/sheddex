@@ -170,3 +170,11 @@ and both panels hiding (with the stored flags). Not on a real phone.
 - Checked in the full-page harness: / opens it (and types a slash inside a note), a text match
   opens its note, Ctrl+Shift+F from the editor, heading / bullet / numbered / quote / table /
   rename / note-list keys, palette key labels.
+
+**Create a note from a link (2026-10-20):** typing `[[` with a name no note has adds a last
+suggestion, **Create “…”** (`wikilinkCompletion`, type "create", styled by `optionClass`): it
+inserts the link and makes the note (`NoteActions.createLinkedNote`) in the current note's folder,
+staying on the current note. Clicking a link to a missing note now also makes it in the current
+note's folder (was the top level). Lesson notes don't offer it (no `createLinkedNote` there).
+Checked in the harness: `[[Bass lines` → Create → note in "Practice", link inserted, still on the
+same note; clicking a dashed link made "Ear training plan" in "Practice" and opened it.

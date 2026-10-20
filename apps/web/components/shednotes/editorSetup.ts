@@ -1,4 +1,6 @@
-import type { CompletionContext, CompletionResult } from "@codemirror/autocomplete";
+import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
+import { cleanTitle, titleKey } from "@jam-practice/core/shedNotes";
+import { actionsFacet } from "./livePreview";
 import { HighlightStyle } from "@codemirror/language";
 import { Facet } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -62,11 +64,15 @@ export const editorTheme = EditorView.theme({
   ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--accent) 22%, transparent)" },
   ".cm-searchMatch-selected": { backgroundColor: "color-mix(in oklab, var(--accent) 45%, transparent)" },
   ".cm-tooltip": { backgroundColor: "var(--surface)", color: "var(--foreground)", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", borderRadius: "12px", overflow: "hidden", boxShadow: "0 10px 30px rgb(0 0 0 / 0.18)" },
-  ".cm-tooltip-autocomplete > ul": { fontFamily: "inherit", maxHeight: "16rem" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": { fontFamily: "inherit", maxHeight: "16rem", fontSize: "0.9em" },
+  ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "800" },
   ".cm-tooltip-autocomplete > ul > li": { padding: "4px 10px !important" },
   ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "color-mix(in oklab, var(--accent) 20%, transparent)", color: "var(--foreground)" },
   ".cm-completionDetail": { color: "var(--muted)", fontStyle: "normal", marginLeft: "8px" },
   ".cm-completionIcon": { display: "none" },
+  // "Create “…”" — the last choice when linking a note that doesn't exist yet.
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", borderTop: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { content: "'+'", marginRight: "6px", fontWeight: "800" },
   ".cm-diagnostic-error": { borderLeftColor: "var(--danger)" },
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--danger)" },
 
@@ -157,26 +163,39 @@ export const highlightStyle = HighlightStyle.define([
 export type NoteTitle = { title: string; folder: string };
 export const noteTitlesFacet = Facet.define<NoteTitle[], NoteTitle[]>({ combine: (v) => v[0] ?? [] });
 
-/** Typing `[[` suggests your notes' titles; picking one closes the link. */
+/** Typing `[[` suggests your notes' titles; picking one closes the link. When what's typed isn't a
+    note yet, the last choice makes it (in the current note's folder) and links it. */
 export function wikilinkCompletion(ctx: CompletionContext): CompletionResult | null {
   const m = ctx.matchBefore(/\[\[[^[\]\n|#]*$/);
   if (!m) return null;
   const from = m.from + 2;
   const closed = ctx.state.sliceDoc(ctx.pos, ctx.pos + 2) === "]]";
   const notes = ctx.state.facet(noteTitlesFacet);
-  return {
-    from,
-    validFor: /^[^[\]\n|#]*$/,
-    options: notes.map((n) => ({
-      label: n.title,
-      detail: n.folder || undefined,
-      apply: (view: EditorView, _c: unknown, f: number, to: number) => {
-        view.dispatch({
-          changes: { from: f, to: closed ? to + 2 : to, insert: `${n.title}]]` },
-          selection: { anchor: f + n.title.length + 2 },
-          userEvent: "input.complete",
-        });
+  const insert = (view: EditorView, f: number, to: number, title: string) =>
+    view.dispatch({
+      changes: { from: f, to: closed ? to + 2 : to, insert: `${title}]]` },
+      selection: { anchor: f + title.length + 2 },
+      userEvent: "input.complete",
+    });
+  const options: Completion[] = notes.map((n) => ({
+    label: n.title,
+    detail: n.folder || undefined,
+    apply: (view: EditorView, _c: Completion, f: number, to: number) => insert(view, f, to, n.title),
+  }));
+  const typed = cleanTitle(ctx.state.sliceDoc(from, ctx.pos));
+  const actions = ctx.state.facet(actionsFacet)();
+  if (typed && actions.createLinkedNote && !notes.some((n) => titleKey(n.title) === titleKey(typed))) {
+    options.push({
+      label: `Create “${typed}”`,
+      detail: "new note, in this folder",
+      type: "create",
+      boost: -99,
+      apply: (view: EditorView, _c: Completion, f: number, to: number) => {
+        insert(view, f, to, typed);
+        void actions.createLinkedNote!(typed);
       },
-    })),
-  };
+    });
+  }
+  // No `validFor`: the "Create" choice changes with every letter typed.
+  return { from, options };
 }

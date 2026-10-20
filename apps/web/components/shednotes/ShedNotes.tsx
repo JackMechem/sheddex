@@ -152,7 +152,15 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       openNoteByTitle: (title, o) => {
         const hit = byKey.get(titleKey(title));
         if (hit) open(hit.id);
-        else if (o?.create) void createNote(title);
+        // A link to a note that doesn't exist yet: made in the current note's folder.
+        else if (o?.create) void createNote(title, currentMeta?.folder ?? "");
+      },
+      createLinkedNote: async (title) => {
+        try {
+          await createMut({ title, folder: currentMeta?.folder ?? "" });
+        } catch (e) {
+          setNotice(errorText(e));
+        }
       },
       openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
       openPath: (path) => router.push(path),
@@ -181,7 +189,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         syncUrl(next);
       },
     }),
-    [createNote, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden],
+    [createNote, createMut, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden],
   );
   useEffect(() => {
     commandItemsRef.current = () =>

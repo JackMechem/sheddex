@@ -21,6 +21,9 @@ export type NoteActions = {
   toggleNoteList?: () => void;
   toggleLinksPanel?: () => void;
   openCommandPalette?: () => void;
+  /** Makes a note with this title in the current note's folder, staying where you are (the
+      "Create" choice when linking a note that doesn't exist yet). */
+  createLinkedNote?: (title: string) => Promise<void>;
   /** Opens (or, with `create`, makes) the note with this title. */
   openNoteByTitle?: (title: string, opts?: { create?: boolean; newTab?: boolean }) => void;
   /** Opens a page of the site ("/tunes") — in place, through the app's router. */

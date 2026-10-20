@@ -93,7 +93,7 @@ export default function NoteEditor({
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions), ownerFacet.of(owner)];
+        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion], icons: false, optionClass: (c) => (c.type === "create" ? "cm-completion-create" : "") }), actionsFacet.of(getActions), ownerFacet.of(owner)];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
