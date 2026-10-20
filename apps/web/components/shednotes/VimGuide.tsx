@@ -10,9 +10,11 @@ const EXAMPLES: [string, string][] = [
   ["nnoremap <leader>n :new<CR>", "Space, then n, makes a new note."],
   ["nnoremap <leader>s :w<CR>", "Space, then s, saves now."],
   ["nnoremap <leader>ff :palette<CR>", "Space, f, f opens the command palette."],
-  ["nnoremap <leader>o :cmd app:quick-switcher<CR>", "Space, then o, finds a note by name — any Shed Notes command works this way."],
+  ["nnoremap <leader>fg :app:search<CR>", "Space, f, g searches every note — any command id works after the colon."],
+  ["nnoremap <leader>o :app:quick-switcher<CR>", "Space, then o, finds a note by name."],
+  ["nnoremap <leader>u :note:share<CR>", "Space, then u, shares this note."],
   ["nnoremap <leader>t :e Today<CR>", "Space, then t, opens the note called Today (making it if it's new)."],
-  ["vnoremap <leader>b :cmd editor:toggle-bold<CR>", "In visual mode, Space then b makes the selection bold."],
+  ["vnoremap <leader>b :editor:toggle-bold<CR>", "In visual mode, Space then b makes the selection bold."],
   ["nnoremap H ^", "H jumps to the start of the line's text."],
 ];
 
@@ -67,7 +69,7 @@ export default function VimGuide({ leader }: { leader: string }) {
             <Code>:w</Code> save now · <Code>:q</Code> close the note · <Code>:wq</Code> both · <Code>:e Title</Code> open a note (making it if it&apos;s new) · <Code>:new</Code> or <Code>:new Title</Code> a new note.
           </li>
           <li>
-            <Code>:cmd id</Code> runs any Shed Notes command by its id, like <Code>:cmd note:share</Code>. There are {COMMANDS.length}; the Reference in the JSON tab lists every id.
+            Any Shed Notes command, by its id: <Code>:app:search</Code>, <Code>:note:share</Code>, <Code>:editor:toggle-bold</Code> — the same ids as in &quot;keybindings&quot;. There are {COMMANDS.length}; the Reference in the JSON tab lists them all. (<Code>:cmd app:search</Code> works too.) From visual mode, commands that change text work on the selection.
           </li>
           <li>
             Your own short names: in the JSON, <Code>&quot;exCommands&quot;: {"{"} &quot;share&quot;: &quot;note:share&quot; {"}"}</Code> adds <Code>:share</Code>. Built in are <Code>:notation</Code> and <Code>:palette</Code>.

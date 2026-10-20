@@ -437,3 +437,13 @@ while vim has a count/operator pending. Checked in the harness: `<leader>ff` ope
 keys, comments), the leader (current one named) and the wait, running commands (`:w`, `:q`,
 `:wq`, `:e`, `:new`, `:cmd id`, exCommands), examples, and troubleshooting. Shown under "How to
 write mappings" in Settings → Vim and in the JSON tab's Reference; a Help entry points to it.
+
+Same day: **any command id works as a `:` command** — `nmap <leader>fg :app:search<CR>`. Vim's ex
+parser reads `\w+` as the name (`app`) and the rest as `argString` (`:search`), so `vimSetup.ts`
+defines one ex command per id prefix (`app`, `note`, `editor`, `view`, taken from COMMAND_BY_ID)
+that runs prefix + rest (words after the id are its argument). Ex lookup takes the longest
+defined prefix, so `editor` doesn't hit `:e`. From visual mode vim has already collapsed the
+selection when an ex command runs (`:'<,'>`); `runById` restores it from `vim.lastSelection`
+(inclusive end; whole lines for V) when the command has a range, so
+`vnoremap <leader>b :editor:toggle-bold<CR>` bolds the selection. Checked in the harness: `<leader>fg`
+opens search; `ve` then `<leader>b` gives `**Jthird**`. Guide and help updated.

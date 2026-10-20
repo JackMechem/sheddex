@@ -51,10 +51,42 @@ function defineBuiltins() {
     if (title) ctx.actions.openNoteByTitle?.(title, { create: true });
     else ctx.actions.newNote?.();
   });
-  Vim.defineEx("cmd", "cmd", (cm: CM, params: { argString?: string }) => {
-    const id = params.argString?.trim() ?? "";
-    if (!runCommand(id, ctxOf(cm))) cm.cm6.dom.dispatchEvent(new CustomEvent("shednotes-message", { bubbles: true, detail: `No command "${id}" here.` }));
-  });
+  Vim.defineEx("cmd", "cmd", (cm: CM, params: ExParams) => runById(cm, params.argString?.trim() ?? "", params));
+  // Any command by its id, straight after the colon: `:app:search`, `:note:share`. Vim reads the
+  // part before the second colon as the command's name, so each id's prefix is a command of its
+  // own that runs `prefix` + the rest.
+  for (const prefix of COMMAND_PREFIXES)
+    Vim.defineEx(prefix, prefix, (cm: CM, params: ExParams) => runById(cm, `${prefix}${params.argString?.trim() ?? ""}`, params));
+}
+
+/** The parts before the colon in command ids ("app" in "app:search"). */
+const COMMAND_PREFIXES = [...new Set([...COMMAND_BY_ID.keys()].map((id) => id.split(":")[0]))];
+
+type ExParams = { argString?: string; line?: number };
+type Pos = { line: number; ch: number };
+type VimCM = CM & {
+  state: { vim?: { lastSelection?: { anchorMark: { find(): Pos | undefined }; headMark: { find(): Pos | undefined }; visualLine?: boolean } } };
+  setSelection(anchor: Pos, head: Pos): void;
+  getLine(n: number): string;
+};
+
+/** Runs a Shed Notes command by id ("app:search", or "note:open Title" with an argument). From
+    visual mode (`:'<,'>…`), vim has already dropped the selection, so it's put back first —
+    "make bold" then works on what was selected. */
+function runById(cm: CM, text: string, params: ExParams = {}) {
+  const sel = (cm as VimCM).state.vim?.lastSelection;
+  if (params.line !== undefined && sel) {
+    const a = sel.anchorMark.find();
+    const h = sel.headMark.find();
+    if (a && h) {
+      const [from, to] = a.line < h.line || (a.line === h.line && a.ch <= h.ch) ? [a, h] : [h, a];
+      // Vim's selections include the last character (or, linewise, whole lines).
+      if (sel.visualLine) (cm as VimCM).setSelection({ line: from.line, ch: 0 }, { line: to.line, ch: (cm as VimCM).getLine(to.line).length });
+      else (cm as VimCM).setSelection(from, { line: to.line, ch: Math.min(to.ch + 1, (cm as VimCM).getLine(to.line).length) });
+    }
+  }
+  const [id, ...rest] = text.split(/\s+/);
+  if (!runCommand(id, ctxOf(cm), rest.join(" ") || undefined)) cm.cm6.dom.dispatchEvent(new CustomEvent("shednotes-message", { bubbles: true, detail: `No command "${id}" here.` }));
 }
 
 /** Applies the settings file's vim part. Returns problems to show beside the file. */
