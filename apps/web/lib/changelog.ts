@@ -33,6 +33,29 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-10-20",
+    title: "Shed Notes and Score Writer",
+    summary: "Notes for your practice, linked together, and a real music notation editor.",
+    changes: [
+      { kind: "new", text: "**Shed Notes**: notes in markdown that look finished as you type. Link notes with [[ ]] and see what links back, use folders and #tags, and search everything." },
+      { kind: "new", text: "Attach notes to a **routine on a day**, a **day**, a **tune** or your **lessons** with Add notes — a new note, or one you already have." },
+      { kind: "new", text: "**Vim keys** in notes if you want them, and a settings file for your own keys, vim mappings and commands." },
+      { kind: "new", text: "**Score Writer**: write music in notation — treble or bass clef, any key and time, notes typed or clicked onto the staff, chord symbols — and play it back." },
+      { kind: "new", text: "Put **notation in any note**: it's a Score Writer score, shown right in the note." },
+      { kind: "improved", text: "**Lesson notes** are written in the Shed Notes editor, notation included, and students see it all." },
+      { kind: "improved", text: "Bass Genius transcriptions use the same notation editor." },
+      { kind: "improved", text: "The routine happening **right now** is outlined in the Shed Log and shown in the sidebar." },
+      { kind: "improved", text: "On phones, a tune's **chord chart** is full size and scrolls sideways, with **Fit to screen** to see it all." },
+      { kind: "improved", text: "Thinner, rounded scrollbars in your theme's colors (phones keep their own)." },
+      { kind: "improved", text: "The button that hides the sidebar now sits in the sidebar, next to the ⋮ menu." },
+      { kind: "improved", text: "Feedback you send gets an **ID** (like FB-12), shown on the Feedback page." },
+      { kind: "fixed", text: "Recordings made in the browser can be **scrubbed** again (the playhead was stuck at the end in Firefox)." },
+      { kind: "fixed", text: "Pausing the Shed Log's day timer now pauses a task's timer too." },
+      { kind: "fixed", text: "The Library title no longer gets squeezed on phones." },
+    ],
+  },
+  {
     version: "0.9.6",
     date: "2026-10-19",
     title: "Settings",

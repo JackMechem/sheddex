@@ -8,7 +8,7 @@ import { BackButton } from "@/components/library/shared";
 import { BassIcon, ChevronRightIcon, DownloadIcon, PlusIcon, TrashIcon, WaveIcon } from "@/components/tools";
 import TranscriptionEditor, { downloadJson, safeFilename } from "@/components/bassgenius/TranscriptionEditor";
 import PatternsDialog from "@/components/bassgenius/PatternsDialog";
-import TranscriptionScore from "@/components/bassgenius/TranscriptionScore";
+import TranscriptionScore from "@/components/notation/Score";
 import { BUILT_IN_PLAYERS, isBuiltInId } from "@/lib/bassBuiltIns";
 import { cleanTranscription, emptyTranscription, playerFile, readImportFile, type Transcription } from "@/lib/bassTranscription";
 import { decodeXmlBytes, importMusicXml } from "@/lib/musicXml";

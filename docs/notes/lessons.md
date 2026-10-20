@@ -357,3 +357,25 @@ practice in `Home.tsx`. It renders nothing unless you have a student or a teache
     hand in (soonest due first, overdue in red, linking to their lesson).
 - `relWhen` is now exported from `sessions.tsx`.
 
+
+
+### Lesson notes use Shed Notes (2026-10-20)
+
+- The Tiptap `RichNote` is gone (and its `@tiptap/*` packages and the `.rich-text` CSS). Lesson
+  notes are written in `components/lessons/LessonNoteEditor.tsx`: the Shed Notes `NoteEditor`
+  with the formatting buttons, Notation and the Vim switch for the teacher, and `readOnly` for the
+  student (no toolbar, no vim, checkboxes can't be ticked). It uses the reader's own Shed Notes
+  settings. The notes are still Markdown in `lessonItems.body`, so nothing was converted.
+  Snippets use core `noteSnippet` (♪ for notation).
+- Notation is a teacher's Score Writer score in a ```score block. `scores.get` takes an optional
+  `lessonId`: someone else's score is returned (with `readOnly`) only if the score's owner is
+  that lesson's teacher, the reader is its teacher or student, and a note item of that lesson
+  (not in a lesson still hidden from the student — `hiddenSessions`, now exported) contains the
+  score's id. The embed hides Edit and "Open in Score Writer" for read-only scores.
+- "Your own notes" at the bottom of the notes list: private Shed Notes attached to
+  `lesson:<lessonStudents id>` (a new `NoteTarget` kind), for teacher or student; the note's
+  Links panel links back to the lesson's notes page.
+- Checked in the esbuild harness (fake backend): the teacher's view (toolbar, ticking, the score
+  with Edit) and the student's (read-only, the same score, no Edit, ticking blocked); tsc, lint,
+  build. **Not checked signed in:** the real notes page, the server's lesson check for scores,
+  "Your own notes".

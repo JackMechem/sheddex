@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_VERSION, CHANNEL } from "@/lib/version";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -55,6 +56,7 @@ export default function FeedbackForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [sentNumber, setSentNumber] = useState<number | null>(null);
 
   const shotUrl = useMemo(() => (shot ? URL.createObjectURL(shot) : null), [shot]);
   useEffect(() => () => (shotUrl ? URL.revokeObjectURL(shotUrl) : undefined), [shotUrl]);
@@ -75,15 +77,17 @@ export default function FeedbackForm({
         if (!res.ok) throw new Error("The screenshot didn't upload — try again, or send without it.");
         screenshotId = ((await res.json()) as { storageId: Id<"_storage"> }).storageId;
       }
-      await submit({
+      const result = await submit({
         kind,
         message,
         ...(email.trim() ? { email } : {}),
         page: window.location.pathname + window.location.search,
         userAgent: navigator.userAgent,
+        version: `${APP_VERSION}${CHANNEL === "stable" ? "" : ` ${CHANNEL}`}`,
         ...(screenshotId ? { screenshotId } : {}),
         ...(target ? { target } : {}),
       });
+      setSentNumber(result?.number ?? null);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message.replace(/^[\s\S]*Uncaught Error: /, "").split("\n")[0] : "Couldn't send that.");
@@ -99,6 +103,7 @@ export default function FeedbackForm({
           <CheckIcon className="h-7 w-7" />
         </span>
         <p className="text-lg font-extrabold">{report ? "Thanks — we'll take a look" : "Thanks for telling us!"}</p>
+        {sentNumber !== null && <p className="rounded-full bg-background px-3 py-1 font-mono text-xs font-bold">FB-{sentNumber}</p>}
         <p className="max-w-sm text-sm text-muted">
           {report
             ? "Reports go straight to the person who runs soniroll."

@@ -234,3 +234,55 @@ Verified:
 - A faint chevron at the page's top-left (`SidebarToggle`) hides and shows the sidebar.
 - The resize handle is a 16px grab strip with a faint pill; double-click resets the width.
 - Width: min 220, default 244.
+
+
+### Feedback IDs and linked commits/PRs (2026-10-20)
+
+- `feedback.number` (index `by_number`) → shown as `FB-<n>`: assigned on submit (`nextNumber`),
+  and older feedback is numbered oldest-first by `ensureNumbers` (run from submit and, once, by the
+  admin inbox via `admin.ensureFeedbackNumbers`). The sender sees it after sending and on
+  `/feedback`.
+- `feedback.links`: commits and PRs (`kind`, `ref`, `url`, `title`, `merged`). Added by hand on the
+  admin card (`admin.addFeedbackLink` parses a hash, `#12` or a GitHub link —
+  `packages/convex/lib/github.ts`), removed with ×, searchable.
+- GitHub webhook `POST /github-webhook` (`http.ts`): HMAC-checked with `GITHUB_WEBHOOK_SECRET`;
+  push and pull_request events; `FB-n` links, "fixes FB-n" on main marks done
+  (`feedback.linkWork`). Setup in `docs/guides/deploying.md`.
+- Checked: 13 Node checks on the parsing and the signature; the route answers 503 on dev (no
+  secret yet); the inbox in the harness (IDs assigned oldest first, linking a hash and `#7`, the
+  error for junk, search by ID, 1200 and 390 with no overflow). Not checked: a real GitHub
+  delivery (the webhook isn't set up), signed in on the real admin page.
+- **Pick… (same day):** each card's Pick… opens a dialog of the repo's recent commits (branch
+  select, default `preview`) and pull requests, from GitHub's API via the admin-only action
+  `github.recentWork` (public repo; optional `GITHUB_TOKEN` for the rate limit), cached 5 minutes
+  in the page; a click links one with its title. Checked against real GitHub data (60 commits on
+  preview, 8 PRs) in the harness at 1200 and 390; the action itself not run signed in.
+- **Pick… moved to the browser (same day):** the Convex action hit "rate limit reached" straight
+  away — GitHub's unauthenticated limit is per IP, and Convex's servers are shared. The picker now
+  calls GitHub's API from the page (`lib/githubWork.ts`, CORS allowed, 5-minute cache; the
+  message says when the limit resets), and `convex/github.ts` is gone. Checked live from the
+  harness page: 60 commits, 8 PRs.
+
+### Shared inbox, GitHub issues, version (2026-10-20)
+
+- **Version:** `feedback.version` ("0.9.6 beta", sent by the form), on the card and in issues.
+- **Shared inbox** (`convex/inbox.ts`, `inboxCore.ts`, `inboxForward.ts`): production holds the
+  list. With `FEEDBACK_HUB_URL` + `FEEDBACK_HUB_SECRET` set, a deployment's new bugs/ideas/notes
+  are stored locally without a number and `inbox.forward` (scheduled; retries with backoff) sends
+  them, with the screenshot as base64, to production's `POST /feedback-hub` (secret header), which
+  stores them with `source` and a `sender` snapshot and returns the FB-number (written back
+  locally, so `/feedback` shows it). The admin inbox is now actions (`inbox.list`, `inbox.apply`,
+  `inbox.createIssue`, `inbox.moveToShared`) on every deployment — `components/admin/useInbox.ts`
+  polls every 15 s and refreshes after each change. Rows carry `where` ("shared"/"here"). The old
+  admin feedback query/mutations are gone.
+- **GitHub issues:** never automatic. `createIssueHere` (on the deployment holding the list, with
+  `GITHUB_TOKEN`) writes title, quoted message, ID, kind, version, page link, device, and the
+  screenshot only when asked; labels `bug` / `enhancement`. Link existing: the picker lists the
+  repo's issues from the browser (`lib/githubWork.ts`), or `#45` / a link. The webhook's `issues`
+  event closes/reopens the linked feedback.
+- Checked: tsc (web, convex, mobile), lint, build; the hub endpoint on dev with a temporary secret
+  (list with the version field, 401 with a wrong secret, readable 400s; secret removed after);
+  the inbox in the harness (version and source on the card, the create panel's wording and
+  screenshot box → `includeScreenshot: true`, the issue chip, the issue picker against the real
+  repo — which has no issues yet). **Not checked:** forwarding between two real deployments,
+  creating a real issue (no token here, and it would be public), a real webhook delivery.

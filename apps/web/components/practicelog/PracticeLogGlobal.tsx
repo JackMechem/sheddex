@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import Celebrations, { SHARE_PROGRESS_EVENT, useCelebrations } from "@/components/practicelog/Celebrations";
 import { ProgressShareDialog } from "@/components/practicelog/Sharing";
-import type { ProgressCardKind } from "@/lib/practiceLog";
+import { type ProgressCardKind, todayKey } from "@/lib/practiceLog";
 import { useToolTimeTracker } from "@/lib/toolTime";
 import { useToolUsageWriter } from "@/lib/toolUsage";
 import { usePracticeLog } from "@/lib/usePracticeLog";
+import { startDayTimer } from "@/lib/dayStopwatch";
+import { getSnapshot as engineState, subscribe as subscribeEngine } from "@/lib/practiceTimerEngine";
 
 /**
  * The Shed Log's app-wide part, mounted once around every page (`AppShell`): it takes in the
@@ -33,6 +35,22 @@ export default function PracticeLogGlobal() {
     );
   }, [ready, teachers, syncAssigned]);
   useCelebrations(data, ready);
+  // A Shed Log routine or task resumed on the Practice Timer (from anywhere) restarts the day
+  // timer, the way starting it does — pausing the day timer pauses the run (`pauseDayPractice`).
+  useEffect(() => {
+    if (!ready) return;
+    let wasPaused = engineState()?.paused ?? true;
+    const off = subscribeEngine(() => {
+      const run = engineState();
+      const paused = run?.paused ?? true;
+      const link = run && run.session.type === "custom" ? run.session.link : undefined;
+      if (wasPaused && !paused && link?.date === todayKey()) startDayTimer();
+      wasPaused = paused;
+    });
+    return () => {
+      off();
+    };
+  }, [ready]);
   // Tools always keep their own usage log (signed out too); the Shed Log takes the button-less
   // tools' time automatically only when signed in with "Count time in tools" on.
   useToolUsageWriter();

@@ -37,6 +37,7 @@ export default function FeedbackPage() {
                 {mine.map((f) => (
                   <li key={f.id} className="flex flex-col gap-1 rounded-2xl bg-background p-3">
                     <div className="flex items-center gap-2 text-[11px] font-semibold">
+                      {f.number !== null && <span className="font-mono text-foreground">FB-{f.number}</span>}
                       <span className="text-muted">{KIND[f.kind]}</span>
                       <span className={`rounded-full px-2 py-0.5 ${STATUS[f.status].cls}`}>{STATUS[f.status].label}</span>
                       <span className="ml-auto font-normal text-muted">{new Date(f.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>

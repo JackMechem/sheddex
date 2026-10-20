@@ -10,7 +10,9 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { EmptyState, Pill } from "@/components/library/ui";
 import { CapIcon, PersonBadge } from "@/components/lessons/parts";
-import RichNote, { markdownSnippet } from "@/components/lessons/RichNote";
+import LessonNoteEditor from "@/components/lessons/LessonNoteEditor";
+import AttachedNotes from "@/components/shednotes/AttachedNotes";
+import { noteSnippet } from "@jam-practice/core/shedNotes";
 import { ChevronLeftIcon, NoteIcon, PlusIcon, SearchIcon, TrashIcon } from "@/components/tools";
 
 type Note = { id: Id<"lessonItems">; title: string; body: string; createdAt: number; updatedAt: number };
@@ -153,7 +155,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
                 <p className="px-2 text-[11px] font-bold text-muted">{g.month}</p>
                 {g.notes.map((n) => {
                   const active = n.id === selected?.id;
-                  const snippet = markdownSnippet(n.body, 90);
+                  const snippet = noteSnippet(n.body, 90);
                   return (
                     <Link
                       key={n.id}
@@ -174,12 +176,18 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
             ))
           )}
         </nav>
+        {/* Private Shed Notes attached to these lessons: only the person who attached them sees them. */}
+        <section className="flex flex-col gap-2 border-t border-foreground/[0.06] pt-3">
+          <h2 className="text-xs font-semibold text-muted">Your own notes</h2>
+          <AttachedNotes target={{ kind: "lesson", lessonId }} label={`Lessons with ${heading}`} newTitle={`Lessons with ${heading}`} cardClassName="bg-surface" buttonClassName="rounded-full bg-surface px-2.5 py-1 text-xs font-medium hover:bg-surface-hover" />
+        </section>
       </aside>
 
       {/* The note */}
       <section className={`${selected ? "flex" : "hidden lg:flex"} min-w-0 flex-1 flex-col lg:h-full lg:overflow-y-auto`}>
         {selected ? (
           <NoteView
+            lessonId={lessonId}
             key={selected.id}
             note={selected}
             teacher={teacher}
@@ -206,7 +214,7 @@ export default function NotesPage({ lessonId, noteId, session }: { lessonId: str
 }
 
 /** One note: the teacher edits its title and text (saved as you type); the student reads it. */
-function NoteView({ note, teacher, listHref, onDeleted }: { note: Note; teacher: boolean; listHref: string; onDeleted: () => void }) {
+function NoteView({ note, teacher, listHref, onDeleted, lessonId }: { note: Note; teacher: boolean; listHref: string; onDeleted: () => void; lessonId: string }) {
   const update = useMutation(api.lessons.updateItem);
   const remove = useMutation(api.lessons.removeItem);
   const [title, setTitle] = useState(note.title);
@@ -294,7 +302,8 @@ function NoteView({ note, teacher, listHref, onDeleted }: { note: Note; teacher:
           </div>
         )}
       </header>
-      <RichNote
+      <LessonNoteEditor
+        lessonId={lessonId}
         markdown={note.body}
         editable={teacher}
         onChange={teacher ? (md) => queue({ body: md }) : undefined}

@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { PauseIcon, PlayIcon, StopwatchIcon, TrashIcon } from "@/components/tools";
 import { discardDayTimer, pauseDayTimer, startDayTimer, unflushedMs, useDayTimer } from "@/lib/dayStopwatch";
+import { getSnapshot as engineState, pause as pauseEngine } from "@/lib/practiceTimerEngine";
 import { type PracticeLogData, minutesOn, todayKey } from "@/lib/practiceLog";
+
+/** Pausing the day's practice pauses a routine or task the Practice Timer is running for the Shed
+    Log too (otherwise its "Timing" kept going). Resuming that run restarts the day timer
+    (`PracticeLogGlobal`). */
+export function pauseDayPractice() {
+  pauseDayTimer();
+  const run = engineState();
+  if (run && !run.paused && run.session.type === "custom" && run.session.link) pauseEngine();
+}
 
 /** "1:05:09", "23:10". */
 export function formatStopwatch(ms: number): string {
@@ -77,7 +87,7 @@ export default function DayTimer({ data, date, compact = false, onClear }: { dat
       )}
       {isToday &&
         (running ? (
-          <button type="button" onClick={pauseDayTimer} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+          <button type="button" onClick={pauseDayPractice} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
             <PauseIcon className="h-4 w-4" /> Pause
           </button>
         ) : (

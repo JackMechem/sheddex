@@ -3,9 +3,10 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import { Accidental, Beam, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Tuplet, Voice } from "vexflow";
 import {
-  HIGHEST_MIDI,
-  LOWEST_MIDI,
+  KEY_NAMES,
+  keyAlters,
   midiOf,
+  staffOf,
   pitchName,
   STEPS,
   measureCapacity,
@@ -19,11 +20,13 @@ import {
 import { chordFont, chordSymbolFont, SMUFL_CHORD_GLYPH } from "@/components/ChordChart";
 import { prettyQuality } from "@/lib/iRealPro";
 
-// Draws a transcription as engraved notation (VexFlow): bass clef, 4/4, measures wrapped into
-// rows, chord symbols above each measure, beams per beat, triplet brackets, ties, dots, ghost
-// (x) notes and accidentals (with naturals within a measure). Unfinished measures are padded with
-// grey rests that aren't part of the transcription. Bass parts are written an octave above where
-// they sound, so a note's stored (sounding) octave is drawn one higher.
+// Draws a score as engraved notation (VexFlow) — the one notation view every editor uses (Score
+// Writer, Shed Notes, Bass Genius): treble or bass clef and the key signature at the start of each
+// row, the time signature at the start, measures wrapped into rows, chord symbols above each
+// measure, beams per beat (per dotted quarter in 6/8 and the like), triplet brackets, ties, dots,
+// ghost (x) notes and accidentals against the key (with naturals within a measure). Unfinished
+// measures are padded with grey rests that aren't part of the score. Bass parts are written an
+// octave above where they sound, so a bass-clef note's stored (sounding) octave is drawn one higher.
 //
 // Clicking a note selects it. In write mode clicking the staff adds or re-pitches a note; in
 // select mode clicking elsewhere in a measure selects the whole measure (Shift extends a range). The selected note is drawn in the accent colour with a
@@ -56,8 +59,6 @@ type Hover = {
   replace: number | null;
 };
 
-/** Diatonic index (C0 = 0) of the written top line of the bass clef, A3. */
-const TOP_LINE_INDEX = 3 * 7 + 5;
 
 const VALUE_DURATION: Record<TNote["value"], string> = { w: "w", h: "h", q: "q", "8": "8", "16": "16" };
 const ACC: Record<number, string> = { [-2]: "bb", [-1]: "b", 0: "n", 1: "#", 2: "##" };
@@ -202,6 +203,13 @@ export default function TranscriptionScore({
     const accent = themeColor("--accent", "#6366f1");
     const muted = themeColor("--muted", "#888");
     const cap = measureCapacity(transcription);
+    const staff = staffOf(transcription);
+    const alters = keyAlters(transcription.key);
+    const keyName = transcription.key ? KEY_NAMES[transcription.key]?.major : null;
+    const ts = transcription.timeSignature;
+    const beatGroup = ts.bottom === 8 && ts.top % 3 === 0 ? new Fraction(3, 8) : new Fraction(1, 4);
+    // Clef and key on every row; the time signature only on the first.
+    const keyWidth = Math.abs(transcription.key ?? 0) * 10;
     const perRow = Math.max(1, Math.min(4, Math.floor(width / MIN_MEASURE)));
     const measures = transcription.measures;
     const rows: number[][] = [];
@@ -219,8 +227,7 @@ export default function TranscriptionScore({
       renderer.resize(width, ROW_HEIGHT);
       const ctx = renderer.getContext();
       const hits: Hit[] = [];
-      // Only the very first measure carries the clef and time signature.
-      const openingExtra = ri === 0 ? 80 : 0;
+      const openingExtra = 44 + keyWidth + (ri === 0 ? 36 : 0);
       const measureWidth = (width - 2 - openingExtra) / perRow;
       const chordMarks: { x: number; symbol: string; measure: number; beat: number }[] = [];
       let x = 1;
@@ -235,8 +242,9 @@ export default function TranscriptionScore({
         const w = measureWidth + (first ? openingExtra : 0);
         const stave = new Stave(x, STAVE_Y, w);
         geomRef.current = { topY: stave.getYForLine(0), spacing: stave.getSpacingBetweenLines() };
-        if (first && ri === 0) stave.addClef("bass");
-        if (first && ri === 0) stave.addTimeSignature(`${transcription.timeSignature.top}/${transcription.timeSignature.bottom}`);
+        if (first) stave.addClef(staff.clef);
+        if (first && keyName) stave.addKeySignature(keyName);
+        if (first && ri === 0) stave.addTimeSignature(`${ts.top}/${ts.bottom}`);
         if (mi === measures.length - 1) stave.setEndBarType(3); // final barline
         stave.setContext(ctx).draw();
 
@@ -257,15 +265,15 @@ export default function TranscriptionScore({
         m.notes.forEach((n) => {
           let sn: StaveNote;
           if (n.pitch) {
-            const written = n.pitch.octave + 1;
+            const written = n.pitch.octave + staff.writtenShift;
             const key = `${n.pitch.step.toLowerCase()}/${written}`;
-            sn = new StaveNote({ keys: [key], duration: VALUE_DURATION[n.value] + (n.dots ? "d" : ""), clef: "bass", type: n.ghost ? "x" : "n", autoStem: true });
+            sn = new StaveNote({ keys: [key], duration: VALUE_DURATION[n.value] + (n.dots ? "d" : ""), clef: staff.clef, type: n.ghost ? "x" : "n", autoStem: true });
             const id = `${n.pitch.step}${written}`;
-            const prev = shown.get(id) ?? 0;
+            const prev = shown.get(id) ?? alters[n.pitch.step];
             if (n.pitch.alter !== prev && !n.ghost) sn.addModifier(new Accidental(ACC[n.pitch.alter]), 0);
             shown.set(id, n.pitch.alter);
           } else {
-            sn = new StaveNote({ keys: ["d/3"], duration: VALUE_DURATION[n.value] + (n.dots ? "d" : "") + "r", clef: "bass" });
+            sn = new StaveNote({ keys: [staff.restKey], duration: VALUE_DURATION[n.value] + (n.dots ? "d" : "") + "r", clef: staff.clef });
           }
           if (n.dots) Dot.buildAndAttach([sn], { all: true });
           notes.push(sn);
@@ -274,7 +282,7 @@ export default function TranscriptionScore({
         });
         // Grey padding rests for what's left.
         for (const d of paddingRests(used, Math.max(0, cap - used))) {
-          const rest = new StaveNote({ keys: ["d/3"], duration: d + "r", clef: "bass" });
+          const rest = new StaveNote({ keys: [staff.restKey], duration: d + "r", clef: staff.clef });
           rest.setStyle({ fillStyle: muted, strokeStyle: muted });
           rest.setGroupStyle({ fillStyle: muted, strokeStyle: muted });
           notes.push(rest);
@@ -296,7 +304,7 @@ export default function TranscriptionScore({
         const voice = new Voice({ numBeats: transcription.timeSignature.top, beatValue: transcription.timeSignature.bottom });
         voice.setStrict(false);
         voice.addTickables(notes);
-        beams.push(...Beam.generateBeams(notes.filter((n, idx) => sources[idx] !== null) as StaveNote[], { groups: [new Fraction(1, 4)] }));
+        beams.push(...Beam.generateBeams(notes.filter((n, idx) => sources[idx] !== null) as StaveNote[], { groups: [beatGroup] }));
         new Formatter().joinVoices([voice]).format([voice], Math.max(40, stave.getNoteEndX() - stave.getNoteStartX() - 10));
         notes.forEach((sn, idx) => {
           const src = sources[idx];
@@ -495,10 +503,13 @@ export default function TranscriptionScore({
     const steps = Math.round(((y - topY) / spacing) * 2); // 0 = top line, each step a line or space
     const onStaff = steps >= -9 && steps <= 17;
     if (!onStaff) return { kind: "measure" as const, measure };
-    const index = TOP_LINE_INDEX - steps;
-    const pitch: Pitch = { step: STEPS[((index % 7) + 7) % 7], alter: 0, octave: Math.floor(index / 7) - 1 };
+    const staff = staffOf(transcription);
+    const index = staff.topLineIndex - steps;
+    const step = STEPS[((index % 7) + 7) % 7];
+    // A note placed with the mouse follows the key signature (F in G major is F♯).
+    const pitch: Pitch = { step, alter: keyAlters(transcription.key)[step], octave: Math.floor(index / 7) - staff.writtenShift };
     const midi = midiOf(pitch);
-    if (midi < LOWEST_MIDI || midi > HIGHEST_MIDI) return { kind: "measure" as const, measure };
+    if (midi < staff.low || midi > staff.high) return { kind: "measure" as const, measure };
     // Which note's column the pointer is in (halfway to each neighbour); past the last note of a
     // bar with room left is the place to add one. A full bar only ever overwrites.
     const xs = measure.noteXs;

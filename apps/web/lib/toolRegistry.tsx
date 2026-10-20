@@ -36,6 +36,8 @@ export const TOOL_COMPONENTS: Record<string, ComponentType> = {
   "/practice-timer": dynamic(() => import("@/components/PracticeTimer"), { loading: PaneLoading }),
   "/lessons": dynamic(() => import("@/components/lessons/LessonsPage"), { loading: PaneLoading }),
   "/shed-log": dynamic(() => import("@/components/practicelog/GatedPracticeLog"), { loading: PaneLoading }),
+  "/score-writer": dynamic(() => import("@/components/scorewriter/ScoreWriter"), { loading: PaneLoading }),
+  "/shed-notes": dynamic(() => import("@/components/shednotes/GatedShedNotes"), { loading: PaneLoading }),
   "/metronome": dynamic(() => import("@/components/Metronome"), { loading: PaneLoading }),
   "/random-metric-modulation": dynamic(() => import("@/components/RandomMetricModulation"), {
     loading: PaneLoading,

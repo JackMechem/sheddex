@@ -506,3 +506,10 @@ scrolls); narrower screens stack them. The Bass line card's header has **Hide ch
 **No auto-scroll on phones (2026-10-18):** Jack asked to turn off the score following the playing
 note on mobile. The `scrollIntoView` that keeps the `.bass-now` note in view now only runs from
 640px wide (`sm`) up; the note is still highlighted on phones. Not checked on a real phone.
+
+
+**The editor moved (2026-10-20):** `TranscriptionScore` and the body of `TranscriptionEditor` are
+now the shared `components/notation/Score.tsx` and `ScoreEditor.tsx`, which Score Writer and Shed
+Notes use too. `bassgenius/TranscriptionEditor.tsx` is a wrapper with the same props. A
+transcription with no `clef` is `bass8` (written an octave up), so nothing changed here. See
+`score-writer.md`.

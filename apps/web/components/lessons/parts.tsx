@@ -17,7 +17,7 @@ import { CheckIcon, ChordChartIcon, CloseIcon, DotsVerticalIcon, GraduationCapIc
 import type { IRealSong } from "@/lib/iRealPro";
 import { describeRepeat, formatMinutesShort, fromDateKey, lessonRoutineId, type Routine, type RoutineReport, todayKey, totalMinutes } from "@/lib/practiceLog";
 import { useChordChartsLibrary } from "@/lib/useChordChartsLibrary";
-import { markdownSnippet } from "@/components/lessons/RichNote";
+import { noteSnippet } from "@jam-practice/core/shedNotes";
 
 /** Pieces of the Lessons pages (`components/lessons/*`): a teacher's students and what they give
     them; a student's teachers and what they've been given. */
@@ -407,7 +407,7 @@ export function ItemCard({
       </header>
       {item.kind === "note" ? (
         <>
-          {item.body.trim() && <p className="line-clamp-3 text-sm leading-relaxed text-foreground/80">{markdownSnippet(item.body, 320)}</p>}
+          {item.body.trim() && <p className="line-clamp-3 text-sm leading-relaxed text-foreground/80">{noteSnippet(item.body, 320)}</p>}
           {notesHref && (
             <Link href={notesHref} className="self-start rounded-full bg-background px-3.5 py-1.5 text-xs font-semibold hover:bg-surface-hover">
               {teacher ? "Open in notes" : "Read the notes"}

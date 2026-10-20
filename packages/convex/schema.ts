@@ -499,15 +499,42 @@ export default defineSchema({
     message: v.string(),
     page: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    /** The site's version when it was sent ("0.9.6 beta"). */
+    version: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     target: v.optional(v.object({ type: v.union(v.literal("post"), v.literal("profile")), id: v.string(), label: v.string() })),
     status: v.union(v.literal("new"), v.literal("seen"), v.literal("planned"), v.literal("done"), v.literal("closed")),
     adminNote: v.optional(v.string()),
+    /** The GitHub issue for it, if one was made or linked (by the admin, never automatically). */
+    issue: v.optional(v.object({ number: v.number(), url: v.string(), title: v.string(), state: v.string() })),
+    /** Sent from another deployment (dev, a preview) to this one, the shared inbox: where from,
+        and who sent it there (their account isn't in this database). */
+    source: v.optional(v.string()),
+    sender: v.optional(v.object({ username: v.optional(v.string()), name: v.optional(v.string()) })),
+    /** Here, on a deployment that sends its feedback to the shared inbox: it's been sent. */
+    forwarded: v.optional(v.boolean()),
+    /** Its ID, shown as FB-<number> (1, 2, 3… in the order they came in). */
+    number: v.optional(v.number()),
+    /** Commits and pull requests that work on it — added on the admin page, or by the GitHub
+        webhook when a commit message or PR mentions FB-<number>. */
+    links: v.optional(
+      v.array(
+        v.object({
+          kind: v.union(v.literal("commit"), v.literal("pr")),
+          ref: v.string(),
+          url: v.string(),
+          title: v.string(),
+          merged: v.optional(v.boolean()),
+          at: v.number(),
+        }),
+      ),
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_createdAt", ["createdAt"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_number", ["number"]),
 
   recordings: defineTable({
     userId: v.id("users"),
@@ -614,4 +641,47 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_player", ["playerId"]),
+
+  /** Score Writer: one score per row (`data` is `packages/core/bassTranscription.ts`'s
+      `Transcription`, the shared notation format). `title` and `measureCount` are copied out for
+      lists. Shed Notes embeds them by id. */
+  scores: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    measureCount: v.number(),
+    data: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  /** Shed Notes: one markdown note per row, private to its owner. `titleKey` is the lowercased
+      title (titles are unique per account, and `[[links]]` find notes by it); `links` holds the
+      title keys this note's `[[links]]` point at, so backlinks are a lookup; `tags` its #tags. */
+  shedNotes: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    titleKey: v.string(),
+    folder: v.string(),
+    body: v.string(),
+    links: v.array(v.string()),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_title", ["userId", "titleKey"])
+    .searchIndex("search_body", { searchField: "body", filterFields: ["userId"] }),
+
+  /** A Shed Note attached to something outside Shed Notes: a day, a routine on a day, or a tune
+      (`target` from `packages/core/shedNotes.ts`'s `targetKey`). `label` is what it was called
+      when linked, shown if the thing itself is gone. */
+  shedNoteLinks: defineTable({
+    userId: v.id("users"),
+    noteId: v.id("shedNotes"),
+    target: v.string(),
+    label: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user_target", ["userId", "target"])
+    .index("by_note", ["noteId"]),
 });
