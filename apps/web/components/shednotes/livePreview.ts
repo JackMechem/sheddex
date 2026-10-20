@@ -239,6 +239,12 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
           out.push(hide.range(end - 2, end));
         }
       }
+      // Template blanks: {{name}}.
+      for (const m of line.text.matchAll(/\{\{\s*[^{}\n]*?[^{}\s][^{}\n]*?\s*\}\}/g)) {
+        const start = line.from + (m.index ?? 0);
+        if (inCode(state, start)) continue;
+        out.push(Decoration.mark({ class: "cm-template-var" }).range(start, start + m[0].length));
+      }
       for (const m of line.text.matchAll(/(^|[\s(])(#[\p{L}\p{N}_/-]*\p{L}[\p{L}\p{N}_/-]*)/gu)) {
         const start = line.from + (m.index ?? 0) + m[1].length;
         if (inCode(state, start)) continue;

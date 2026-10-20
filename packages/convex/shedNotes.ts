@@ -107,6 +107,7 @@ export const get = query({
         view: note.view ?? {},
         body: note.body,
         attached: [] as { target: string; label: string }[],
+        templateId: null as string | null,
         role,
         owner: owner?.username ?? null,
       };
@@ -120,6 +121,7 @@ export const get = query({
       view: note.view ?? {},
       body: note.body,
       attached: attached.map((a) => ({ target: a.target, label: a.label })),
+      templateId: (note.templateId ?? null) as string | null,
       role: "owner" as const,
       owner: null as string | null,
     };
@@ -184,7 +186,7 @@ async function attach(ctx: MutationCtx, userId: Id<"users">, noteId: Id<"shedNot
 
 /** A new note. The title is made unique ("Untitled 2"); returns its id and the title it got. */
 export const create = mutation({
-  args: { title: v.optional(v.string()), folder: v.optional(v.string()), body: v.optional(v.string()), attach: attachArg },
+  args: { title: v.optional(v.string()), folder: v.optional(v.string()), body: v.optional(v.string()), attach: attachArg, templateId: v.optional(v.id("shedNoteTemplates")) },
   handler: async (ctx, args) => {
     const userId = await me(ctx);
     const taken = new Set((await allNotes(ctx, userId)).map((n) => n.titleKey));
@@ -200,6 +202,7 @@ export const create = mutation({
       body,
       links: linkKeys(body),
       tags: findTags(body),
+      ...(args.templateId ? { templateId: args.templateId } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -242,6 +245,15 @@ export const rename = mutation({
         const body = renameLinks(other.body, note.title, title);
         const self = other._id === note._id;
         if (body !== other.body) await ctx.db.patch(other._id, { body, links: linkKeys(body), ...(self ? {} : { updatedAt: now }) });
+      }
+      // Templates' links too, so notes made from them link to the right note.
+      const templates = await ctx.db
+        .query("shedNoteTemplates")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      for (const t of templates) {
+        const body = renameLinks(t.body, note.title, title);
+        if (body !== t.body) await ctx.db.patch(t._id, { body });
       }
     }
     await ctx.db.patch(note._id, { title, titleKey: key, updatedAt: now });
@@ -479,5 +491,15 @@ export const importNotes = mutation({
       result.created++;
     }
     return result;
+  },
+});
+
+/** Records which template a note now follows (Apply / Change template). */
+export const setTemplate = mutation({
+  args: { id: v.id("shedNotes"), templateId: v.union(v.id("shedNoteTemplates"), v.null()) },
+  handler: async (ctx, { id, templateId }) => {
+    const userId = await me(ctx);
+    await ownNote(ctx, userId, id);
+    await ctx.db.patch(id, { templateId: templateId ?? undefined });
   },
 });

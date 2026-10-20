@@ -51,6 +51,10 @@ export type NoteListActions = {
   renameFolder: (path: string) => void;
   moveFolderPrompt: (path: string) => void;
   deleteFolder: (path: string) => void;
+  /** The templates page. */
+  openTemplates: () => void;
+  /** Pick a template and make a note from it. */
+  newFromTemplate: () => void;
   /** Drag and drop: a note into a folder ("" = the top level). */
   moveNoteTo: (id: string, folder: string) => void;
   /** Drag and drop: a folder into another ("" = the top level). */
@@ -70,6 +74,8 @@ export default function NoteList({
   notes,
   folders,
   shared = [],
+  templateCount = 0,
+  templatesOpen = false,
   currentId,
   actions,
   initialQuery = "",
@@ -77,6 +83,8 @@ export default function NoteList({
   notes: NoteMeta[];
   folders: string[];
   shared?: SharedNote[];
+  templateCount?: number;
+  templatesOpen?: boolean;
   currentId: string | null;
   actions: NoteListActions;
   initialQuery?: string;
@@ -272,7 +280,12 @@ export default function NoteList({
             </button>
           ))}
           <span className="flex-1" />
-          <button type="button" onClick={() => actions.newFolder("")} className="flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold text-muted hover:text-foreground">
+          {templateCount > 0 && (
+            <button type="button" onClick={actions.newFromTemplate} className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 font-semibold text-muted hover:text-foreground">
+              <NotePlusIcon className="h-3.5 w-3.5" /> From template
+            </button>
+          )}
+          <button type="button" onClick={() => actions.newFolder("")} className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 font-semibold text-muted hover:text-foreground">
             <FolderPlusIcon className="h-3.5 w-3.5" /> New folder
           </button>
         </div>
@@ -343,6 +356,15 @@ export default function NoteList({
         )}
         {!query && notes.length === 0 && folders.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted">No notes yet. Make one with New.</li>}
       </ul>
+      <button
+        type="button"
+        onClick={actions.openTemplates}
+        className={`flex shrink-0 items-center gap-2 rounded-lg border-t border-foreground/10 px-2 py-2 text-left text-sm font-semibold ${templatesOpen ? "bg-accent/15 text-foreground" : "text-muted hover:bg-surface-hover hover:text-foreground"}`}
+      >
+        <DocumentIcon className={`h-4 w-4 shrink-0 ${templatesOpen ? "text-accent" : ""}`} />
+        <span className="flex-1">Templates</span>
+        <span className="rounded-full bg-background px-1.5 text-[10px] tabular-nums">{templateCount}</span>
+      </button>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
     </div>
   );

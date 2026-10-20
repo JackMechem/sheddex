@@ -25,10 +25,15 @@ import SettingsPane from "./SettingsPane";
 import ShareDialog from "./ShareDialog";
 import NotePrint from "./NotePrint";
 import ImportDialog from "./ImportDialog";
+import TemplateFillDialog, { type NoteTemplate } from "./TemplateFillDialog";
+import TemplatesPane from "./TemplatesPane";
+import { fillTemplate } from "@/lib/noteTemplates";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import { getFont } from "@/lib/fonts";
 
 export const SETTINGS_ID = "settings";
+export const TEMPLATES_ID = "templates";
+const isNoteId = (id: string | null): id is string => !!id && id !== SETTINGS_ID && id !== TEMPLATES_ID;
 
 /** Which side panels are folded away (this device). */
 const VIEW_KEY = "jam-practice-shed-notes-view";
@@ -101,7 +106,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const [back, setBack] = useState<string[]>([]);
   const [forward, setForward] = useState<string[]>([]);
   const [focusTitleFor, setFocusTitleFor] = useState<string | null>(null);
-  const [palette, setPalette] = useState<{ mode: "commands" | "notes"; items: PaletteItem[] } | null>(null);
+  const [palette, setPalette] = useState<{ mode: "commands" | "notes" | "templates"; items: PaletteItem[]; onTemplate?: (t: NoteTemplate) => void; placeholder?: string } | null>(null);
+  const templates = useQuery(api.shedNoteTemplates.list);
+  const setTemplateMut = useMutation(api.shedNotes.setTemplate);
+  const createScoreMut = useMutation(api.scores.create);
+  /** Asking for a template's blanks: for a new note, or to apply it to the open note. */
+  const [filling, setFilling] = useState<{ template: NoteTemplate; mode: "new" | "apply"; onCreated?: (title: string) => void } | null>(null);
+  const [replacing, setReplacing] = useState<NoteTemplate | null>(null);
   const [notation, setNotation] = useState<{ scoreId: string | null; onDone: (scoreId: string) => void } | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [deleting, setDeleting] = useState<NoteMeta | null>(null);
@@ -167,6 +178,75 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     }
   }, [convex]);
 
+  const pickTemplate = useCallback(
+    (placeholder: string, then: (t: NoteTemplate) => void) => {
+      if (!templates?.length) {
+        setNotice("You don't have any templates yet — make one under Templates.");
+        return;
+      }
+      setPalette({ mode: "templates", items: templates.map((t) => ({ id: t.id, label: t.name, detail: t.title ? fillPreview(t.title) : undefined })), onTemplate: then, placeholder });
+    },
+    [templates],
+  );
+
+  /** A template's text with its blanks filled, and every score in it copied (so editing the music
+      in the note doesn't change the template's). */
+  const instantiate = useCallback(
+    async (t: NoteTemplate, values: Record<string, string>, title: string) => {
+      let body = fillTemplate(t.body, values, { title });
+      const ids = [...new Set([...body.matchAll(/^(```|~~~)\s*score\s*\n\s*(\S+)/gim)].map((m) => m[2]))];
+      for (const id of ids) {
+        const row = await convex.query(api.scores.get, { id });
+        if (!row) continue;
+        const copy = await createScoreMut({ data: row.data });
+        body = body.split(id).join(copy);
+      }
+      return body;
+    },
+    [convex, createScoreMut],
+  );
+
+  async function submitFill(values: Record<string, string>, typedTitle: string) {
+    const f = filling;
+    setFilling(null);
+    if (!f) return;
+    try {
+      if (f.mode === "new") {
+        const title = typedTitle || "Untitled";
+        const body = await instantiate(f.template, values, title);
+        const made = await createMut({ title, folder: currentMeta?.folder ?? "", body, templateId: f.template.id as Id<"shedNoteTemplates"> });
+        if (f.onCreated) f.onCreated(made.title);
+        else {
+          const view = viewRef.current;
+          // From the palette: link the new note at the cursor, if a note of yours is open.
+          if (view && isNoteId(current) && currentMeta && !view.state.readOnly) {
+            const link = `[[${made.title}]]`;
+            const at = view.state.selection.main;
+            view.dispatch({ changes: { from: at.from, to: at.to, insert: link }, selection: { anchor: at.from + link.length }, userEvent: "input" });
+            view.focus();
+            setNotice(`Made “${made.title}” and linked it here`);
+          } else open(made.id);
+        }
+      } else if (isNoteId(current) && currentMeta) {
+        const view = viewRef.current;
+        const title = typedTitle || currentMeta.title;
+        const body = await instantiate(f.template, values, title);
+        if (view) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: body }, selection: { anchor: 0 }, userEvent: "input" });
+        await setTemplateMut({ id: current as Id<"shedNotes">, templateId: f.template.id as Id<"shedNoteTemplates"> });
+        if (typedTitle && typedTitle !== currentMeta.title) {
+          try {
+            await renameMut({ id: current as Id<"shedNotes">, title: typedTitle });
+          } catch (e) {
+            setNotice(`Applied, but kept the title: ${errorText(e)}`);
+          }
+        }
+        view?.focus();
+      }
+    } catch (e) {
+      setNotice(errorText(e));
+    }
+  }
+
   const setConfig = useCallback(
     (key: keyof ShedNotesConfig, value: boolean) => {
       if (!cfg.setValue(key, value)) setNotice("Fix the settings file first — it isn't valid JSON right now.");
@@ -206,9 +286,28 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       // Only your own notes (a note shared with you isn't in your list).
       shareNote: () => currentMeta && setSharing(currentMeta),
       // What's in the editor right now (even the last second of typing).
-      exportPdf: () => current && current !== SETTINGS_ID && setPrinting({ id: current, text: viewRef.current?.state.doc.toString() ?? null }),
+      exportPdf: () => isNoteId(current) && setPrinting({ id: current, text: viewRef.current?.state.doc.toString() ?? null }),
       exportAll: () => void exportAll(),
       importNotes: () => setImporting(true),
+      templates: () => (templates ?? []).map((t) => ({ id: t.id, name: t.name })),
+      newFromTemplate: (templateId, onCreated) => {
+        const start = (t: NoteTemplate) => setFilling({ template: t, mode: "new", onCreated });
+        const hit = templateId ? templates?.find((t) => t.id === templateId) : null;
+        if (hit) start(hit);
+        else pickTemplate("Make a note from a template", start);
+      },
+      applyTemplate: (templateId) => {
+        if (!isNoteId(current) || !currentMeta) return;
+        const then = (t: NoteTemplate) => {
+          // Anything in the note goes — so ask first, unless it's empty.
+          if ((viewRef.current?.state.doc.toString() ?? "").trim()) setReplacing(t);
+          else setFilling({ template: t, mode: "apply" });
+        };
+        const hit = templateId ? templates?.find((t) => t.id === templateId) : null;
+        if (hit) then(hit);
+        else pickTemplate("Apply a template to this note", then);
+      },
+      openTemplates: () => open(TEMPLATES_ID),
       goBack: () => {
         if (!back.length) return;
         const prev = back[back.length - 1];
@@ -228,7 +327,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         syncUrl(next);
       },
     }),
-    [createNote, createMut, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden, exportAll],
+    [createNote, createMut, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden, exportAll, templates, pickTemplate],
   );
   useEffect(() => {
     commandItemsRef.current = () =>
@@ -243,7 +342,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   useEffect(() => {
     const onSlash = (e: KeyboardEvent) => {
       if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (palette || notation || prompt || deleting || searching || sharing || printing || importing) return;
+      if (palette || notation || prompt || deleting || searching || sharing || printing || importing || filling || replacing) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest("input, textarea, select, [contenteditable='true'], .cm-editor")) return;
       e.preventDefault();
@@ -252,12 +351,12 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     };
     window.addEventListener("keydown", onSlash, true);
     return () => window.removeEventListener("keydown", onSlash, true);
-  }, [palette, notation, prompt, deleting, searching, sharing, printing, importing]);
+  }, [palette, notation, prompt, deleting, searching, sharing, printing, importing, filling, replacing]);
 
   // App keys (the palette, the switcher, new note) work outside the editor too.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (palette || notation || prompt || deleting || searching || sharing || printing || importing) return;
+      if (palette || notation || prompt || deleting || searching || sharing || printing || importing || filling || replacing) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest(".cm-editor")) return;
       for (const b of cfg.config.keybindings) {
@@ -270,8 +369,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting, searching, sharing, printing, importing]);
+  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting, searching, sharing, printing, importing, filling, replacing]);
 
+  // The list's "From template" (read when pressed, so it uses the current actions).
+  const newFromTemplateRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    newFromTemplateRef.current = () => actions.newFromTemplate?.(null);
+  }, [actions]);
   const listActions = useMemo(
     () => ({
       open: (id: string) => open(id),
@@ -285,6 +389,8 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       deleteFolder: (path: string) => setDeletingFolder(path),
       moveNoteTo: (id: string, folder: string) => void moveMut({ id: id as Id<"shedNotes">, folder }).catch((e) => setNotice(errorText(e))),
       share: (note: NoteMeta) => setSharing(note),
+      openTemplates: () => open(TEMPLATES_ID),
+      newFromTemplate: () => newFromTemplateRef.current(),
       leave: (id: string) => {
         if (current === id) open(null);
         void leaveMut({ noteId: id as Id<"shedNotes"> }).catch((e) => setNotice(errorText(e)));
@@ -355,11 +461,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             <GearIcon className="h-4 w-4" />
           </button>
         </div>
-        <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
+        <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} templateCount={templates?.length ?? 0} templatesOpen={current === TEMPLATES_ID} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
       </aside>
 
       <section className={`min-h-0 min-w-0 flex-1 flex-col ${current ? "flex" : "hidden lg:flex"}`}>
-        {current === SETTINGS_ID ? (
+        {current === TEMPLATES_ID ? (
+          <TemplatesPane templates={templates ?? []} notes={notes.map((n) => ({ title: n.title, folder: n.folder }))} config={cfg.config} actions={actions} onBack={() => open(back.length ? back[back.length - 1] : null)} onNotice={setNotice} />
+        ) : current === SETTINGS_ID ? (
           <>
             <button type="button" onClick={() => open(null)} className="mb-3 self-start rounded-full bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-surface-hover lg:hidden">
               ‹ Notes
@@ -369,6 +477,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         ) : current ? (
           <NotePane
             key={current}
+            templates={templates ?? []}
             id={current}
             notes={notes}
             config={cfg.config}
@@ -400,6 +509,11 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
               <button type="button" onClick={() => void createNote()} className="flex items-center gap-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
                 <PlusIcon className="h-4 w-4" /> New note
               </button>
+              {(templates?.length ?? 0) > 0 && (
+                <button type="button" onClick={() => actions.newFromTemplate?.(null)} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
+                  From a template
+                </button>
+              )}
               {notes.length > 0 && (
                 <button type="button" onClick={() => setPalette({ mode: "notes", items: noteItems() })} className="rounded-full bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-hover">
                   Open a note
@@ -412,7 +526,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
 
       {palette && (
         <Palette
-          placeholder={palette.mode === "commands" ? "Type a command" : "Find or make a note"}
+          placeholder={palette.mode === "commands" ? "Type a command" : palette.mode === "templates" ? (palette.placeholder ?? "Pick a template") : "Find or make a note"}
           items={palette.items}
           onClose={() => {
             setPalette(null);
@@ -420,7 +534,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           }}
           onPick={(item) => {
             setPalette(null);
-            if (palette.mode === "commands") {
+            if (palette.mode === "templates") {
+              const t = templates?.find((x) => x.id === item.id);
+              if (t) palette.onTemplate?.(t);
+            } else if (palette.mode === "commands") {
               requestAnimationFrame(() => runCommand(item.id, { view: viewRef.current, actions }));
             } else open(item.id);
           }}
@@ -482,6 +599,31 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           onCancel={() => setPrompt(null)}
         />
       )}
+      {filling && (
+        <TemplateFillDialog
+          template={filling.template}
+          askTitle={filling.mode === "new" && !filling.template.title.trim()}
+          confirmLabel={filling.mode === "new" ? "Make note" : "Apply"}
+          onSubmit={(values, title) => void submitFill(values, title)}
+          onCancel={() => {
+            setFilling(null);
+            viewRef.current?.focus();
+          }}
+        />
+      )}
+      {replacing && (
+        <ConfirmDialog
+          title={`Replace this note with “${replacing.name}”?`}
+          message="Everything in the note now will be deleted and the template put in its place."
+          confirmLabel="Replace"
+          onConfirm={() => {
+            const t = replacing;
+            setReplacing(null);
+            setFilling({ template: t, mode: "apply" });
+          }}
+          onCancel={() => setReplacing(null)}
+        />
+      )}
       {moreMenu && <ContextMenu menu={moreMenu} onClose={() => setMoreMenu(null)} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} onDone={setNotice} />}
       {printing && <PrintNote id={printing.id} text={printing.text} onClose={() => setPrinting(null)} />}
@@ -536,3 +678,6 @@ function PrintNote({ id, text, onClose }: { id: string; text: string | null; onC
     />
   );
 }
+
+/** A template's title as it'll look, blanks shown as "…". */
+const fillPreview = (title: string) => title.replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g, (_m, name: string) => `‹${name.trim()}›`);

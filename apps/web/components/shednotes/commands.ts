@@ -48,6 +48,14 @@ export type NoteActions = {
   exportAll?: () => void;
   /** Notes from a .zip, a folder or .md files. */
   importNotes?: () => void;
+  /** Your templates (for the `[[` suggestions). */
+  templates?: () => { id: string; name: string }[];
+  /** A new note from a template (`null`: pick one): asks for its blanks, makes the note, then
+      `onCreated` gets its title — without it, a link to it goes in at the cursor. */
+  newFromTemplate?: (templateId: string | null, onCreated?: (title: string) => void) => void;
+  /** Replaces this note with a template (pick one; warns if the note has anything in it). */
+  applyTemplate?: (templateId?: string) => void;
+  openTemplates?: () => void;
   goBack?: () => void;
   goForward?: () => void;
   /** The editor's text is saved now (vim's :w). */
@@ -221,6 +229,9 @@ export const COMMANDS: Command[] = [
   { id: "note:export-pdf", name: "Export this note as a PDF", needs: "exportPdf", run: act("exportPdf", (a) => a.exportPdf!()) },
   { id: "app:export-all", name: "Export every note as Markdown (.zip)", needs: "exportAll", run: act("exportAll", (a) => a.exportAll!()) },
   { id: "app:import", name: "Import notes (a .zip, a folder or Markdown files)", needs: "importNotes", run: act("importNotes", (a) => a.importNotes!()) },
+  { id: "note:new-from-template", name: "New note from a template (and link it here)", needs: "newFromTemplate", run: act("newFromTemplate", (a) => a.newFromTemplate!(null)) },
+  { id: "note:apply-template", name: "Apply a template to this note (or change it)", needs: "applyTemplate", run: act("applyTemplate", (a) => a.applyTemplate!()) },
+  { id: "app:open-templates", name: "Open templates", needs: "openTemplates", run: act("openTemplates", (a) => a.openTemplates!()) },
   { id: "note:close", name: "Close this note", needs: "closeNote", run: act("closeNote", (a) => a.closeNote!()) },
   { id: "note:save", name: "Save now", needs: "save", run: act("save", (a) => a.save!()) },
   { id: "view:toggle-vim", name: "Turn vim mode on or off", needs: "setConfig", run: toggle("vimMode") },

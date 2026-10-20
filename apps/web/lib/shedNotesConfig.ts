@@ -52,6 +52,9 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "Mod-Alt-p", command: "note:export-pdf" },
     { key: "Mod-Alt-e", command: "app:export-all" },
     { key: "Mod-Alt-i", command: "app:import" },
+    { key: "Alt-t", command: "note:new-from-template" },
+    { key: "Alt-Shift-t", command: "note:apply-template" },
+    { key: "Mod-Alt-j", command: "app:open-templates" },
     { key: "Alt-w", command: "note:close" },
     { key: "Mod-s", command: "note:save" },
     // How it looks

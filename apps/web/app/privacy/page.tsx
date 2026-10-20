@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (and their settings file), your Score Writer scores, recordings and any files you upload (PDFs,
+            <strong>Your stuff:</strong> tool settings, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, recordings and any files you upload (PDFs,
             images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>

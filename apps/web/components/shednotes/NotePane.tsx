@@ -91,6 +91,7 @@ export default function NotePane({
   onToggleList,
   linksOpen,
   onToggleLinks,
+  templates,
 }: {
   id: string;
   notes: NoteMeta[];
@@ -109,11 +110,14 @@ export default function NotePane({
   onToggleList: () => void;
   linksOpen: boolean;
   onToggleLinks: () => void;
+  templates: { id: string; name: string }[];
 }) {
   const { note, setBody, flush, saveState, saveError } = useNote(id);
   const rename = useMutation(api.shedNotes.rename);
   const [draft, setDraft] = useState<string | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  // Whether the note is empty right now (it offers templates then).
+  const [empty, setEmpty] = useState<boolean | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
   const titleText = draft ?? note?.title ?? "";
   // The title wraps onto more lines rather than being cut off.
@@ -174,6 +178,8 @@ export default function NotePane({
             moveNote: undefined,
             deleteNote: undefined,
             shareNote: undefined,
+            applyTemplate: undefined,
+            newFromTemplate: undefined,
             // A score made here would be yours, not the note owner's — so no new notation.
             openScore: undefined,
           },
@@ -231,6 +237,7 @@ export default function NotePane({
               { label: "Move to folder", onSelect: () => actions.moveNote?.() },
             ]
           : []),
+        ...(mine ? [{ label: note?.templateId ? `Change template (now ${templates.find((t) => t.id === note.templateId)?.name ?? "deleted"})…` : "Apply a template…", onSelect: () => actions.applyTemplate?.() }] : []),
         { label: "Export as PDF", onSelect: () => actions.exportPdf?.() },
         { label: "Settings file", onSelect: () => actions.openSettings?.() },
         ...(mine ? [{ label: "Delete note", danger: true, onSelect: () => actions.deleteNote?.() }] : []),
@@ -357,6 +364,28 @@ export default function NotePane({
           </button>}
         </div>
 
+        {mine && (empty ?? !note.body.trim()) && (
+          // An empty note: start it from a template.
+          <div className="flex flex-wrap items-center gap-1.5 text-xs" style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
+            <span className="font-semibold text-muted">Start from a template:</span>
+            {templates.slice(0, 6).map((t) => (
+              <button key={t.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => actions.applyTemplate?.(t.id)} className="rounded-full bg-accent/15 px-2.5 py-1 font-semibold text-accent hover:bg-accent/25">
+                {t.name}
+              </button>
+            ))}
+            {templates.length > 6 && (
+              <button type="button" onClick={() => actions.applyTemplate?.()} className="rounded-full bg-surface px-2.5 py-1 font-semibold hover:bg-surface-hover">
+                More…
+              </button>
+            )}
+            {templates.length === 0 && (
+              <button type="button" onClick={() => actions.openTemplates?.()} className="rounded-full bg-surface px-2.5 py-1 font-semibold hover:bg-surface-hover">
+                Make a template
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="relative min-h-[55vh] rounded-2xl lg:min-h-0 lg:flex-1">
           <NoteEditor
             key={id}
@@ -365,7 +394,10 @@ export default function NotePane({
             fontFamily={fontStack}
             notes={titles}
             actions={paneActions}
-            onChange={setBody}
+            onChange={(text) => {
+              setBody(text);
+              setEmpty(!text.trim());
+            }}
             readOnly={!canEdit}
             scoreContext={mine ? undefined : { noteId: id }}
             syncText={saveState === "saved" ? note.body : undefined}

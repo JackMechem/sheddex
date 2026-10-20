@@ -101,6 +101,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Link notes", text: "Type [[ and pick a note (or type a new name). Click the link to go there; the note you link to lists this one under Backlinks." },
       { title: "Write notation", text: "Press Notation: the Score Writer editor opens. Write the music, then Add to note. It shows as a score in the note; Edit changes it (in Score Writer too)." },
       { title: "Attach it to your practice", text: "On a routine in the Shed Log (or a day, or a tune), press Add notes to make a note there or attach one you have." },
+      { title: "Start from a template", text: "Under Templates (bottom of the note list), write a note to start from, with {{blanks}} like {{tune}}. Then type [[ and pick New from “…”, use From template, or press a template on an empty note. You fill in the blanks and the note is made." },
       { title: "Share it", text: "Press the people button above a note: add someone by username (they can view or edit), or turn on its link. Notes shared with you are under Shared with me." },
     ],
     features: [
@@ -111,6 +112,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       "Notes attached to routines, days and tunes",
       "Vim keys, with your own mappings and commands",
       "A settings file for keys, vim and how notes look",
+      "Templates with blanks you fill in when you make a note",
       "Share a note with other people (view or edit), or by link",
       "Export a note as a PDF, export every note as Markdown, and import Markdown notes",
     ],
@@ -121,6 +123,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Links", text: "Beside a note: what it's attached to, the notes that link to it (backlinks) and the notes it links to." },
       { name: "Search", text: "Press / (outside a note) or Ctrl/⌘-Shift-F to search every note's title and text; Enter opens the one you pick." },
       { name: "Command palette", text: "Ctrl/⌘-Space (or Ctrl/⌘-P — on a Mac ⌘-Space is usually Spotlight) lists every command with its key; Ctrl/⌘-O finds or makes a note by name. Every command has a key: hover a button to see it, or open the settings file's Reference." },
+      { name: "Templates", text: "Kept apart from your notes, under Templates. A template has a name, a title for new notes and its text; {{name}} anywhere (title too) is a blank you're asked to fill in, and {{date}}, {{time}} and {{title}} fill in by themselves. Make a note from one by typing [[ (templates come first; type to narrow them), with New note from a template in the command palette (Alt-T; it links the new note where your cursor is), with From template in the note list, or with the buttons on an empty note. ⋮ → Change template replaces a note with another template, after warning you its text will be deleted." },
       { name: "Share", text: "The people button above a note. Add people by username — public profiles are suggested as you type; a private account works if you type its exact username — and set each to Can view or Can edit. The link can be off, only for the people added (they sign in), or for anyone with the link (view only). Only you can rename, move, delete or share your note." },
       { name: "Export as PDF", text: "In a note's ⋮ menu (or Ctrl/⌘-Alt-P): the note laid out as a page, notation included. Choose Save as PDF in the print dialog." },
       { name: "Export and import", text: "The ⤓ button by the search: Export all saves a .zip of every note as a Markdown file, in its folders. Import takes that .zip back (titles, folders and fonts come back exactly), or any folder or .zip of Markdown files, like an Obsidian vault. You choose what happens when a title is already yours: skip, replace or keep both." },

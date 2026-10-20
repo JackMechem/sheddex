@@ -73,6 +73,11 @@ export const editorTheme = EditorView.theme({
   // "Create “…”" — the last choice when linking a note that doesn't exist yet.
   ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", borderTop: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
   ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { content: "'+'", marginRight: "6px", fontWeight: "800" },
+  // "New from “…”" — making a note from a template, at the top of the `[[` suggestions.
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-template": { color: "var(--accent)", fontWeight: "600" },
+  ".cm-tooltip-autocomplete > ul > completion-section": { display: "block", padding: "6px 10px 2px", fontSize: "11px", fontWeight: "600", color: "var(--muted)" },
+  // A template's {{blank}}.
+  ".cm-template-var": { backgroundColor: "color-mix(in oklab, var(--accent) 14%, transparent)", color: "var(--accent)", borderRadius: "6px", padding: "0 2px", fontWeight: "600" },
   ".cm-diagnostic-error": { borderLeftColor: "var(--danger)" },
   ".cm-lintRange-error": { backgroundImage: "none", textDecoration: "underline wavy var(--danger)" },
 
@@ -161,6 +166,10 @@ export const highlightStyle = HighlightStyle.define([
 ]);
 
 export type NoteTitle = { title: string; folder: string };
+
+// Templates first, then notes.
+const TEMPLATES_SECTION = { name: "Templates", rank: 0 };
+const NOTES_SECTION = { name: "Notes", rank: 1 };
 export const noteTitlesFacet = Facet.define<NoteTitle[], NoteTitle[]>({ combine: (v) => v[0] ?? [] });
 
 /** Typing `[[` suggests your notes' titles; picking one closes the link. When what's typed isn't a
@@ -177,18 +186,44 @@ export function wikilinkCompletion(ctx: CompletionContext): CompletionResult | n
       selection: { anchor: f + title.length + 2 },
       userEvent: "input.complete",
     });
+  const actions = ctx.state.facet(actionsFacet)();
   const options: Completion[] = notes.map((n) => ({
     label: n.title,
     detail: n.folder || undefined,
+    section: NOTES_SECTION,
     apply: (view: EditorView, _c: Completion, f: number, to: number) => insert(view, f, to, n.title),
   }));
+  // A new note from a template: what's typed picks the template. Its blanks are asked for, then
+  // the note is made and linked here, in place of what was typed.
+  for (const t of actions.newFromTemplate ? (actions.templates?.() ?? []) : []) {
+    options.push({
+      label: t.name,
+      displayLabel: `New from “${t.name}”`,
+      detail: "template",
+      type: "template",
+      section: TEMPLATES_SECTION,
+      apply: (view: EditorView, _c: Completion, f: number, to: number) => {
+        const start = f - 2;
+        const end = closed ? to + 2 : to;
+        const typedText = view.state.sliceDoc(start, end);
+        actions.newFromTemplate!(t.id, (title) => {
+          const link = `[[${title}]]`;
+          // Still where it was? Replace it; otherwise put the link at the cursor.
+          const here = view.state.sliceDoc(start, end) === typedText;
+          const from = here ? start : view.state.selection.main.head;
+          view.dispatch({ changes: { from, to: here ? end : from, insert: link }, selection: { anchor: from + link.length }, userEvent: "input.complete" });
+          view.focus();
+        });
+      },
+    });
+  }
   const typed = cleanTitle(ctx.state.sliceDoc(from, ctx.pos));
-  const actions = ctx.state.facet(actionsFacet)();
   if (typed && actions.createLinkedNote && !notes.some((n) => titleKey(n.title) === titleKey(typed))) {
     options.push({
       label: `Create “${typed}”`,
       detail: "new note, in this folder",
       type: "create",
+      section: NOTES_SECTION,
       boost: -99,
       apply: (view: EditorView, _c: Completion, f: number, to: number) => {
         insert(view, f, to, typed);

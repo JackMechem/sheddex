@@ -43,6 +43,7 @@ export const RELEASES: Release[] = [
       { kind: "new", text: "**Vim keys** in notes if you want them, and a settings file for your own keys, vim mappings and commands." },
       { kind: "new", text: "**Score Writer**: write music in notation — treble or bass clef, any key and time, notes typed or clicked onto the staff, chord symbols — and play it back." },
       { kind: "new", text: "Put **notation in any note**: it's a Score Writer score, shown right in the note." },
+      { kind: "new", text: "**Templates** for notes, with blanks you fill in (in the title too) — start a note from one with [[, the command palette or an empty note." },
       { kind: "new", text: "**Share a note** with other people by username (they can view or edit), or by link — just for them, or for anyone with it." },
       { kind: "new", text: "Save a note as a **PDF**, **export** all your notes as Markdown files, and **import** them again (or any folder of Markdown notes)." },
       { kind: "improved", text: "**Lesson notes** are written in the Shed Notes editor, notation included, and students see it all." },

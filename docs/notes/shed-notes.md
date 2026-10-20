@@ -261,3 +261,40 @@ Lora stick to one note and not another, Ctrl+Alt+F toggles.
   overflow, no console errors. **Not checked:** anything against the real backend signed in
   (two real accounts sharing, the "invited" link signed in/out), a real print dialog / PDF file,
   folder picking in a real browser, Safari/Firefox.
+
+**Templates (2026-10-20):**
+- Table `shedNoteTemplates` {userId, name (unique per account, case-insensitive), title (the new
+  note's title with variables; empty = ask for a title), body} — **not notes**: not in the list,
+  links, search or export. `packages/convex/shedNoteTemplates.ts` (list, create, update, remove;
+  max 200). Account deletion cascades. `shedNotes.templateId` records the template a note was made
+  from / last had applied (`create` takes `templateId`; `setTemplate`).
+- Variables (`apps/web/lib/noteTemplates.ts`): `{{name}}` (spaces inside allowed, names match
+  case-insensitively, each asked once); built-ins `{{date}}` (YYYY-MM-DD), `{{time}}` (HH:mm) and
+  `{{title}}` (the new note's final title) fill themselves. `{{ }}` (empty) is left alone. Live
+  preview shows blanks as accent pills (`cm-template-var`).
+- `TemplatesPane.tsx` (current id `TEMPLATES_ID = "templates"`, opened from the Templates row at the
+  bottom of the note list, or `app:open-templates`, Ctrl/⌘-Alt-J): list + editor (name, title,
+  "Asked for: …", the body in `NoteEditor` with notation allowed). Autosaves ~0.7 s after typing.
+- `TemplateFillDialog.tsx` asks for the variables (plus a Title box when the template has no title
+  and it's a new note) and previews the filled title.
+- Ways in: (1) `[[` — `wikilinkCompletion` adds "New from “Name”" options in a Templates section
+  ranked above Notes, matched on the template name (`displayLabel` shows the long label); picking
+  one asks for the blanks, makes the note in the current folder and replaces the typed `[[…` with
+  `[[Title]]` (or inserts at the cursor if the text moved). (2) `note:new-from-template` (Alt-T):
+  pick a template in the palette; the new note is linked at the cursor if one of your notes is
+  open, else opened. Also "From template" in the list's toolbar and on the empty start screen
+  (phones have no keys). (3) An empty note of yours shows "Start from a template:" chips (6, then
+  More…; "Make a template" when there are none). (4) ⋮ → "Apply a template…" / "Change template
+  (now X)…" / `note:apply-template` (Alt-Shift-T): if the note has text, a ConfirmDialog warns it
+  will be deleted; then the editor's whole text is replaced (an ordinary edit, so it autosaves and
+  Ctrl-Z undoes it), the template recorded, and the note renamed if the template has a title.
+- Scores in a template are **copied** for each note made from it (`instantiate` in ShedNotes:
+  `scores.get` + `scores.create`), so editing the music in a note doesn't change the template.
+- Renaming a note already rewrote `[[Old]]` in all your notes (`shedNotes.rename`); it now rewrites
+  templates' text too. Not shared notes owned by others (they can't link to yours).
+- Checked in the harness (fake backend): making a template; `[[Les` → New from “Lesson” → blanks →
+  note "2026-10-20 lesson with Ella" made with the template's id and linked in place; Alt-T → palette
+  → note linked at the cursor; an empty note's chip applying the template (title renamed); Change
+  template warning then Replace; renaming "Scales" updating links in notes and in the template; 390
+  dark (Templates page, the fill sheet), no overflow or errors. Not checked against the real backend
+  signed in, or score copying with a real score.

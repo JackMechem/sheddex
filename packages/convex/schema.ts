@@ -673,6 +673,8 @@ export default defineSchema({
     /** Sharing by link: `token` is in the link; "invited" = only people it's shared with (signed
         in), "anyone" = anyone with the link can view. Missing = no link. */
     link: v.optional(v.object({ token: v.string(), access: v.union(v.literal("invited"), v.literal("anyone")) })),
+    /** The template it was made from (or last had applied), if any. */
+    templateId: v.optional(v.id("shedNoteTemplates")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -695,6 +697,18 @@ export default defineSchema({
 
   /** Shed Notes folders that exist on their own (so a folder can be empty). A note's `folder`
       also makes its folders exist; this table holds the ones made with New folder. */
+  /** Shed Notes templates: not notes themselves. `title` and `body` can hold {{variables}}, asked
+      for when a note is made from the template. */
+  shedNoteTemplates: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    /** The new note's title, with {{variables}}; empty = ask for a title. */
+    title: v.string(),
+    body: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   shedNoteFolders: defineTable({
     userId: v.id("users"),
     path: v.string(),
