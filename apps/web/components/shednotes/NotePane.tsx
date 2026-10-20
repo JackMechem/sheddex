@@ -29,6 +29,24 @@ const FORMAT: { label: string; title: string; command: string; className?: strin
   { label: "Quote", title: "Quote", command: "editor:toggle-quote" },
 ];
 
+/** Folds a side panel away (desktop): the note list on the left, the links on the right. */
+export function PanelButton({ side, open, onClick, className = "" }: { side: "left" | "right"; open: boolean; onClick: () => void; className?: string }) {
+  const what = side === "left" ? "the note list" : "the links panel";
+  const label = `${open ? "Hide" : "Show"} ${what}`;
+  const x = side === "left" ? 9 : 15;
+  // The chevron points the way the panel will move.
+  const chevron = side === "left" ? (open ? "m15 10-2 2 2 2" : "m13 10 2 2-2 2") : open ? "m9 10 2 2-2 2" : "m11 10-2 2 2 2";
+  return (
+    <button type="button" onClick={onClick} aria-label={label} aria-pressed={open} title={label} className={`shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground ${className}`}>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <path d={`M${x} 4v16`} />
+        <path d={chevron} />
+      </svg>
+    </button>
+  );
+}
+
 export function VimSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
   return (
     <button
@@ -66,6 +84,10 @@ export default function NotePane({
   onNotice,
   onTag,
   onOpen,
+  listOpen,
+  onToggleList,
+  linksOpen,
+  onToggleLinks,
 }: {
   id: string;
   notes: NoteMeta[];
@@ -80,11 +102,14 @@ export default function NotePane({
   onNotice: (text: string) => void;
   onTag: (tag: string) => void;
   onOpen: (id: string) => void;
+  listOpen: boolean;
+  onToggleList: () => void;
+  linksOpen: boolean;
+  onToggleLinks: () => void;
 }) {
   const { note, setBody, flush, saveState, saveError } = useNote(id);
   const rename = useMutation(api.shedNotes.rename);
   const [draft, setDraft] = useState<string | null>(null);
-  const [linksOpen, setLinksOpen] = useState(true);
   const [menu, setMenu] = useState<MenuState | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -170,6 +195,7 @@ export default function NotePane({
           <button type="button" onClick={onBackToList} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover lg:hidden">
             <ChevronLeftIcon className="h-4 w-4" /> Notes
           </button>
+          <PanelButton side="left" open={listOpen} onClick={onToggleList} className="hidden lg:block" />
           <button type="button" onClick={() => actions.goBack?.()} disabled={!canBack} aria-label="Back" className={`${iconBtn} hidden lg:block`}>
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
@@ -189,12 +215,10 @@ export default function NotePane({
             ))}
           </div>
           <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} />
-          <button type="button" onClick={() => setLinksOpen((o) => !o)} aria-pressed={linksOpen} className={`hidden shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold xl:block ${linksOpen ? "bg-accent/15 text-accent" : "bg-surface text-muted hover:text-foreground"}`}>
-            Links
-          </button>
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>
+          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} className="hidden xl:block" />
         </div>
 
         <input

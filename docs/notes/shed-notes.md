@@ -116,3 +116,18 @@ Score Writer score, written in the shared notation editor (see `score-writer.md`
 
 **Not built (ideas for later):** a graph view, embeds (`![[note]]`), playing notation back, Lessons
 notes as Shed Notes (they're shared teacher → student), task and day-task notes, mobile.
+
+**Polish (2026-10-20):**
+- The note dialog's writing area is inset and framed (`px-5 pb-4`, a rounded `bg-background` box;
+  the editor is absolutely positioned, so padding on its own box did nothing).
+- Vim's status bar is a floating pill in the editor's bottom-left corner. `NoteEditor` sets
+  `data-vim-mode` on the editor from vim's `vim-mode-change` and gives vim's mode label the class
+  `cm-vim-mode`; `editorSetup.ts` hides the "--NORMAL--" text and draws a dot and "Normal",
+  "Insert" (a filled accent pill) or "Visual". Pending keys show beside it; `:` widens it into the
+  command line.
+- Both side panels fold away on desktop with `PanelButton` (the Shed Log's panel icon): the note
+  list from the left of the toolbar, the links from its right (replacing the "Links" pill).
+  Stored per device in `jam-practice-shed-notes-view` (`listHidden`, `linksHidden`).
+
+Checked in the esbuild harness: the dialog at 900×1184, the pill in every mode in dark and light,
+and both panels hiding (with the stored flags). Not on a real phone.

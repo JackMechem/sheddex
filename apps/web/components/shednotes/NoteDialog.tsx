@@ -147,7 +147,8 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
                 <NoteIcon className="h-3.5 w-3.5" /> Notation
               </button>
             </div>
-            <div className="relative min-h-0 flex-1 px-4">
+            <div className="min-h-0 flex-1 px-5 pb-4">
+              <div className="relative h-full overflow-hidden rounded-xl bg-background">
               <NoteEditor
                 key={noteId}
                 initialText={note.body}
@@ -160,8 +161,9 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
                 }}
                 autoFocus
                 placeholder="Write here. [[ links another note."
-                className="absolute inset-0 px-1"
+                className="absolute inset-0 px-3 pt-1"
               />
+              </div>
             </div>
             <footer className="flex flex-wrap items-center gap-2 border-t border-foreground/10 px-5 py-3">
               <span className="text-xs text-muted">{saveState === "saved" ? "Saved" : saveState === "error" ? "Not saved" : "Saving…"}</span>

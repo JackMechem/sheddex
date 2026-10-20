@@ -9,7 +9,7 @@ import { type Diagnostic, linter } from "@codemirror/lint";
 import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers, placeholder as placeholderExt } from "@codemirror/view";
-import { vim } from "@replit/codemirror-vim";
+import { getCM, vim } from "@replit/codemirror-vim";
 import { useEffect, useId, useRef } from "react";
 import { titleKey } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
@@ -163,6 +163,27 @@ export default function NoteEditor({
       ],
     });
   }, [config, language]);
+
+  // Vim's status bar is drawn as a floating pill (styles in editorSetup.ts): the editor carries the
+  // mode as data-vim-mode, and the mode label gets a class to restyle.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    if (!config.vimMode) {
+      delete view.dom.dataset.vimMode;
+      return;
+    }
+    type VimCM = { on: (event: string, fn: (e: { mode: string; subMode?: string }) => void) => void; state: { vimPlugin?: { statusButton?: HTMLElement } }; shedTagged?: boolean };
+    const cm = getCM(view) as unknown as VimCM | null;
+    if (!cm || cm.shedTagged) return;
+    cm.shedTagged = true;
+    view.dom.dataset.vimMode = "normal";
+    cm.on("vim-mode-change", (e) => {
+      view.dom.dataset.vimMode = e.mode;
+    });
+    const label = cm.state.vimPlugin?.statusButton;
+    if (label) label.className = "cm-vim-mode";
+  }, [config.vimMode]);
 
   // The note list → link colours and `[[` suggestions.
   useEffect(() => {

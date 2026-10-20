@@ -11,6 +11,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
 import { DocumentIcon, GearIcon, PlusIcon } from "@/components/tools";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
+import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { type NoteMeta, errorText, useNoteList, useNotesConfig } from "@/lib/useShedNotes";
 import { type NoteActions, availableCommands, runCommand } from "./commands";
 import ScoreDialog from "@/components/notation/ScoreDialog";
@@ -20,6 +21,10 @@ import Palette, { type PaletteItem } from "./Palette";
 import SettingsPane from "./SettingsPane";
 
 export const SETTINGS_ID = "settings";
+
+/** Which side panels are folded away (this device). */
+const VIEW_KEY = "jam-practice-shed-notes-view";
+const VIEW_DEFAULTS = { listHidden: false, linksHidden: false };
 
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -79,6 +84,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [listQuery, setListQuery] = useState<{ q: string; n: number } | null>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const [{ listHidden, linksHidden }, setPanels] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
 
   useEffect(() => {
     if (!notice) return;
@@ -229,7 +235,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
 
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:flex-row lg:gap-6 lg:px-6 lg:pb-4 lg:pt-6">
-      <aside className={`min-h-0 flex-col gap-3 lg:flex lg:w-72 lg:shrink-0 ${current ? "hidden" : "flex"}`}>
+      <aside className={`min-h-0 flex-col gap-3 lg:w-72 lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
         <div className="flex items-center gap-2">
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
             <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Shed Notes</span>
@@ -267,6 +273,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             onNotice={setNotice}
             onTag={(tag) => setListQuery((q) => ({ q: `#${tag}`, n: (q?.n ?? 0) + 1 }))}
             onOpen={(id) => open(id)}
+            listOpen={!listHidden}
+            onToggleList={() => setPanels({ listHidden: !listHidden })}
+            linksOpen={!linksHidden}
+            onToggleLinks={() => setPanels({ linksHidden: !linksHidden })}
           />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-foreground/10 p-10 text-center">
