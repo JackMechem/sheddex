@@ -13,7 +13,7 @@ import { DocumentIcon, GearIcon, PlusIcon } from "@/components/tools";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteMeta, errorText, useNoteList, useNotesConfig } from "@/lib/useShedNotes";
 import { type NoteActions, availableCommands, runCommand } from "./commands";
-import NotationDialog from "./NotationDialog";
+import ScoreDialog from "@/components/notation/ScoreDialog";
 import NoteList from "./NoteList";
 import NotePane from "./NotePane";
 import Palette, { type PaletteItem } from "./Palette";
@@ -73,7 +73,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const [forward, setForward] = useState<string[]>([]);
   const [focusTitleFor, setFocusTitleFor] = useState<string | null>(null);
   const [palette, setPalette] = useState<{ mode: "commands" | "notes"; items: PaletteItem[] } | null>(null);
-  const [notation, setNotation] = useState<{ initial: string | null; onDone: (abc: string) => void } | null>(null);
+  const [notation, setNotation] = useState<{ scoreId: string | null; onDone: (scoreId: string) => void } | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [deleting, setDeleting] = useState<NoteMeta | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         if (hit) open(hit.id);
         else if (o?.create) void createNote(title);
       },
-      openNotation: (initial, onDone) => setNotation({ initial, onDone }),
+      openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
       setConfig: (key, value) => setConfig(key, value),
       config: () => cfg.config,
       openSettings: () => open(SETTINGS_ID),
@@ -314,17 +314,14 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         />
       )}
       {notation && (
-        <NotationDialog
-          initial={notation.initial}
-          onCancel={() => {
-            setNotation(null);
-            viewRef.current?.focus();
-          }}
-          onDone={(abc) => {
-            notation.onDone(abc);
-            setNotation(null);
-          }}
-        />
+        <ScoreDialog
+            scoreId={notation.scoreId}
+            onClose={() => {
+              setNotation(null);
+              viewRef.current?.focus();
+            }}
+            onDone={(id) => notation.onDone(id)}
+          />
       )}
       {prompt && (
         <PromptDialog

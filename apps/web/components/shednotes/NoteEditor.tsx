@@ -10,12 +10,14 @@ import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Prec } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers, placeholder as placeholderExt } from "@codemirror/view";
 import { vim } from "@replit/codemirror-vim";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { titleKey } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteActions, runCommand } from "./commands";
 import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion } from "./editorSetup";
 import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview";
+import ScoreEmbeds from "./ScoreEmbeds";
+import { ownerFacet } from "./embedStore";
 import { applyVimConfig, registerVimEditor } from "./vimSetup";
 
 /**
@@ -51,6 +53,7 @@ export default function NoteEditor({
   className?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const owner = useId();
   const viewRef = useRef<EditorView | null>(null);
   const actionsRef = useRef(actions);
   const onChangeRef = useRef(onChange);
@@ -80,7 +83,7 @@ export default function NoteEditor({
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions)];
+        : [markdown({ base: markdownLanguage }), livePreview, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions), ownerFacet.of(owner)];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -169,5 +172,10 @@ export default function NoteEditor({
     view.dispatch({ effects: c.notes.reconfigure([noteTitlesFacet.of(notes), titlesFacet.of(new Set(notes.map((n) => titleKey(n.title))))]) });
   }, [notes, language]);
 
-  return <div ref={host} className={`min-h-0 ${className}`} />;
+  return (
+    <>
+      <div ref={host} className={`min-h-0 ${className}`} />
+      {language === "markdown" && <ScoreEmbeds owner={owner} />}
+    </>
+  );
 }

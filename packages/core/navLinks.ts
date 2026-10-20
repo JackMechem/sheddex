@@ -103,6 +103,13 @@ export const NAV_LINKS_DATA: NavLinkInfo[] = [
     category: "Practice tools",
   },
   {
+    href: "/score-writer",
+    label: "Score Writer",
+    description:
+      "Write music in notation — notes, rests, ties, triplets and chord symbols in any key and time, typed or clicked onto the staff — and play it back. Your scores can go in Shed Notes too.",
+    category: "Practice tools",
+  },
+  {
     href: "/practice-timer",
     label: "Practice Timer",
     description:

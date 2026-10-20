@@ -12,7 +12,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { CloseIcon, NoteIcon } from "@/components/tools";
 import { errorText, useNote, useNoteList, useNotesConfig } from "@/lib/useShedNotes";
 import { type NoteActions, runCommand } from "./commands";
-import NotationDialog from "./NotationDialog";
+import ScoreDialog from "@/components/notation/ScoreDialog";
 import NoteEditor from "./NoteEditor";
 import { VimSwitch } from "./NotePane";
 
@@ -29,7 +29,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
   const rename = useMutation(api.shedNotes.rename);
   const create = useMutation(api.shedNotes.create);
   const [draft, setDraft] = useState<string | null>(null);
-  const [notation, setNotation] = useState<{ initial: string | null; onDone: (abc: string) => void } | null>(null);
+  const [notation, setNotation] = useState<{ scoreId: string | null; onDone: (scoreId: string) => void } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const viewRef = useRef<EditorView | null>(null);
 
@@ -71,7 +71,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
             .then((m) => router.push(`/shed-notes?id=${encodeURIComponent(m.id)}`))
             .catch((e) => setNotice(errorText(e)));
       },
-      openNotation: (initial, onDone) => setNotation({ initial, onDone }),
+      openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
       setConfig: (key, value) => {
         if (!cfg.setValue(key, value)) setNotice("Fix the settings file first — it isn't valid JSON right now.");
       },
@@ -183,13 +183,13 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
       </div>
       {notation && (
         <div onMouseDown={(e) => e.stopPropagation()}>
-          <NotationDialog
-            initial={notation.initial}
-            onCancel={() => setNotation(null)}
-            onDone={(abc) => {
-              notation.onDone(abc);
+          <ScoreDialog
+            scoreId={notation.scoreId}
+            onClose={() => {
               setNotation(null);
+              viewRef.current?.focus();
             }}
+            onDone={(id) => notation.onDone(id)}
           />
         </div>
       )}

@@ -110,5 +110,9 @@ settings in a JSON file only (custom keybindings and vim commands).
 - Real phones (iOS keyboard with CodeMirror, touch on checkboxes), Safari, hover styles.
 - Large notes' performance, two tabs editing one note (last write wins).
 
+**Later the same day:** the ABC notation dialog was replaced. Notation in a note is now a
+Score Writer score, written in the shared notation editor (see `score-writer.md`); old
+```` ```abc ```` blocks still display.
+
 **Not built (ideas for later):** a graph view, embeds (`![[note]]`), playing notation back, Lessons
 notes as Shed Notes (they're shared teacher → student), task and day-task notes, mobile.

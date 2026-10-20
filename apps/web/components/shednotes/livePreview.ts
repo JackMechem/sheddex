@@ -4,6 +4,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import type { SyntaxNode } from "@lezer/common";
 import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
 import type { NoteActions } from "./commands";
+import { addEmbed, ownerFacet, removeEmbed } from "./embedStore";
 
 /**
  * Obsidian-style live preview for the markdown editor: the text stays markdown, but marks hide
@@ -172,7 +173,7 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
             }
             case "FencedCode": {
               const info = node.getChild("CodeInfo");
-              if (info && /^(abc|music)$/i.test(state.sliceDoc(info.from, info.to).trim())) return false;
+              if (info && /^(abc|music|score)$/i.test(state.sliceDoc(info.from, info.to).trim())) return false;
               for (let pos = node.from; pos <= node.to; ) {
                 const line = state.doc.lineAt(pos);
                 out.push(Decoration.line({ class: "cm-codeblock" }).range(line.from));
@@ -256,9 +257,10 @@ const marksPlugin = ViewPlugin.fromClass(
 
 // ---------------------------------------------------------------- notation blocks
 
-type Block = { from: number; to: number; bodyFrom: number; abc: string };
+/** A ```score block (a Score Writer score, by id) or an ```abc one (ABC typed by hand). */
+export type Block = { kind: "score" | "abc"; from: number; to: number; bodyFrom: number; body: string };
 
-function findBlocks(state: EditorState): Block[] {
+export function findBlocks(state: EditorState): Block[] {
   const out: Block[] = [];
   const doc = state.doc;
   for (let n = 1; n <= doc.lines; n++) {
@@ -273,17 +275,21 @@ function findBlocks(state: EditorState): Block[] {
       }
     }
     if (!close) break;
-    if (/^(abc|music)$/i.test(fence[2])) {
+    const kind = /^score$/i.test(fence[2]) ? "score" : /^(abc|music)$/i.test(fence[2]) ? "abc" : null;
+    if (kind) {
       const bodyFrom = n + 1 < close ? doc.line(n + 1).from : open.to;
-      const abc = n + 1 < close ? doc.sliceString(doc.line(n + 1).from, doc.line(close - 1).to) : "";
-      out.push({ from: open.from, to: doc.line(close).to, bodyFrom, abc });
+      const body = n + 1 < close ? doc.sliceString(doc.line(n + 1).from, doc.line(close - 1).to) : "";
+      out.push({ kind, from: open.from, to: doc.line(close).to, bodyFrom, body });
     }
     n = close;
   }
   return out;
 }
 
-/** abcjs is big — loaded the first time a note shows notation. */
+/** A score block's id (its first non-empty line). */
+export const scoreIdOf = (body: string) => body.trim().split(/\s+/)[0] ?? "";
+
+/** abcjs is big — loaded the first time a note shows ABC notation. */
 let abcjsPromise: Promise<typeof import("abcjs")> | null = null;
 export function loadAbcjs() {
   abcjsPromise ??= import("abcjs");
@@ -315,15 +321,26 @@ export function renderNotation(el: HTMLElement, abc: string) {
   });
 }
 
-class NotationWidget extends WidgetType {
+/** Puts the cursor into a block's source (which shows it), on a plain click. */
+function revealOnClick(wrap: HTMLElement, view: EditorView) {
+  wrap.addEventListener("mousedown", (e) => {
+    if ((e.target as HTMLElement).closest("button, a, [data-note]")) return;
+    e.preventDefault();
+    const pos = view.posAtDOM(wrap);
+    const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
+    if (block) view.dispatch({ selection: { anchor: block.bodyFrom } });
+    view.focus();
+  });
+}
+
+class AbcWidget extends WidgetType {
   constructor(
     readonly abc: string,
     readonly editing: boolean,
-    readonly bodyFrom: number,
   ) {
     super();
   }
-  eq(other: NotationWidget) {
+  eq(other: AbcWidget) {
     return other.abc === this.abc && other.editing === this.editing;
   }
   get estimatedHeight() {
@@ -335,36 +352,37 @@ class NotationWidget extends WidgetType {
     const body = document.createElement("div");
     wrap.append(body);
     renderNotation(body, this.abc);
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "cm-abc-edit";
-    btn.textContent = "Edit notation";
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const pos = view.posAtDOM(wrap);
-      const actions = view.state.facet(actionsFacet)();
-      const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
-      if (!block || !actions.openNotation) return;
-      actions.openNotation(block.abc, (abc) => {
-        const fresh = findBlocks(view.state).find((b) => b.from === block.from);
-        if (!fresh) return;
-        view.dispatch({ changes: { from: fresh.from, to: fresh.to, insert: "```abc\n" + abc.trim() + "\n```" }, userEvent: "input" });
-      });
-    });
-    wrap.append(btn);
-    if (!this.editing) {
-      // Clicking the notation puts the cursor in its source, which shows it.
-      wrap.addEventListener("mousedown", (e) => {
-        if ((e.target as HTMLElement).closest("button")) return;
-        e.preventDefault();
-        const pos = view.posAtDOM(wrap);
-        const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
-        if (block) view.dispatch({ selection: { anchor: block.bodyFrom } });
-        view.focus();
-      });
-    }
+    if (!this.editing) revealOnClick(wrap, view);
     return wrap;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+/** A Score Writer score: an empty box the note's editor renders the score into (`embedStore`). */
+class ScoreWidget extends WidgetType {
+  constructor(
+    readonly scoreId: string,
+    readonly editing: boolean,
+  ) {
+    super();
+  }
+  eq(other: ScoreWidget) {
+    return other.scoreId === this.scoreId && other.editing === this.editing;
+  }
+  get estimatedHeight() {
+    return 220;
+  }
+  toDOM(view: EditorView) {
+    const wrap = document.createElement("div");
+    wrap.className = `cm-score${this.editing ? " cm-abc-editing" : ""}`;
+    addEmbed({ el: wrap, scoreId: this.scoreId, view, owner: view.state.facet(ownerFacet) });
+    if (!this.editing) revealOnClick(wrap, view);
+    return wrap;
+  }
+  destroy(dom: HTMLElement) {
+    removeEmbed(dom);
   }
   ignoreEvent() {
     return true;
@@ -376,8 +394,9 @@ function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
   const out: Range<Decoration>[] = [];
   for (const b of blocks) {
     const editing = touches(state, b.from, b.to);
-    if (editing) out.push(Decoration.widget({ widget: new NotationWidget(b.abc, true, b.bodyFrom), block: true, side: 1 }).range(b.to));
-    else out.push(Decoration.replace({ widget: new NotationWidget(b.abc, false, b.bodyFrom), block: true }).range(b.from, b.to));
+    const widget = b.kind === "score" ? new ScoreWidget(scoreIdOf(b.body), editing) : new AbcWidget(b.body, editing);
+    if (editing) out.push(Decoration.widget({ widget, block: true, side: 1 }).range(b.to));
+    else out.push(Decoration.replace({ widget, block: true }).range(b.from, b.to));
   }
   return Decoration.set(out, true);
 }

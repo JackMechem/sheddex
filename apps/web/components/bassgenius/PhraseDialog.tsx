@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import TranscriptionScore from "@/components/bassgenius/TranscriptionScore";
+import TranscriptionScore from "@/components/notation/Score";
 import { CloseIcon } from "@/components/tools";
 import type { BassPhrase } from "@/lib/bassLine";
 import { noteName } from "@/lib/bassInsights";

@@ -37,6 +37,7 @@ import type * as previewSeed from "../previewSeed.js";
 import type * as profiles from "../profiles.js";
 import type * as recordings from "../recordings.js";
 import type * as routines from "../routines.js";
+import type * as scores from "../scores.js";
 import type * as setlists from "../setlists.js";
 import type * as shedNotes from "../shedNotes.js";
 import type * as site from "../site.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   profiles: typeof profiles;
   recordings: typeof recordings;
   routines: typeof routines;
+  scores: typeof scores;
   setlists: typeof setlists;
   shedNotes: typeof shedNotes;
   site: typeof site;

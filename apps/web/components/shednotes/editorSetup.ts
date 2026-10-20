@@ -64,8 +64,7 @@ export const editorTheme = EditorView.theme({
   ".cm-abc-editing": { marginTop: "2px", border: "1px dashed color-mix(in oklab, var(--accent) 50%, transparent)" },
   ".cm-abc-paper svg": { maxWidth: "100%" },
   ".cm-abc-empty, .cm-abc-warning": { margin: "0", fontSize: "12px", color: "var(--muted)" },
-  ".cm-abc-edit": { position: "absolute", top: "8px", right: "8px", fontSize: "12px", fontWeight: "600", padding: "2px 10px", borderRadius: "999px", backgroundColor: "var(--surface)", color: "var(--foreground)", opacity: "0", transition: "opacity 120ms" },
-  ".cm-abc:hover .cm-abc-edit, .cm-abc-editing .cm-abc-edit, .cm-abc-edit:focus-visible": { opacity: "1" },
+  ".cm-score": { margin: "6px 0", padding: "10px 12px", borderRadius: "14px", backgroundColor: "var(--surface)", color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
 });
 
 /** Markdown (and JSON, for the settings file) colours. Marks are muted; content keeps its weight. */

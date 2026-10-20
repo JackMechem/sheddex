@@ -129,12 +129,35 @@ export const fill = internalMutation({
     });
     await setSetting(ctx, userId, "jam-practice-practice-log", practiceLog(now, known[0].name));
 
-    // Shed Notes: two linked notes (one with notation), the warm-up one attached to today's routine.
+    // A Score Writer score, shown in the first note.
+    const scoreNotes = ["C", "D", "E", "F", "G", "A", "B"].map((step, i) => ({ id: `demo-n${i}`, value: "8", pitch: { step, alter: 0, octave: 4 }, midi: [60, 62, 64, 65, 67, 69, 71][i] }));
+    const scoreId = await ctx.db.insert("scores", {
+      userId,
+      title: "C major warm-up",
+      measureCount: 2,
+      data: {
+        title: "C major warm-up",
+        tune: "",
+        source: "",
+        tempo: 100,
+        comments: "",
+        timeSignature: { top: 4, bottom: 4 },
+        clef: "treble",
+        measures: [
+          { id: "demo-m1", chords: [{ beat: 0, symbol: "C^7" }], notes: [...scoreNotes, { id: "demo-n7", value: "8", pitch: { step: "C", alter: 0, octave: 5 }, midi: 72 }] },
+          { id: "demo-m2", chords: [], notes: [{ id: "demo-n8", value: "w", pitch: { step: "C", alter: 0, octave: 5 }, midi: 72 }] },
+        ],
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Shed Notes: two linked notes (one with that score), the warm-up one attached to today's routine.
     const notes = [
       {
         title: "Warm-up ideas",
         folder: "Practice",
-        body: "# Warm-up ideas\n\nStart slow, then push the tempo. Scales go with [[Autumn Leaves voicings]].\n\n- [x] Long tones\n- [ ] Scales in all keys\n\n```abc\nX:1\nM:4/4\nL:1/8\nK:C\nC D E F G A B c | c B A G F E D C |]\n```\n\n#warmup",
+        body: "# Warm-up ideas\n\nStart slow, then push the tempo. Scales go with [[Autumn Leaves voicings]].\n\n- [x] Long tones\n- [ ] Scales in all keys\n\n```score\n" + scoreId + "\n```\n\n#warmup",
       },
       {
         title: "Autumn Leaves voicings",

@@ -288,6 +288,13 @@ export const performDelete = internalMutation({
       .collect();
     for (const row of sharedFiles) await ctx.db.delete(row._id);
 
+    // Score Writer scores.
+    const scores = await ctx.db
+      .query("scores")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of scores) await ctx.db.delete(row._id);
+
     // Shed Notes and their attachments to days, routines and tunes.
     const noteLinks = await ctx.db
       .query("shedNoteLinks")

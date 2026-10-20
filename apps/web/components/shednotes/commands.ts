@@ -3,6 +3,7 @@ import { EditorSelection, type ChangeSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { WIKILINK_RE, parseLinkInner } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
+import { type Block, findBlocks, scoreIdOf } from "./livePreview";
 
 /**
  * Every command Shed Notes can run, by id — the same ids work in the settings file's
@@ -17,8 +18,9 @@ export type NoteActions = {
   openCommandPalette?: () => void;
   /** Opens (or, with `create`, makes) the note with this title. */
   openNoteByTitle?: (title: string, opts?: { create?: boolean; newTab?: boolean }) => void;
-  /** The notation dialog; `initial` is the ABC being edited, if any. */
-  openNotation?: (initial: string | null, onDone: (abc: string) => void) => void;
+  /** The notation editor on a Score Writer score (`null`: a new one); `onDone` gets its id once
+      it's saved. */
+  openScore?: (scoreId: string | null, onDone: (scoreId: string) => void) => void;
   setConfig?: (key: keyof ShedNotesConfig, value: boolean) => void;
   config?: () => ShedNotesConfig;
   openSettings?: () => void;
@@ -155,41 +157,20 @@ export function openUrl(url: string) {
   if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer");
 }
 
-/** The ```abc block the cursor is in: its whole range and its notation. */
-export function notationBlockAt(view: EditorView, pos: number): { from: number; to: number; abc: string } | null {
-  const doc = view.state.doc;
-  const here = doc.lineAt(pos).number;
-  for (let n = here; n >= 1; n--) {
-    const text = doc.line(n).text;
-    if (/^(```|~~~)/.test(text)) {
-      if (!/^(```|~~~)\s*(abc|music)\s*$/i.test(text)) return null;
-      for (let e = n + 1; e <= doc.lines; e++) {
-        if (/^(```|~~~)\s*$/.test(doc.line(e).text)) {
-          if (e < here) return null;
-          const inner = n + 1 <= e - 1 ? doc.sliceString(doc.line(n + 1).from, doc.line(e - 1).to) : "";
-          return { from: doc.line(n).from, to: doc.line(e).to, abc: inner };
-        }
-      }
-      return null;
-    }
-  }
-  return null;
+/** The notation block (```score or ```abc) the cursor is in. */
+export function notationBlockAt(view: EditorView, pos: number): Block | null {
+  return findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to) ?? null;
 }
 
-/** Puts a ```abc block in place of the one under the cursor, or on its own lines at the cursor. */
-export function insertNotation(view: EditorView, abc: string) {
-  const block = "```abc\n" + abc.trim() + "\n```";
+/** Puts a ```score block for `scoreId` on its own lines at the cursor. */
+export function insertScore(view: EditorView, scoreId: string) {
+  const block = "```score\n" + scoreId + "\n```";
   const at = view.state.selection.main.head;
-  const existing = notationBlockAt(view, at);
-  if (existing) {
-    view.dispatch({ changes: { from: existing.from, to: existing.to, insert: block }, selection: { anchor: existing.from + block.length }, userEvent: "input" });
-  } else {
-    const line = view.state.doc.lineAt(at);
-    const pre = line.text.trim() ? "\n\n" : line.number > 1 && view.state.doc.line(line.number - 1).text.trim() ? "\n" : "";
-    const insertAt = line.text.trim() ? line.to : line.from;
-    const text = pre + block + "\n";
-    view.dispatch({ changes: { from: insertAt, insert: text }, selection: { anchor: insertAt + text.length }, userEvent: "input" });
-  }
+  const line = view.state.doc.lineAt(at);
+  const pre = line.text.trim() ? "\n\n" : line.number > 1 && view.state.doc.line(line.number - 1).text.trim() ? "\n" : "";
+  const insertAt = line.text.trim() ? line.to : line.from;
+  const text = pre + block + "\n";
+  view.dispatch({ changes: { from: insertAt, insert: text }, selection: { anchor: insertAt + text.length }, userEvent: "input" });
   view.focus();
 }
 
@@ -260,12 +241,13 @@ export const COMMANDS: Command[] = [
     id: "editor:insert-notation",
     name: "Write music notation",
     editor: true,
-    needs: "openNotation",
+    needs: "openScore",
     run: (ctx) => {
       const view = ctx.view;
-      if (!view || !ctx.actions.openNotation) return false;
+      if (!view || !ctx.actions.openScore) return false;
       const block = notationBlockAt(view, view.state.selection.main.head);
-      ctx.actions.openNotation(block ? block.abc : null, (abc) => insertNotation(view, abc));
+      if (block?.kind === "score") ctx.actions.openScore(scoreIdOf(block.body), () => {});
+      else ctx.actions.openScore(null, (id) => insertScore(view, id));
       return true;
     },
   },

@@ -615,6 +615,18 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_player", ["playerId"]),
 
+  /** Score Writer: one score per row (`data` is `packages/core/bassTranscription.ts`'s
+      `Transcription`, the shared notation format). `title` and `measureCount` are copied out for
+      lists. Shed Notes embeds them by id. */
+  scores: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    measureCount: v.number(),
+    data: v.any(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   /** Shed Notes: one markdown note per row, private to its owner. `titleKey` is the lowercased
       title (titles are unique per account, and `[[links]]` find notes by it); `links` holds the
       title keys this note's `[[links]]` point at, so backlinks are a lookup; `tags` its #tags. */

@@ -443,6 +443,17 @@ export function FileIcon({ className }: { className?: string }) {
 }
 
 /** A page with lines — a PDF or document. */
+/** Score Writer: a staff with a note on it. */
+export function ScoreIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7h18M3 11h18M3 15h18M3 19h18" strokeOpacity={0.45} />
+      <path d="M15 17V4l4 2" />
+      <ellipse cx="12.5" cy="17" rx="2.6" ry="2" transform="rotate(-20 12.5 17)" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function DocumentIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -668,6 +679,7 @@ const NAV_LINK_ICONS: Record<string, (props: { className?: string }) => React.JS
   "/practice-timer": StopwatchIcon,
   "/shed-log": CalendarIcon,
   "/shed-notes": DocumentIcon,
+  "/score-writer": ScoreIcon,
   "/metronome": MetronomeIcon,
   "/random-metric-modulation": MetricModulationIcon,
   "/tempo-trainer": TempoTrainerIcon,
