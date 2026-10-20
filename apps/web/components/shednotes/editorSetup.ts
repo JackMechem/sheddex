@@ -294,12 +294,36 @@ function wordCounts(doc: Text): Map<string, number> {
   return counts;
 }
 
+// The dictionary (public/shed-notes/words-en.txt, most common first), fetched the first time a
+// suggestion is wanted and kept for the visit.
+let dictionary: Promise<string[]> | null = null;
+function loadDictionary(): Promise<string[]> {
+  dictionary ??= fetch("/shed-notes/words-en.txt")
+    .then((r) => (r.ok ? r.text() : ""))
+    .then((t) => t.split("\n").filter((l) => l && !l.startsWith("#")))
+    .catch(() => {
+      dictionary = null; // try again next time
+      return [];
+    });
+  return dictionary;
+}
+
+const MAX_WORDS = 4;
+
+/** `word` in the case of what's typed: "Pra" → "Practice", "PRA" → "PRACTICE". */
+function matchCase(word: string, typed: string): string {
+  if (typed.length > 1 && typed === typed.toUpperCase() && typed !== typed.toLowerCase()) return word.toUpperCase();
+  if (typed[0] !== typed[0].toLowerCase() && word === word.toLowerCase()) return word[0].toUpperCase() + word.slice(1);
+  return word;
+}
+
 /**
- * Word suggestions as you type, like a code editor's: words already in this note and in your
- * notes' titles, the most used first. Enter or Tab fills one in. Off unless the setting is on, and
- * never inside `[[links]]`, #tags, code or notation.
+ * Word suggestions as you type, like a phone keyboard's or a code editor's: up to four words that
+ * start with what you've typed — your own words first (from this note and your note titles, the
+ * ones you use most), then common English and music words. Enter or Tab fills one in. Off unless
+ * the setting is on, and never inside `[[links]]`, #tags, code or notation.
  */
-export function wordCompletion(ctx: CompletionContext): CompletionResult | null {
+export async function wordCompletion(ctx: CompletionContext): Promise<CompletionResult | null> {
   if (!ctx.state.facet(wordCompletionFacet)) return null;
   const m = ctx.matchBefore(WORD_BEFORE);
   if (!m || (m.to - m.from < 2 && !ctx.explicit)) return null;
@@ -308,17 +332,34 @@ export function wordCompletion(ctx: CompletionContext): CompletionResult | null 
   if (/\[\[[^\]]*$/.test(before) || before.endsWith("#")) return null;
   for (let n: { name: string; parent: unknown } | null = syntaxTree(ctx.state).resolveInner(ctx.pos, -1); n; n = n.parent as typeof n) if (NO_WORDS.has(n.name)) return null;
   const typed = ctx.state.sliceDoc(m.from, m.to);
+  const lower = typed.toLowerCase();
+
+  // Yours: words in this note (not counting the one being typed) and in your note titles.
   const counts = new Map(wordCounts(ctx.state.doc));
-  // The word being typed counts itself once; don't offer it back as typed.
   counts.set(typed, (counts.get(typed) ?? 1) - 1);
   for (const { title } of ctx.state.facet(noteTitlesFacet))
     for (const w of title.matchAll(WORD)) if (w[0].length >= 4) counts.set(w[0], (counts.get(w[0]) ?? 0) + 1);
-  const lower = typed.toLowerCase();
-  const options: Completion[] = [];
-  for (const [word, count] of counts) {
-    if (count <= 0 || word === typed || !word.toLowerCase().startsWith(lower)) continue;
-    options.push({ label: word, type: "word", boost: Math.min(count, 40) });
+  const yours = [...counts].filter(([w, n]) => n > 0 && w.length > typed.length && w.toLowerCase().startsWith(lower)).sort((a, b) => b[1] - a[1]).map(([w]) => w);
+
+  const picked: string[] = [];
+  const taken = new Set<string>();
+  const add = (w: string) => {
+    const k = w.toLowerCase();
+    if (picked.length < MAX_WORDS && !taken.has(k)) {
+      taken.add(k);
+      picked.push(w);
+    }
+  };
+  yours.forEach(add);
+  if (picked.length < MAX_WORDS) {
+    const words = await loadDictionary();
+    if (ctx.aborted) return null;
+    for (const w of words) {
+      if (picked.length >= MAX_WORDS) break;
+      if (w.length > lower.length && w.startsWith(lower)) add(matchCase(w, typed));
+    }
   }
-  if (!options.length) return null;
-  return { from: m.from, options: options.slice(0, 200), validFor: /^[\p{L}\p{M}\p{N}'’]*$/u };
+  if (!picked.length) return null;
+  // In this order, as given (no re-sorting or fuzzy filtering); asked again on every letter.
+  return { from: m.from, filter: false, options: picked.map((w) => ({ label: w, type: "word" })) };
 }

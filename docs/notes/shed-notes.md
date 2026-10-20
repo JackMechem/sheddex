@@ -401,3 +401,17 @@ Gotcha for tests: the JSON editor only draws the lines on screen, so check the s
 (`__db.settings`), not the editor's text. Verified in the harness: suggestions on/off, Enter and
 Tab fill in, none inside `[[`, none from an abc block; switching on from the form; recording
 Alt-L for live preview saves and works; 390 dark has no overflow. Not checked signed in.
+
+Same day, reworked after Jack's feedback ("only works for words already on the page… figure out
+what word I'm typing… like 4"): suggestions now finish the word from a **dictionary** too. Up to
+four, in order: your words (this note minus code blocks, plus note titles; most used first), then
+`public/shed-notes/words-en.txt` — 39k words, most common first, fetched once (349 KB, ~140 KB
+gzipped) the first time a suggestion is wanted. It's SCOWL levels 10–35 (wordlist-english, MIT
+package; SCOWL's own permissive notice is kept at the top of the file and the source is credited
+on /credits) plus a hand-written list of music words ranked just after the most common words;
+within a tier, plain words before their -s/-ed/-ing/-ly forms, then shorter first. Rebuild with
+`apps/web/scripts/build-word-list.mjs` (instructions at its top). The source is now async and
+returns `filter: false` (CodeMirror keeps our order, asks again each letter), matching the typed
+case ("Pra" → "Practice"). Checked in the harness: pra → your "Pratt's", practice, practical,
+practically; arp → arpeggio…; synco → syncopated, syncopation; Met → Metal, Method, Methods,
+Metronome; arrows + Enter and Tab fill in. English only.

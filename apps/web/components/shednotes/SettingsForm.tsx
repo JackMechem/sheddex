@@ -10,7 +10,7 @@ const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(n
 
 const SWITCHES: { key: "vimMode" | "livePreview" | "wordCompletion" | "lineNumbers" | "readableLineLength" | "spellcheck"; label: string; hint: string }[] = [
   { key: "livePreview", label: "Live preview", hint: "Hides markdown marks where the cursor isn't and draws notation. Off shows the plain text." },
-  { key: "wordCompletion", label: "Word suggestions", hint: "Suggests words from the note and your note titles as you type, like a code editor. Enter or Tab fills one in; keep typing to ignore it." },
+  { key: "wordCompletion", label: "Word suggestions", hint: "Suggests up to four words that finish what you're typing — your own words first, then common English and music words. Enter or Tab fills one in; keep typing to ignore them." },
   { key: "vimMode", label: "Vim keys", hint: "Vim's normal, insert and visual modes in every note." },
   { key: "lineNumbers", label: "Line numbers", hint: "Numbers down the side of every note." },
   { key: "readableLineLength", label: "Readable line length", hint: "Keeps lines to a comfortable width on a wide screen. A note can still be made full width from its ⋮ menu." },

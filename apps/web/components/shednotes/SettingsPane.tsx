@@ -15,7 +15,7 @@ const OPTIONS: [keyof ShedNotesConfig, string][] = [
   ["readableLineLength", "Keeps lines to a comfortable width on a wide screen."],
   ["fontSize", "The text size in notes, 10 to 32."],
   ["spellcheck", "The browser's spellcheck underline."],
-  ["wordCompletion", "true suggests words from the note and your note titles as you type; Enter or Tab fills one in. Off at first."],
+  ["wordCompletion", "true suggests up to four words that finish what you're typing (your own words first, then a dictionary); Enter or Tab fills one in. Off at first."],
   ["keybindings", 'A list of { "key": "Mod-b", "command": "editor:toggle-bold" }, added to the built-in keys (Reference shows them all): a key you list replaces that key\'s built-in command, and "command": "" turns a key off. Mod is Ctrl (⌘ on a Mac); also Shift-, Alt-, Ctrl-, Meta-.'],
   ["vim", 'leader: what <leader> is in mappings. mappings: vimrc lines (map, nmap, imap, vmap, noremap, nnoremap, inoremap, vnoremap, unmap). exCommands: { "name": "command id" } adds :name.'],
 ];
