@@ -61,3 +61,24 @@ export async function recentPulls(): Promise<GitHubItem[]> {
     merged: !!p.merged_at,
   }));
 }
+
+export type GitHubIssue = { number: number; url: string; title: string; state: string; labels: string[]; at: number };
+
+/** The repo's issues, newest activity first (pull requests left out). */
+export async function recentIssues(): Promise<GitHubIssue[]> {
+  const issues = await gh<{ number: number; html_url: string; title: string; state: string; labels: { name: string }[]; updated_at: string; pull_request?: unknown }[]>(
+    "/issues?state=all&sort=updated&direction=desc&per_page=60",
+  );
+  return issues
+    .filter((i) => !i.pull_request)
+    .map((i) => ({ number: i.number, url: i.html_url, title: i.title, state: i.state, labels: i.labels.map((l) => l.name), at: Date.parse(i.updated_at) }));
+}
+
+/** "#45" or an issue link → the issue (looked up, so the title and state are right). */
+export async function issueByRef(input: string): Promise<GitHubIssue | null> {
+  const m = /(?:issues\/|#|^)(\d+)\s*$/.exec(input.trim());
+  if (!m) return null;
+  const i = await gh<{ number: number; html_url: string; title: string; state: string; labels: { name: string }[]; updated_at: string; pull_request?: unknown }>(`/issues/${m[1]}`);
+  if (i.pull_request) return null;
+  return { number: i.number, url: i.html_url, title: i.title, state: i.state, labels: i.labels.map((l) => l.name), at: Date.parse(i.updated_at) };
+}

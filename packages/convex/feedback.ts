@@ -4,6 +4,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { WorkLink } from "./lib/github";
+import { internal } from "./_generated/api";
 
 /**
  * "Send feedback": bug reports, feature ideas, anything else, and reports of a post or profile.
@@ -25,6 +26,7 @@ export const submit = mutation({
     email: v.optional(v.string()),
     page: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    version: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     target: v.optional(v.object({ type: v.union(v.literal("post"), v.literal("profile")), id: v.string(), label: v.string() })),
   },
@@ -61,22 +63,27 @@ export const submit = mutation({
     }
     const email = (a.email ?? "").trim().toLowerCase();
     const user = userId ? await ctx.db.get(userId) : null;
-    const number = await nextNumber(ctx);
-    await ctx.db.insert("feedback", {
-      number,
+    // Sharing the inbox with production: bugs, ideas and other notes go there (reports about posts
+    // and profiles stay here, with what they're about); its FB-number comes back once it's there.
+    const shared = !!process.env.FEEDBACK_HUB_URL && a.kind !== "report";
+    const number = shared ? undefined : await nextNumber(ctx);
+    const id = await ctx.db.insert("feedback", {
+      ...(number !== undefined ? { number } : {}),
       ...(userId ? { userId } : {}),
       ...(EMAIL_RE.test(email) ? { email: email.slice(0, 200) } : user?.email ? { email: user.email } : {}),
       kind: a.kind,
       message: message || "(no details)",
       ...(a.page ? { page: a.page.slice(0, 500) } : {}),
       ...(a.userAgent ? { userAgent: a.userAgent.slice(0, 400) } : {}),
+      ...(a.version ? { version: a.version.slice(0, 40) } : {}),
       ...(a.screenshotId ? { screenshotId: a.screenshotId } : {}),
       ...(a.target ? { target: { type: a.target.type, id: a.target.id.slice(0, 100), label: a.target.label.slice(0, 200) } } : {}),
       status: "new",
       createdAt: now,
       updatedAt: now,
     });
-    return { number };
+    if (shared) await ctx.scheduler.runAfter(0, internal.inbox.forward, { id });
+    return { number: number ?? null };
   },
 });
 

@@ -262,3 +262,27 @@ Verified:
   calls GitHub's API from the page (`lib/githubWork.ts`, CORS allowed, 5-minute cache; the
   message says when the limit resets), and `convex/github.ts` is gone. Checked live from the
   harness page: 60 commits, 8 PRs.
+
+### Shared inbox, GitHub issues, version (2026-10-20)
+
+- **Version:** `feedback.version` ("0.9.6 beta", sent by the form), on the card and in issues.
+- **Shared inbox** (`convex/inbox.ts`, `inboxCore.ts`, `inboxForward.ts`): production holds the
+  list. With `FEEDBACK_HUB_URL` + `FEEDBACK_HUB_SECRET` set, a deployment's new bugs/ideas/notes
+  are stored locally without a number and `inbox.forward` (scheduled; retries with backoff) sends
+  them, with the screenshot as base64, to production's `POST /feedback-hub` (secret header), which
+  stores them with `source` and a `sender` snapshot and returns the FB-number (written back
+  locally, so `/feedback` shows it). The admin inbox is now actions (`inbox.list`, `inbox.apply`,
+  `inbox.createIssue`, `inbox.moveToShared`) on every deployment — `components/admin/useInbox.ts`
+  polls every 15 s and refreshes after each change. Rows carry `where` ("shared"/"here"). The old
+  admin feedback query/mutations are gone.
+- **GitHub issues:** never automatic. `createIssueHere` (on the deployment holding the list, with
+  `GITHUB_TOKEN`) writes title, quoted message, ID, kind, version, page link, device, and the
+  screenshot only when asked; labels `bug` / `enhancement`. Link existing: the picker lists the
+  repo's issues from the browser (`lib/githubWork.ts`), or `#45` / a link. The webhook's `issues`
+  event closes/reopens the linked feedback.
+- Checked: tsc (web, convex, mobile), lint, build; the hub endpoint on dev with a temporary secret
+  (list with the version field, 401 with a wrong secret, readable 400s; secret removed after);
+  the inbox in the harness (version and source on the card, the create panel's wording and
+  screenshot box → `includeScreenshot: true`, the issue chip, the issue picker against the real
+  repo — which has no issues yet). **Not checked:** forwarding between two real deployments,
+  creating a real issue (no token here, and it would be public), a real webhook delivery.

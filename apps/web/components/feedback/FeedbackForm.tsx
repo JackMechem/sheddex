@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_VERSION, CHANNEL } from "@/lib/version";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
@@ -82,6 +83,7 @@ export default function FeedbackForm({
         ...(email.trim() ? { email } : {}),
         page: window.location.pathname + window.location.search,
         userAgent: navigator.userAgent,
+        version: `${APP_VERSION}${CHANNEL === "stable" ? "" : ` ${CHANNEL}`}`,
         ...(screenshotId ? { screenshotId } : {}),
         ...(target ? { target } : {}),
       });

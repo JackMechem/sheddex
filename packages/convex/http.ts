@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { feedbackRefs, validSignature } from "./lib/github";
+import { hub } from "./inbox";
 
 const http = httpRouter();
 
@@ -12,9 +13,10 @@ const MAIN = "main";
 
 /**
  * GitHub webhook (repo Settings → Webhooks: `<deployment>.convex.site/github-webhook`, JSON, the
- * secret in the GITHUB_WEBHOOK_SECRET env var, events: pushes and pull requests). A commit
+ * secret in the GITHUB_WEBHOOK_SECRET env var, events: pushes, pull requests and issues). A commit
  * message or PR title/description that mentions FB-<number> links it to that feedback; "fixes
- * FB-<number>" marks it done once it's on main (a push to main, or a PR merged into main).
+ * FB-<number>" marks it done once it's on main (a push to main, or a PR merged into main); closing
+ * a feedback's GitHub issue marks it done (reopening moves it back to planned).
  */
 http.route({
   path: "/github-webhook",
@@ -44,6 +46,14 @@ http.route({
           linked++;
         }
       }
+    } else if (event === "issues") {
+      // An issue made from feedback closed (or reopened) on GitHub: the feedback follows.
+      const action = payload.action;
+      const issue = payload.issue as { number: number; state: string };
+      if (action === "closed" || action === "reopened") {
+        await ctx.runMutation(internal.inboxCore.setStatusForIssue, { issueNumber: issue.number, state: issue.state });
+        linked++;
+      }
     } else if (event === "pull_request") {
       const pr = payload.pull_request as { number: number; html_url: string; title: string; body: string | null; merged: boolean; base: { ref: string } };
       const { mentioned, fixes } = feedbackRefs(`${pr.title}\n${pr.body ?? ""}`);
@@ -60,5 +70,8 @@ http.route({
     return new Response(JSON.stringify({ ok: true, linked }), { status: 200, headers: { "content-type": "application/json" } });
   }),
 });
+
+/** The shared feedback inbox (production): other deployments send and read feedback here. */
+http.route({ path: "/feedback-hub", method: "POST", handler: hub });
 
 export default http;

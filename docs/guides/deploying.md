@@ -113,31 +113,45 @@ uploads / feedback, an announcement banner, and "sign everyone out". Details:
 `docs/notes/launch-admin-analytics.md`.
 
 
-## GitHub webhook: linking commits and PRs to feedback
+## Feedback: the shared inbox, GitHub issues and the webhook
 
-Every piece of feedback has an ID, shown as `FB-12` in the admin inbox (click it to copy). A commit
-message or a pull request title or description that mentions `FB-12` is linked to it in the
-inbox; "Fixes FB-12" (also fix/fixed/closes/resolves) marks it **Done** when it reaches `main`
-(pushed to main, or a PR merged into main). Mentioned without "fixes", new/seen feedback moves to
-**Planned**. Links can also be added by hand on each card (a hash, `#12`, or a GitHub link).
+Every piece of feedback has an ID (`FB-12`) and records the site version it was sent from. In the
+admin inbox, a bug or idea has **Create GitHub issue** (labelled `bug` / `enhancement`; the
+message, page, version, device and ID — never the sender's email or name; the screenshot only if
+you tick it) and **Link existing issue**. Nothing goes to GitHub on its own. Each card can also
+link commits and PRs (**Pick…** lists them from GitHub, fetched by your browser).
 
-Set up once for each deployment (dev and prod):
-1. Make a secret: `openssl rand -hex 32`.
-2. From `packages/convex`: `npx convex env set GITHUB_WEBHOOK_SECRET <secret>` (add `--prod` for
-   production).
-3. GitHub → the repo → Settings → Webhooks → Add webhook:
-   - Payload URL: `https://<deployment>.convex.site/github-webhook` (the deployment's
-     `CONVEX_SITE_URL`; prod's for soniroll.com).
-   - Content type: `application/json`; Secret: the same secret.
-   - Events: "Let me select individual events" → **Pushes** and **Pull requests**.
-4. GitHub sends a ping; the webhook's Recent Deliveries should show `200`. Without the secret set
-   the endpoint answers `503`; with a wrong one, `401`.
+**Production is the shared inbox.** Dev and previews send their bugs, ideas and notes there, and
+their admin inbox reads and changes production's list (reports about posts and profiles stay on
+the deployment they're about). Everything below goes on **production** unless it says otherwise —
+and production needs this code first (merge to `main` so Vercel runs `convex deploy`).
 
-Without the webhook, each inbox card's **Pick…** button lists the repo's recent commits (by
-branch) and pull requests straight from GitHub, so you can link them with a click. It's fetched by
-your browser (`apps/web/lib/githubWork.ts`; the repo is public), so GitHub's limit of 60 lookups
-an hour is yours alone, and each list is kept for 5 minutes. (It first ran on Convex, but GitHub
-counts Convex's shared servers together and the limit was already used up.)
+Production's HTTP address: Convex dashboard → the production deployment → Settings → "HTTP
+Actions URL" (ends in `.convex.site`). Make secrets with
+`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Run the `npx convex
+env` commands from `packages/convex`.
 
-GitHub lists at most 20 commits in one push, so a push with more than 20 only links those 20 (a
-PR mentioning the ID covers the rest).
+1. **GitHub token** (to make issues): GitHub → your profile picture → Settings → Developer
+   settings → Personal access tokens → **Fine-grained tokens** → Generate new token. Name it,
+   pick an expiry, Resource owner JackMechem, Repository access "Only select repositories" →
+   `soniroll`, Repository permissions → **Issues: Read and write**. Generate, copy, then
+   `npx convex env set GITHUB_TOKEN <token> --prod`.
+2. **Shared inbox:** make one secret.
+   - Production: `npx convex env set FEEDBACK_HUB_SECRET <secret> --prod`
+   - Dev: `npx convex env set FEEDBACK_HUB_URL https://<prod>.convex.site`,
+     `npx convex env set FEEDBACK_HUB_SECRET <secret>`, `npx convex env set FEEDBACK_SOURCE_NAME dev`
+   - Previews: Convex dashboard → the project → Settings → Environment Variables → "Default
+     environment variables" for preview deployments: the same `FEEDBACK_HUB_URL` and
+     `FEEDBACK_HUB_SECRET`, and `FEEDBACK_SOURCE_NAME` = `preview`.
+   Feedback already on dev stays there, marked "Only on this deployment", with a **Move to the
+   shared inbox** button.
+3. **Webhook** (links `FB-12` in commits and PRs; "Fixes FB-12" on main marks it Done; closing an
+   issue made from feedback marks it Done): make another secret,
+   `npx convex env set GITHUB_WEBHOOK_SECRET <secret> --prod`, then GitHub → the repo → Settings
+   → Webhooks → Add webhook: Payload URL `https://<prod>.convex.site/github-webhook`, Content
+   type `application/json`, the secret, "Let me select individual events" → **Pushes**, **Pull
+   requests**, **Issues**. Its Recent Deliveries should show the ping with `200` (`503` = the
+   secret isn't set, `401` = it doesn't match).
+
+GitHub lists at most 20 commits in one push, so a bigger push only links those 20 (a PR that
+mentions the ID covers the rest). **Pick…** is limited by GitHub to 60 lookups an hour per person.

@@ -499,10 +499,20 @@ export default defineSchema({
     message: v.string(),
     page: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    /** The site's version when it was sent ("0.9.6 beta"). */
+    version: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     target: v.optional(v.object({ type: v.union(v.literal("post"), v.literal("profile")), id: v.string(), label: v.string() })),
     status: v.union(v.literal("new"), v.literal("seen"), v.literal("planned"), v.literal("done"), v.literal("closed")),
     adminNote: v.optional(v.string()),
+    /** The GitHub issue for it, if one was made or linked (by the admin, never automatically). */
+    issue: v.optional(v.object({ number: v.number(), url: v.string(), title: v.string(), state: v.string() })),
+    /** Sent from another deployment (dev, a preview) to this one, the shared inbox: where from,
+        and who sent it there (their account isn't in this database). */
+    source: v.optional(v.string()),
+    sender: v.optional(v.object({ username: v.optional(v.string()), name: v.optional(v.string()) })),
+    /** Here, on a deployment that sends its feedback to the shared inbox: it's been sent. */
+    forwarded: v.optional(v.boolean()),
     /** Its ID, shown as FB-<number> (1, 2, 3… in the order they came in). */
     number: v.optional(v.number()),
     /** Commits and pull requests that work on it — added on the admin page, or by the GitHub

@@ -9,7 +9,8 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import Select from "@/components/Select";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { type GitHubItem, recentCommits, recentPulls, repoBranches } from "@/lib/githubWork";
+import { type GitHubIssue, type GitHubItem, issueByRef, recentCommits, recentIssues, recentPulls, repoBranches } from "@/lib/githubWork";
+import { type InboxRow, useInbox } from "@/components/admin/useInbox";
 import { LibraryPage } from "@/components/library/ui";
 import { BugIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, SparkIcon, TrashIcon, UsersIcon } from "@/components/tools";
 import { VERSION_LABEL } from "@/lib/version";
@@ -164,7 +165,7 @@ function Stat({
 
 function Overview({ onGo }: { onGo: (t: Tab) => void }) {
   const s = useQuery(api.admin.stats, {});
-  const feedback = useQuery(api.admin.feedbackList, {});
+  const { rows: feedback } = useInbox();
   const users = useQuery(api.admin.users, {});
   const [now] = useState(() => Date.now());
   if (!s)
@@ -313,15 +314,7 @@ const STATUSES = [
 type Status = (typeof STATUSES)[number]["id"];
 
 function Inbox() {
-  const rows = useQuery(api.admin.feedbackList, {});
-  const update = useMutation(api.admin.updateFeedback);
-  const ensureNumbers = useMutation(api.admin.ensureFeedbackNumbers);
-  // Feedback from before IDs existed gets its FB-number the first time the inbox opens.
-  const unnumbered = !!rows?.some((r) => r.number === null);
-  useEffect(() => {
-    if (unnumbered) void ensureNumbers({});
-  }, [unnumbered, ensureNumbers]);
-  const remove = useMutation(api.admin.deleteFeedback);
+  const { rows, shared, error: inboxError, change, createIssue, moveToShared, errorText } = useInbox();
   const removePost = useMutation(api.admin.removePost);
   const [view, setView] = useState<"open" | Status | "all">("open");
   const [kind, setKind] = useState<keyof typeof KIND_META | "all">("all");
@@ -335,7 +328,7 @@ function Inbox() {
       (r) =>
         (view === "all" || (view === "open" ? r.status === "new" || r.status === "seen" : r.status === view)) &&
         (kind === "all" || r.kind === kind) &&
-        (!t || `fb-${r.number ?? ""} ${r.message} ${r.email ?? ""} ${r.from?.username ?? ""} ${r.page ?? ""} ${r.target?.label ?? ""} ${r.links.map((l) => `${l.ref} ${l.title}`).join(" ")}`.toLowerCase().includes(t.replace(/^fb\s+/, "fb-"))),
+        (!t || `fb-${r.number ?? ""} ${r.issue ? `#${r.issue.number} ${r.issue.title}` : ""} ${r.version ?? ""} ${r.source ?? ""} ${r.message} ${r.email ?? ""} ${r.from?.username ?? ""} ${r.page ?? ""} ${r.target?.label ?? ""} ${r.links.map((l) => `${l.ref} ${l.title}`).join(" ")}`.toLowerCase().includes(t.replace(/^fb\s+/, "fb-"))),
     );
   }, [rows, view, kind, q]);
 
@@ -384,7 +377,13 @@ function Inbox() {
         </div>
       </aside>
       <section className="flex min-w-0 flex-col gap-3">
-        <SearchField value={q} onChange={setQ} placeholder="Search messages, people, pages" />
+        <SearchField value={q} onChange={setQ} placeholder="Search messages, people, pages, FB-12, #45" />
+        <p className="px-1 text-xs text-muted">
+          {shared
+            ? "The shared inbox: bugs, ideas and notes from every deployment (reports about posts stay on the one they're about). Refreshes every 15 seconds."
+            : "This deployment's inbox. Refreshes every 15 seconds."}
+        </p>
+        {inboxError && <p className="rounded-2xl bg-danger/10 px-4 py-2 text-sm text-danger">Couldn&apos;t reach the inbox: {inboxError}</p>}
         {list.length === 0 ? (
           <p className="rounded-3xl bg-surface p-10 text-center text-sm text-muted">
             {rows.length ? "Nothing here." : "No feedback yet — it'll show up here as people send it."}
@@ -423,7 +422,7 @@ function Inbox() {
                     type="button"
                     aria-label="Delete"
                     title="Delete"
-                    onClick={() => setConfirm({ title: "Delete this?", body: "It's gone for good (including any screenshot).", action: () => void remove({ id: f.id }) })}
+                    onClick={() => setConfirm({ title: "Delete this?", body: "It's gone for good (including any screenshot).", action: () => void change(f, { op: "delete", id: f.id }) })}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-background hover:text-danger"
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -480,22 +479,33 @@ function Inbox() {
                     {deviceOf(f.userAgent)}
                   </span>
                 )}
+                {f.version && <span title="The site's version when this was sent">v{f.version}</span>}
+                {f.source && <span className="rounded-full bg-background px-1.5" title="Sent from this deployment">from {f.source}</span>}
               </div>
-              <WorkLinks id={f.id} links={f.links} />
+              {shared && f.where === "here" && f.kind !== "report" && (
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-amber-500/10 px-3 py-2 text-xs">
+                  <span className="flex-1">Only on this deployment (sent before it shared its inbox).</span>
+                  <button type="button" onClick={() => void moveToShared(f).catch((e: unknown) => setConfirm({ title: "Couldn't move it", body: errorText(e), action: () => {} }))} className="rounded-full bg-surface px-3 py-1 font-semibold hover:bg-surface-hover">
+                    Move to the shared inbox
+                  </button>
+                </div>
+              )}
+              {(f.kind === "bug" || f.kind === "feature") && (!shared || f.where === "shared") && <IssueBox row={f} createIssue={createIssue} change={change} errorText={errorText} />}
+              <WorkLinks row={f} change={change} errorText={errorText} />
               <div className="flex flex-wrap items-center gap-2 border-t border-foreground/5 pt-3">
                 <div className="flex flex-wrap gap-1 rounded-full bg-background p-1">
                   {STATUSES.map((s) => (
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => void update({ id: f.id, status: s.id })}
+                      onClick={() => void change(f, { op: "status", id: f.id, status: s.id })}
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${f.status === s.id ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
                     >
                       {s.label}
                     </button>
                   ))}
                 </div>
-                <NoteField id={f.id} note={f.adminNote} />
+                <NoteField note={f.adminNote} onSave={(note) => void change(f, { op: "note", id: f.id, note })} />
               </div>
             </article>
           ))
@@ -553,20 +563,183 @@ function FeedbackId({ number }: { number: number }) {
 type WorkLink = { kind: "commit" | "pr"; ref: string; url: string; title: string; merged?: boolean; at: number };
 
 /** The commits and pull requests linked to a feedback, and a field to link one by hand. */
-function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
-  const add = useMutation(api.admin.addFeedbackLink);
-  const removeLink = useMutation(api.admin.removeFeedbackLink);
+type Inbox = ReturnType<typeof useInbox>;
+
+/** A bug's or idea's GitHub issue: made or linked by the admin — never automatically. */
+function IssueBox({ row, createIssue, change, errorText }: { row: InboxRow; createIssue: Inbox["createIssue"]; change: Inbox["change"]; errorText: Inbox["errorText"] }) {
+  const [mode, setMode] = useState<"create" | "link" | null>(null);
+  const [withShot, setWithShot] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (row.issue) {
+    const open = row.issue.state === "open";
+    return (
+      <div className="flex min-w-0 items-center gap-2 text-xs">
+        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${open ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-violet-500/15 text-violet-600 dark:text-violet-300"}`}>
+          {open ? "Issue open" : "Issue closed"}
+        </span>
+        <a href={row.issue.url} target="_blank" rel="noreferrer" className="shrink-0 font-mono font-semibold text-foreground hover:underline">
+          #{row.issue.number}
+        </a>
+        <span className="min-w-0 flex-1 truncate text-muted">{row.issue.title}</span>
+        <button type="button" onClick={() => void change(row, { op: "setIssue", id: row.id, issue: null }).catch((e: unknown) => setError(errorText(e)))} className="shrink-0 rounded-full px-2 py-0.5 text-muted hover:bg-background hover:text-foreground" title="Unlink the issue (it stays on GitHub)">
+          Unlink
+        </button>
+      </div>
+    );
+  }
+
+  async function make() {
+    setBusy(true);
+    setError(null);
+    try {
+      await createIssue(row, withShot);
+      setMode(null);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setMode(mode === "create" ? null : "create")} aria-expanded={mode === "create"} className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+          Create GitHub issue
+        </button>
+        <button type="button" onClick={() => setMode("link")} className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+          Link existing issue
+        </button>
+      </div>
+      {mode === "create" && (
+        <div className="flex flex-col gap-2 rounded-2xl bg-background p-3 text-xs">
+          <p className="text-muted">
+            Makes a public issue on GitHub labelled <b className="text-foreground">{row.kind === "bug" ? "bug" : "enhancement"}</b>: the message, the page, the site version, the device and FB-{row.number ?? "?"}. Never their email or name.
+          </p>
+          {row.screenshotUrl && (
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={withShot} onChange={(e) => setWithShot(e.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
+              Include the screenshot (it becomes public too)
+            </label>
+          )}
+          <div className="flex gap-2">
+            <button type="button" disabled={busy} onClick={() => void make()} className="rounded-full bg-accent px-3 py-1.5 font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50">
+              {busy ? "Making it…" : "Create issue"}
+            </button>
+            <button type="button" onClick={() => setMode(null)} className="rounded-full px-3 py-1.5 font-semibold text-muted hover:text-foreground">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {mode === "link" && (
+        <IssuePicker
+          onPick={(issue) => {
+            setMode(null);
+            void change(row, { op: "setIssue", id: row.id, issue: { number: issue.number, url: issue.url, title: issue.title, state: issue.state } }).catch((e: unknown) => setError(errorText(e)));
+          }}
+          onClose={() => setMode(null)}
+        />
+      )}
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/** The repo's issues to link one (or type #45 / paste its link). */
+function IssuePicker({ onPick, onClose }: { onPick: (issue: GitHubIssue) => void; onClose: () => void }) {
+  const [issues, setIssues] = useState<GitHubIssue[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    let live = true;
+    recentIssues().then(
+      (list) => live && setIssues(list),
+      (e: Error) => live && setError(e.message),
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const t = q.trim().toLowerCase().replace(/^#/, "");
+  const shown = (issues ?? []).filter((i) => !t || `${i.number} ${i.title} ${i.labels.join(" ")}`.toLowerCase().includes(t));
+  async function byRef() {
+    try {
+      const issue = await issueByRef(q);
+      if (issue) onPick(issue);
+      else setError("That isn't an issue in the repo.");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onMouseDown={onClose}>
+      <div role="dialog" aria-label="Link a GitHub issue" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 border-b border-foreground/10 p-3">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && /^\s*(#?\d+|https?:\/\/\S+\/issues\/\d+)\s*$/.test(q) && void byRef()}
+            placeholder="Search issues, or type #45 / paste its link"
+            aria-label="Search issues"
+            className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+        <ul className="min-h-0 flex-1 overflow-y-auto p-2">
+          {error ? (
+            <li className="px-3 py-6 text-center text-sm text-danger">{error}</li>
+          ) : !issues ? (
+            <li className="flex justify-center py-8">
+              <LoadingSpinner />
+            </li>
+          ) : shown.length === 0 ? (
+            <li className="px-3 py-6 text-center text-sm text-muted">
+              {issues.length === 0 && !t ? "There are no issues on GitHub yet." : `No issues match${/^#?\d+$/.test(q.trim()) ? " — press Enter to look it up" : ""}.`}
+            </li>
+          ) : (
+            shown.map((i) => (
+              <li key={i.number}>
+                <button type="button" onClick={() => onPick(i)} className="flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-surface-hover">
+                  <span className="mt-0.5 shrink-0 font-mono text-xs font-bold">#{i.number}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{i.title}</span>
+                    <span className="block truncate text-xs text-muted">
+                      {i.state}
+                      {i.labels.length ? ` · ${i.labels.join(", ")}` : ""}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function WorkLinks({ row, change, errorText }: { row: InboxRow; change: Inbox["change"]; errorText: Inbox["errorText"] }) {
+  const links: WorkLink[] = row.links;
+  const add = (a: { input: string; title?: string }) => change(row, { op: "addLink", id: row.id, ...a });
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   async function submit() {
     if (!value.trim()) return;
     try {
-      await add({ id, input: value });
+      await add({ input: value });
       setValue("");
       setError(null);
     } catch (e) {
-      setError((e as Error).message.replace(/^[\s\S]*?Uncaught Error:\s*/, "").split("\n")[0]);
+      setError(errorText(e));
     }
   }
   return (
@@ -582,7 +755,7 @@ function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
                 {l.ref}
               </a>
               <span className="min-w-0 flex-1 truncate text-muted">{l.title}</span>
-              <button type="button" onClick={() => void removeLink({ id, url: l.url })} aria-label={`Unlink ${l.ref}`} className="shrink-0 rounded-full px-1.5 text-muted opacity-60 hover:bg-background hover:text-danger hover:opacity-100">
+              <button type="button" onClick={() => void change(row, { op: "removeLink", id: row.id, url: l.url })} aria-label={`Unlink ${l.ref}`} className="shrink-0 rounded-full px-1.5 text-muted opacity-60 hover:bg-background hover:text-danger hover:opacity-100">
                 ×
               </button>
             </li>
@@ -613,7 +786,7 @@ function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
         <WorkPicker
           linked={new Set(links.map((l) => l.url))}
           onPick={(item) => {
-            void add({ id, input: item.url, title: item.title }).catch((e: Error) => setError(e.message));
+            void add({ input: item.url, title: item.title }).catch((e: unknown) => setError(errorText(e)));
           }}
           onClose={() => setPicking(false)}
         />
@@ -715,14 +888,13 @@ function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: 
   );
 }
 
-function NoteField({ id, note }: { id: Id<"feedback">; note: string }) {
-  const update = useMutation(api.admin.updateFeedback);
+function NoteField({ note, onSave }: { note: string; onSave: (note: string) => void }) {
   const [value, setValue] = useState(note);
   return (
     <input
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      onBlur={() => value !== note && void update({ id, adminNote: value })}
+      onBlur={() => value !== note && onSave(value)}
       placeholder="Private note…"
       className="min-w-0 flex-1 basis-48 rounded-full bg-background px-3.5 py-1.5 text-xs outline-none ring-1 ring-foreground/5 focus:ring-2 focus:ring-accent"
     />
