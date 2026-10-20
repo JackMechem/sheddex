@@ -432,8 +432,8 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     <main className="flex w-full flex-col gap-4 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:flex-row lg:gap-6 lg:px-6 lg:pb-4 lg:pt-6">
       <aside className={`min-h-0 flex-col gap-3 lg:w-72 lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
         <div className="flex items-center gap-2">
-          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-            <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7" /> <span className="truncate">Shed Notes</span>
+          <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-xl">
+            <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7 lg:h-5 lg:w-5" /> <span className="truncate">Shed Notes</span>
           </h1>
           <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Mod-Shift-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
             <SearchIcon className="h-4 w-4" />
