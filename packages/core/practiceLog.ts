@@ -453,6 +453,13 @@ export function routineSpan(routine: Routine, occ: Occurrence = {}): { start: nu
   return { start: Math.min(...timed.map((s) => s.start!)), end: Math.max(...timed.map((s) => s.end!)) };
 }
 
+/** Whether a routine's time that day covers `nowMin` (minutes into the day). Skipped ones don't. */
+export function isRoutineNow(item: DayRoutine, nowMin: number): boolean {
+  if (item.occurrence.skipped) return false;
+  const span = routineSpan(item.routine, item.occurrence);
+  return !!span && span.start <= nowMin && nowMin < span.end;
+}
+
 export function totalMinutes(routine: Routine): number {
   return routine.tasks.reduce((sum, t) => sum + t.minutes, 0);
 }

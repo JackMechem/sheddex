@@ -6,7 +6,9 @@ import { useSyncExternalStore } from "react";
 import { FlameIcon } from "@/components/practicelog/Celebrations";
 import { useDayTimerMs } from "@/components/practicelog/DayTimer";
 import { CalendarIcon } from "@/components/tools";
-import { dayProgress, minutesOn, streak, todayKey, goalOn } from "@/lib/practiceLog";
+import RoutineIcon from "@/components/practicelog/RoutineIcon";
+import { ROUTINE_COLORS, dayProgress, formatTime, isRoutineNow, minutesOn, routineSpan, routinesOn, streak, todayKey, goalOn } from "@/lib/practiceLog";
+import { useClockMinute } from "@/lib/useClockMinute";
 import { usePracticeLog } from "@/lib/usePracticeLog";
 
 const noop = () => () => {};
@@ -30,18 +32,25 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
   const met = goal > 0 && minutes >= goal;
   const s = show ? streak(data, today) : 0;
   const p = show ? dayProgress(data, today) : { done: 0, total: 0 };
+  // The routine whose time it is right now, if any.
+  const clock = useClockMinute();
+  const current = show && clock ? routinesOn(data, clock.today).find((it) => isRoutineNow(it, clock.nowMin)) : undefined;
+  const currentEnd = current ? routineSpan(current.routine, current.occurrence)?.end : undefined;
+  const currentColor = current ? ROUTINE_COLORS[current.routine.color % ROUTINE_COLORS.length] : undefined;
+  const currentName = current ? current.routine.name || "Untitled routine" : "";
 
   if (collapsed) {
     const R = 15;
     const C = 2 * Math.PI * R;
     return (
-      <Link href="/shed-log" onClick={onNavigate} title={`Shed Log — ${Math.round(minutes)} of ${goal} min today`} className="relative mx-auto flex h-10 w-10 items-center justify-center">
+      <Link href="/shed-log" onClick={onNavigate} title={`Shed Log — ${Math.round(minutes)} of ${goal} min today${current ? ` · Now: ${currentName}` : ""}`} className="relative mx-auto flex h-10 w-10 items-center justify-center">
         <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
           <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" className="stroke-surface-hover" />
           <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" strokeLinecap="round" stroke={met ? "#22c55e" : "var(--accent)"} strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
         </svg>
         <CalendarIcon className={`h-4 w-4 ${active ? "text-accent" : "text-foreground"}`} />
         {watch.running && <span className="absolute right-0.5 top-0.5 h-2 w-2 animate-pulse rounded-full bg-danger" />}
+        {current && <span className="absolute bottom-0.5 right-0.5 h-2 w-2 rounded-full" style={{ background: currentColor }} />}
       </Link>
     );
   }
@@ -84,6 +93,13 @@ export default function PracticeLogNavCard({ active, collapsed, large, onNavigat
           {Math.round(minutes)}/{goal} min
         </span>
       </div>
+      )}
+      {current && (
+        <div className="flex items-center gap-2 rounded-xl bg-surface px-2 py-1.5" style={{ boxShadow: `inset 0 0 0 1.5px ${currentColor}` }}>
+          <RoutineIcon icon={current.routine.icon} color={current.routine.color} size="xs" />
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold">{currentName}</span>
+          {currentEnd !== undefined && <span className="shrink-0 text-[11px] tabular-nums text-muted">until {formatTime(currentEnd)}</span>}
+        </div>
       )}
     </Link>
   );

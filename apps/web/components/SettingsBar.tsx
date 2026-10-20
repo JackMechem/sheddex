@@ -301,7 +301,7 @@ export function SettingChip({
                 </button>
               </div>
               {/* Only this part scrolls, inside the popover. */}
-              <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-2 [scrollbar-width:thin]">{children}</div>
+              <div className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-2">{children}</div>
             </div>
           </>,
           document.body,
