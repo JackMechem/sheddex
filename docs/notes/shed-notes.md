@@ -374,3 +374,30 @@ from the menu, font list picks Lora). Not checked signed in.
 - Live preview's default key is `Ctrl-`` ` (Ctrl on a Mac too, since ⌘-` switches windows),
   replacing Mod-e. Checked in the harness: toggles inside the editor (no backtick typed) and
   outside it.
+
+## 2026-10-20: word suggestions, and a settings page in front of the JSON
+
+**Word suggestions** (`wordCompletion`, off by default; `view:toggle-word-completion`):
+`wordCompletion` in `editorSetup.ts` is a second CodeMirror completion source next to the `[[`
+one. It offers words (4+ letters) from the open note — skipping fenced code/notation blocks — and
+from your note titles, ranked by how often they come up, once 2 letters of a word are typed. Never
+inside `[[`, after `#`, or inside code, URLs or HTML (syntax-tree check). Word rows have no icon
+(`cm-completion-word`); optionClass is now `cm-completion-${type}`. Enter accepts (CodeMirror's
+completion keymap); a `Tab → acceptCompletion` keymap at highest precedence takes one too, and
+falls through to tables/indent when none is open. A `words` compartment carries the setting.
+
+**Settings page**: the gear now opens "Settings" with two tabs over the same file. *Settings*
+(`SettingsForm.tsx`): switches (live preview, word suggestions, vim, line numbers, readable line
+length, spellcheck), a text size slider, a searchable list of every command with its keys
+(pencil records a key — needs Ctrl/Alt/⌘, an F key or Shift-Enter; Esc stops; warns when it takes
+a key from another command; × removes the key; ↺ goes back to the built-in), and vim leader,
+mappings (a textarea, one per line) and a read-only list of :commands. *JSON*: the file as before,
+with Reference and the problems list. Every form change rewrites the file through helpers in
+`shedNotesConfig.ts` (`setConfigValue`, `setVimValue`, `setCommandKey`, `resetCommandKey`), so it
+reads as if typed by hand: a rebind turns the built-in keys off (`"command": ""`) and adds the
+new one. When the JSON doesn't parse, the form says so and changes nothing.
+
+Gotcha for tests: the JSON editor only draws the lines on screen, so check the stored settings
+(`__db.settings`), not the editor's text. Verified in the harness: suggestions on/off, Enter and
+Tab fill in, none inside `[[`, none from an abc block; switching on from the form; recording
+Alt-L for live preview saves and works; 390 dark has no overflow. Not checked signed in.

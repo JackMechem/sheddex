@@ -1,6 +1,6 @@
 "use client";
 
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -14,7 +14,7 @@ import { useEffect, useId, useRef } from "react";
 import { titleKey } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteActions, runCommand } from "./commands";
-import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion } from "./editorSetup";
+import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion, wordCompletion, wordCompletionFacet } from "./editorSetup";
 import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview";
 import { tables } from "./tables";
 import ScoreEmbeds, { type ScoreContext } from "./ScoreEmbeds";
@@ -75,7 +75,7 @@ export default function NoteEditor({
   const actionsRef = useRef(actions);
   const onChangeRef = useRef(onChange);
   const lintRef = useRef(lint);
-  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes", Compartment> | null>(null);
+  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes" | "words", Compartment> | null>(null);
 
   useEffect(() => {
     actionsRef.current = actions;
@@ -94,13 +94,14 @@ export default function NoteEditor({
       look: new Compartment(),
       attrs: new Compartment(),
       notes: new Compartment(),
+      words: new Compartment(),
     };
     compartments.current = c;
     const getActions = () => actionsRef.current;
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion], icons: false, optionClass: (c) => (c.type === "create" ? "cm-completion-create" : c.type === "template" ? "cm-completion-template" : "") }), actionsFacet.of(getActions), ownerFacet.of(owner)];
+        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion, wordCompletion], icons: false, optionClass: (c) => (c.type ? `cm-completion-${c.type}` : "") }), actionsFacet.of(getActions), ownerFacet.of(owner)];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -109,6 +110,9 @@ export default function NoteEditor({
           // Your keybindings first and highest, so they win over vim's own keys (like Obsidian).
           c.keys.of([]),
           c.vim.of([]),
+          // Tab also takes a suggestion (Enter does already); with none open it does what it did.
+          Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+          c.words.of([]),
           history(),
           drawSelection(),
           closeBrackets(),
@@ -165,6 +169,7 @@ export default function NoteEditor({
         c.vim.reconfigure(config.vimMode && !readOnly ? vim({ status: true }) : []),
         c.keys.reconfigure(Prec.highest(keymap.of(keys))),
         c.live.reconfigure(liveFacet.of(language === "markdown" && config.livePreview)),
+        c.words.reconfigure(wordCompletionFacet.of(language === "markdown" && config.wordCompletion)),
         c.gutter.reconfigure(config.lineNumbers || language === "json" ? lineNumbers() : []),
         c.look.reconfigure(
           EditorView.theme({

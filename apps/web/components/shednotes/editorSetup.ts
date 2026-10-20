@@ -1,8 +1,8 @@
 import type { Completion, CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { cleanTitle, titleKey } from "@jam-practice/core/shedNotes";
 import { actionsFacet } from "./livePreview";
-import { HighlightStyle } from "@codemirror/language";
-import { Facet } from "@codemirror/state";
+import { HighlightStyle, syntaxTree } from "@codemirror/language";
+import { type Text, Facet } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 
@@ -105,6 +105,8 @@ export const editorTheme = EditorView.theme({
     borderRadius: "999px",
   },
   ".cm-completionIcon": { display: "none" },
+  // Word suggestions (the wordCompletion setting): plain words, no icon.
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-word::before": { display: "none" },
   // "Create “…”" — the last choice when linking a note that doesn't exist yet.
   ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", marginTop: "2px" },
   ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { backgroundColor: "var(--accent)", mask: `${ICON_PLUS} center / contain no-repeat` },
@@ -269,4 +271,54 @@ export function wikilinkCompletion(ctx: CompletionContext): CompletionResult | n
   }
   // No `validFor`: the "Create" choice changes with every letter typed.
   return { from, options };
+}
+
+/** The `wordCompletion` setting: suggest words while typing. */
+export const wordCompletionFacet = Facet.define<boolean, boolean>({ combine: (v) => v.some(Boolean) });
+
+const WORD = /[\p{L}\p{M}\p{N}'’]+/gu;
+const WORD_BEFORE = /\p{L}[\p{L}\p{M}\p{N}'’]*$/u;
+// Where suggesting words would get in the way: code, notation, links, URLs.
+const NO_WORDS = new Set(["FencedCode", "CodeBlock", "InlineCode", "CodeText", "URL", "Autolink", "LinkMark", "HTMLBlock", "HTMLTag", "Comment"]);
+// The words in a text and how often each comes up, worked out once per version of the note.
+const wordCache = new WeakMap<Text, Map<string, number>>();
+function wordCounts(doc: Text): Map<string, number> {
+  let counts = wordCache.get(doc);
+  if (!counts) {
+    counts = new Map();
+    // Not from code or notation blocks.
+    const prose = doc.toString().replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "");
+    for (const m of prose.matchAll(WORD)) if (m[0].length >= 4 && /\p{L}/u.test(m[0])) counts.set(m[0], (counts.get(m[0]) ?? 0) + 1);
+    wordCache.set(doc, counts);
+  }
+  return counts;
+}
+
+/**
+ * Word suggestions as you type, like a code editor's: words already in this note and in your
+ * notes' titles, the most used first. Enter or Tab fills one in. Off unless the setting is on, and
+ * never inside `[[links]]`, #tags, code or notation.
+ */
+export function wordCompletion(ctx: CompletionContext): CompletionResult | null {
+  if (!ctx.state.facet(wordCompletionFacet)) return null;
+  const m = ctx.matchBefore(WORD_BEFORE);
+  if (!m || (m.to - m.from < 2 && !ctx.explicit)) return null;
+  const line = ctx.state.doc.lineAt(ctx.pos);
+  const before = line.text.slice(0, m.from - line.from);
+  if (/\[\[[^\]]*$/.test(before) || before.endsWith("#")) return null;
+  for (let n: { name: string; parent: unknown } | null = syntaxTree(ctx.state).resolveInner(ctx.pos, -1); n; n = n.parent as typeof n) if (NO_WORDS.has(n.name)) return null;
+  const typed = ctx.state.sliceDoc(m.from, m.to);
+  const counts = new Map(wordCounts(ctx.state.doc));
+  // The word being typed counts itself once; don't offer it back as typed.
+  counts.set(typed, (counts.get(typed) ?? 1) - 1);
+  for (const { title } of ctx.state.facet(noteTitlesFacet))
+    for (const w of title.matchAll(WORD)) if (w[0].length >= 4) counts.set(w[0], (counts.get(w[0]) ?? 0) + 1);
+  const lower = typed.toLowerCase();
+  const options: Completion[] = [];
+  for (const [word, count] of counts) {
+    if (count <= 0 || word === typed || !word.toLowerCase().startsWith(lower)) continue;
+    options.push({ label: word, type: "word", boost: Math.min(count, 40) });
+  }
+  if (!options.length) return null;
+  return { from: m.from, options: options.slice(0, 200), validFor: /^[\p{L}\p{M}\p{N}'’]*$/u };
 }

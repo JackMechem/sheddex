@@ -14,6 +14,8 @@ export type ShedNotesConfig = {
   readableLineLength: boolean;
   fontSize: number;
   spellcheck: boolean;
+  /** Suggest words while typing (Enter or Tab fills one in). */
+  wordCompletion: boolean;
   keybindings: Keybinding[];
   vim: {
     /** What `<leader>` means in mappings. */
@@ -32,6 +34,7 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
   readableLineLength: true,
   fontSize: 16,
   spellcheck: true,
+  wordCompletion: false,
   keybindings: [
     // Finding and moving around
     // Alt-Space first (Jack's pick; on Windows the system can take it for the window menu —
@@ -169,6 +172,7 @@ export function parseConfig(text: string): { config: ShedNotesConfig | null; err
       lineNumbers: bool("lineNumbers"),
       readableLineLength: bool("readableLineLength"),
       spellcheck: bool("spellcheck"),
+      wordCompletion: bool("wordCompletion"),
       fontSize,
       keybindings,
       vim,
@@ -188,6 +192,59 @@ export function setConfigValue(text: string, key: keyof ShedNotesConfig, value: 
   }
   if (!isObj(raw)) return null;
   return JSON.stringify({ ...raw, [key]: value }, null, 2);
+}
+
+/** The settings text as an object, or null when it doesn't parse. */
+function rawConfig(text: string): Record<string, unknown> | null {
+  try {
+    const raw: unknown = text.trim() ? JSON.parse(text) : {};
+    return isObj(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The settings text with one vim setting changed. Null when the text doesn't parse. */
+export function setVimValue(text: string, key: keyof ShedNotesConfig["vim"], value: unknown): string | null {
+  const raw = rawConfig(text);
+  if (!raw) return null;
+  return JSON.stringify({ ...raw, vim: { ...(isObj(raw.vim) ? raw.vim : {}), [key]: value } }, null, 2);
+}
+
+/** The keys you've listed yourself in the file (not the built-in ones). */
+export function userKeybindings(text: string): Keybinding[] {
+  const raw = rawConfig(text);
+  if (!raw || !Array.isArray(raw.keybindings)) return [];
+  return raw.keybindings.filter((b): b is Keybinding => isObj(b) && typeof b.key === "string" && typeof b.command === "string");
+}
+
+const sameKey = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * The settings text with a command's keys changed, written the way you'd write it by hand: its
+ * built-in keys are turned off ("command": ""), and `key` (if any) runs it. Whatever else had
+ * that key loses it. `null` key = no key at all. Null when the text doesn't parse.
+ */
+export function setCommandKey(text: string, command: string, key: string | null): string | null {
+  const raw = rawConfig(text);
+  if (!raw) return null;
+  const builtIn = DEFAULT_CONFIG.keybindings.filter((b) => b.command === command).map((b) => b.key);
+  let list = userKeybindings(text).filter((b) => b.command !== command && !(b.command === "" && builtIn.some((k) => sameKey(k, b.key))));
+  if (key) list = list.filter((b) => !sameKey(b.key, key));
+  for (const k of builtIn) if (!key || !sameKey(k, key)) list.push({ key: k, command: "" });
+  if (key) list.push({ key, command });
+  return JSON.stringify({ ...raw, keybindings: list }, null, 2);
+}
+
+/** The settings text with a command back on its built-in keys. Null when the text doesn't parse. */
+export function resetCommandKey(text: string, command: string): string | null {
+  const raw = rawConfig(text);
+  if (!raw) return null;
+  const builtIn = DEFAULT_CONFIG.keybindings.filter((b) => b.command === command).map((b) => b.key);
+  const list = userKeybindings(text).filter((b) => b.command !== command && !builtIn.some((k) => sameKey(k, b.key)));
+  const next: Record<string, unknown> = { ...raw, keybindings: list };
+  if (!list.length) delete next.keybindings;
+  return JSON.stringify(next, null, 2);
 }
 
 /** One vimrc line, parsed. */

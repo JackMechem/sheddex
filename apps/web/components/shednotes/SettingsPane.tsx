@@ -5,6 +5,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { DEFAULT_CONFIG_TEXT, type ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { COMMANDS, COMMAND_BY_ID, type NoteActions, keysFor } from "./commands";
 import NoteEditor from "./NoteEditor";
+import SettingsForm from "./SettingsForm";
 import { applyVimConfig } from "./vimSetup";
 
 const OPTIONS: [keyof ShedNotesConfig, string][] = [
@@ -14,12 +15,15 @@ const OPTIONS: [keyof ShedNotesConfig, string][] = [
   ["readableLineLength", "Keeps lines to a comfortable width on a wide screen."],
   ["fontSize", "The text size in notes, 10 to 32."],
   ["spellcheck", "The browser's spellcheck underline."],
+  ["wordCompletion", "true suggests words from the note and your note titles as you type; Enter or Tab fills one in. Off at first."],
   ["keybindings", 'A list of { "key": "Mod-b", "command": "editor:toggle-bold" }, added to the built-in keys (Reference shows them all): a key you list replaces that key\'s built-in command, and "command": "" turns a key off. Mod is Ctrl (⌘ on a Mac); also Shift-, Alt-, Ctrl-, Meta-.'],
   ["vim", 'leader: what <leader> is in mappings. mappings: vimrc lines (map, nmap, imap, vmap, noremap, nnoremap, inoremap, vnoremap, unmap). exCommands: { "name": "command id" } adds :name.'],
 ];
 
 /**
- * The settings file, edited as a file: JSON in the same editor as the notes (with vim, if it's
+ * Shed Notes' settings, two ways onto one file: a Settings tab of switches, keys and vim options
+ * (each change written into the file), and the file itself in the JSON tab. The JSON tab is the
+ * file, edited as a file: JSON in the same editor as the notes (with vim, if it's
  * on), problems listed above it, and a reference of every setting and command id below. Changes
  * apply as you type, once the file is valid JSON.
  */
@@ -41,6 +45,7 @@ export default function SettingsPane({
   const [version, setVersion] = useState(0);
   const [resetting, setResetting] = useState(false);
   const [reference, setReference] = useState(false);
+  const [tab, setTab] = useState<"form" | "json">("form");
   const unknown = config.keybindings.filter((b) => !COMMAND_BY_ID.has(b.command)).map((b) => `"${b.key}" runs "${b.command}", which isn't a Shed Notes command.`);
   const vimProblems = broken ? [] : applyVimConfig(config);
   const problems = [...errors, ...unknown, ...vimProblems];
@@ -49,19 +54,34 @@ export default function SettingsPane({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl font-extrabold">shed-notes.json</h2>
-          <p className="text-xs text-muted">Shed Notes&apos; settings: keys, vim mappings and commands, and how notes look. Saved to your account.</p>
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+          <h2 className="truncate text-xl font-extrabold">Settings</h2>
+          <p className="text-xs text-muted">How notes look, your keys and vim. Saved to your account as shed-notes.json.</p>
         </div>
-        <button type="button" onClick={() => setReference((r) => !r)} aria-pressed={reference} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${reference ? "bg-accent/15 text-accent" : "bg-surface hover:bg-surface-hover"}`}>
-          Reference
-        </button>
+        <div role="tablist" aria-label="Edit the settings as" className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
+          {(["form", "json"] as const).map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`rounded-full px-3 py-1 ${tab === t ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}>
+              {t === "form" ? "Settings" : "JSON"}
+            </button>
+          ))}
+        </div>
+        {tab === "json" && (
+          <button type="button" onClick={() => setReference((r) => !r)} aria-pressed={reference} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${reference ? "bg-accent/15 text-accent" : "bg-surface hover:bg-surface-hover"}`}>
+            Reference
+          </button>
+        )}
         <button type="button" onClick={() => setResetting(true)} className="rounded-full bg-surface px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
           Reset to defaults
         </button>
       </div>
 
-      {problems.length > 0 && (
+      {tab === "form" && (
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+          <SettingsForm text={text} setText={setText} config={config} broken={broken} />
+        </div>
+      )}
+
+      {tab === "json" && problems.length > 0 && (
         <ul className={`flex flex-col gap-1 rounded-xl px-3 py-2 text-xs ${broken ? "bg-danger/10 text-danger" : "bg-surface text-muted"}`}>
           {broken && <li className="font-semibold">This isn&apos;t valid JSON yet, so the last good settings are still in use.</li>}
           {problems.map((p) => (
@@ -70,7 +90,7 @@ export default function SettingsPane({
         </ul>
       )}
 
-      {reference && (
+      {tab === "json" && reference && (
         <div className="flex max-h-[45vh] flex-col gap-4 overflow-y-auto rounded-xl bg-surface p-3 text-xs">
           <div className="flex flex-col gap-1.5">
             <h3 className="font-semibold text-muted">Settings</h3>
@@ -105,9 +125,11 @@ export default function SettingsPane({
         </div>
       )}
 
+      {tab === "json" && (
       <div className="min-h-[60vh] overflow-hidden rounded-2xl bg-surface lg:min-h-0 lg:flex-1">
         <NoteEditor key={version} initialText={text} language="json" config={config} actions={actions} onChange={setText} className="h-full" />
       </div>
+      )}
 
       {resetting && (
         <ConfirmDialog

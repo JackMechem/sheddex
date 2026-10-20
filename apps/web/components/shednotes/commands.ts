@@ -211,7 +211,7 @@ const act = (key: keyof NoteActions, fn: (a: NoteActions, arg?: string) => void)
   fn(ctx.actions, arg);
   return true;
 };
-const toggle = (key: "vimMode" | "livePreview" | "lineNumbers" | "readableLineLength" | "spellcheck") =>
+const toggle = (key: "vimMode" | "livePreview" | "lineNumbers" | "readableLineLength" | "spellcheck" | "wordCompletion") =>
   act("setConfig", (a) => a.setConfig!(key, !a.config!()[key]));
 
 export const COMMANDS: Command[] = [
@@ -242,6 +242,7 @@ export const COMMANDS: Command[] = [
   { id: "view:toggle-line-numbers", name: "Show or hide line numbers", needs: "setConfig", run: toggle("lineNumbers") },
   { id: "view:toggle-readable-width", name: "Readable line length (the default for every note)", needs: "setConfig", run: toggle("readableLineLength") },
   { id: "view:toggle-spellcheck", name: "Turn spellcheck on or off", needs: "setConfig", run: toggle("spellcheck") },
+  { id: "view:toggle-word-completion", name: "Turn word suggestions on or off", needs: "setConfig", run: toggle("wordCompletion") },
   { id: "editor:toggle-bold", name: "Bold", editor: true, run: ed((v) => toggleWrap(v, "**")) },
   { id: "editor:toggle-italic", name: "Italic", editor: true, run: ed((v) => toggleWrap(v, "*")) },
   { id: "editor:toggle-strikethrough", name: "Strikethrough", editor: true, run: ed((v) => toggleWrap(v, "~~")) },
