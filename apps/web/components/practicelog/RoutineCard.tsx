@@ -22,6 +22,7 @@ import {
   describeRepeat,
   formatMinutesShort,
   formatTime,
+  isRoutineNow,
   routineStatus,
   progressOf,
   routineSpan,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/practiceLog";
 import { pause, resume, skip, stop } from "@/lib/practiceTimerEngine";
 import type { Recording } from "@/lib/recordings";
+import { useClockMinute } from "@/lib/useClockMinute";
 import { type usePracticeLog, useRoutineTimer } from "@/lib/usePracticeLog";
 
 type Log = ReturnType<typeof usePracticeLog>;
@@ -70,6 +72,9 @@ export default function RoutineCard({
   const skipped = !!occurrence.skipped;
   const mine = recordings?.filter((r) => r.routineId === routine.id) ?? [];
   const timeOverride = occurrence.startTime !== undefined;
+  const clock = useClockMinute();
+  // Its time is now: outlined in its colour.
+  const timeIsNow = !!clock && clock.today === date && isRoutineNow(item, clock.nowMin);
 
   function openMenu(e: React.MouseEvent) {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -95,7 +100,10 @@ export default function RoutineCard({
   }
 
   return (
-    <article className={`relative flex flex-col gap-3 rounded-2xl bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}>
+    <article
+      className={`relative flex flex-col gap-3 rounded-2xl bg-surface p-4 pl-5 ${skipped ? "opacity-60" : ""}`}
+      style={timeIsNow ? { boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
+    >
       <span aria-hidden className="absolute bottom-7 left-2 top-7 w-1 rounded-full" style={{ background: color }} />
       <header className="flex items-start gap-3 pl-1">
         <RoutineIcon icon={routine.icon} color={routine.color} size="md" />
