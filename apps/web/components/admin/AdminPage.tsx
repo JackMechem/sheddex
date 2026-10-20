@@ -383,11 +383,11 @@ function Inbox() {
           </p>
         ) : (
           list.map((f) => (
-            <article key={f.id} className={`flex flex-col gap-3 rounded-3xl bg-surface p-4 ring-1 ${f.status === "new" ? "ring-indigo-500/40" : "ring-foreground/5"}`}>
+            <article key={f.id} className={`flex min-w-0 flex-col gap-3 rounded-3xl bg-surface p-4 ring-1 ${f.status === "new" ? "ring-indigo-500/40" : "ring-foreground/5"}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <KindBadge kind={f.kind} />
                 {f.status === "new" && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-bold text-white">New</span>}
-                <span className="text-xs text-muted">
+                <span className="min-w-0 text-xs text-muted [overflow-wrap:anywhere]">
                   {f.from ? (
                     f.from.username ? (
                       <Link href={`/u/${f.from.username}`} className="font-semibold text-foreground hover:underline">
@@ -450,7 +450,7 @@ function Inbox() {
                   </span>
                 </div>
               )}
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{f.message}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{f.message}</p>
               {f.screenshotUrl && (
                 <button type="button" onClick={() => setShot(f.screenshotUrl)} className="self-start overflow-hidden rounded-2xl ring-1 ring-foreground/10">
                   {/* eslint-disable-next-line @next/next/no-img-element -- uploaded screenshot */}
@@ -459,7 +459,7 @@ function Inbox() {
               )}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
                 {f.page && (
-                  <span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
                     on{" "}
                     <Link href={f.page} className="font-semibold text-foreground hover:underline">
                       {f.page}

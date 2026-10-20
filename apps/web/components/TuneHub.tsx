@@ -5,6 +5,7 @@ import { Chip, Hero, KeyBadge, keyColor, LibraryPage, Pill } from "@/components/
 import { displayKey } from "@jam-practice/core/setlistKeys";
 import { useConvexAuth } from "@convex-dev/auth/react";
 import AttachedNotes from "@/components/shednotes/AttachedNotes";
+import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -52,6 +53,10 @@ function isMinorKey(value: string) {
  * saved as you type. Edit opens the usual tune form; the tune can be moved between Tunes I Know
  * and Tunes to Learn, or deleted. Linked from every tune in the account's tune lists.
  */
+/** Phones: whether a tune's chart fits the screen (else full size, scrolling sideways). */
+const CHART_VIEW_KEY = "jam-practice-tune-chart-view";
+const CHART_VIEW_DEFAULTS = { fit: false };
+
 export default function TuneHub({ id, list: listParam }: { id: string; list?: string }) {
   const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
@@ -120,6 +125,7 @@ function Hub({
   const tuneName = (tuneId: string) => [...allTunes, ...allLearn].find((t) => t.id === tuneId)?.name;
   const { selectedSong: chart, selectedSongLoading, loading: libraryLoading, allSongs } = useChordChartsLibrary(tune.chordChartId ?? null);
   const [previewKey, setPreviewKey] = useState("");
+  const [{ fit: chartFit }, setChartView] = usePersistedSettings(CHART_VIEW_KEY, CHART_VIEW_DEFAULTS);
   const [editing, setEditing] = useState(false);
   const [picking, setPicking] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -238,6 +244,7 @@ function Hub({
         <div className="flex min-w-0 flex-col gap-4">
           {/* Chord chart */}
           <ChartPaper
+            className="max-sm:-mx-4 max-sm:rounded-none max-sm:ring-0"
             top={
               <div className="flex w-full flex-wrap items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-bold">
@@ -253,6 +260,10 @@ function Hub({
                       options={[{ value: "", label: `Original (${chart.key || "—"})` }, ...KEY_NAMES.map((k) => ({ value: k, label: k }))]}
                       className="min-w-32"
                     />
+                    {/* Phones: the chart is full size and scrolls sideways, or fits the screen. */}
+                    <button type="button" onClick={() => setChartView({ fit: !chartFit })} aria-pressed={chartFit} className={`${btn} sm:hidden`}>
+                      {chartFit ? "Full size" : "Fit to screen"}
+                    </button>
                     <button type="button" onClick={openInChordCharts} className={btn}>
                       Open
                     </button>
@@ -272,7 +283,7 @@ function Hub({
                 <LoadingSpinner />
               </div>
             ) : shownChart ? (
-              <ChordChart song={shownChart} hideHeader />
+              <ChordChart song={shownChart} hideHeader scroll={!chartFit} />
             ) : (
               <div className="flex flex-col gap-3">
                 <p className="px-1 text-sm text-muted">

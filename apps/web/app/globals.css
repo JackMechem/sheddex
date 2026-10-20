@@ -378,37 +378,42 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
   box-shadow: 0 0 0 4px var(--surface), 0 0 0 10px color-mix(in srgb, var(--reward, var(--accent)) 25%, transparent);
 }
 
-/* Scrollbars: an 8px rounded pill, a faint tint of the theme's text colour on a clear track, no arrow
+/* Scrollbars (mouse and trackpad): an 8px rounded pill, a faint tint of the theme's text colour on a clear track, no arrow
    buttons. Chrome and Safari use the `::-webkit-scrollbar` styles (setting the standard
    `scrollbar-color` there would switch them off and bring Chrome's arrows back); Firefox gets the
    standard properties. In the base layer so the `[scrollbar-width:none]` utilities that hide them
    on chip rows still win. */
 @layer base {
-  ::-webkit-scrollbar {
-    width: 14px;
-    height: 14px;
-  }
-  ::-webkit-scrollbar-track,
-  ::-webkit-scrollbar-corner {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-button {
-    display: none;
-  }
-  ::-webkit-scrollbar-thumb {
-    border: 3px solid transparent;
-    border-radius: 9999px;
-    min-height: 32px;
-    min-width: 32px;
-    background: color-mix(in oklab, var(--foreground) 16%, transparent) padding-box;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklab, var(--foreground) 32%, transparent);
-  }
-  @supports not selector(::-webkit-scrollbar) {
-    * {
-      scrollbar-width: auto;
-      scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+  /* Only with a mouse or trackpad: touch screens keep their own thin overlay scrollbars, which
+     take no room (styling ::-webkit-scrollbar on Android swaps them for classic ones that push
+     the page over and can draw a solid track). */
+  @media (hover: hover) and (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 14px;
+      height: 14px;
+    }
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-button {
+      display: none;
+    }
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent;
+      border-radius: 9999px;
+      min-height: 32px;
+      min-width: 32px;
+      background: color-mix(in oklab, var(--foreground) 16%, transparent) padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: color-mix(in oklab, var(--foreground) 32%, transparent);
+    }
+    @supports not selector(::-webkit-scrollbar) {
+      * {
+        scrollbar-width: auto;
+        scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+      }
     }
   }
 }

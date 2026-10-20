@@ -230,7 +230,7 @@ export function Hero({
       <div className={`flex items-center gap-x-4 gap-y-3 ${tabs ? "" : "flex-wrap"}`}>
         <div className={`flex items-center gap-3 ${tabs ? "min-w-0 flex-1" : "min-w-[min(100%,16rem)] flex-1 basis-72"}`}>
           {leading}
-          <div className={`min-w-0 ${titleExtra ? "" : "flex-1"}`}>
+          <div className={`min-w-0 ${titleExtra ? "max-sm:flex-1" : "flex-1"}`}>
             <div className="flex min-w-0 items-center gap-1.5">
               <h1 className="flex min-w-0 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
                 {!leading && ShownIcon && (
@@ -243,8 +243,10 @@ export function Hero({
               {topic && <IntroButton onClick={intro.show} label={`How ${topic.title} works`} />}
             </div>
             {subtitle && <div className={`text-sm text-muted ${tabs ? "truncate" : ""}`}>{subtitle}</div>}
+            {/* Phones: under the title, so it never squeezes it. */}
+            {titleExtra && <div className="mt-1.5 sm:hidden">{titleExtra}</div>}
           </div>
-          {titleExtra && <div className="shrink-0 sm:ml-1">{titleExtra}</div>}
+          {titleExtra && <div className="hidden shrink-0 sm:ml-1 sm:block">{titleExtra}</div>}
         </div>
         {/* Buttons here sit on the page background, so the "on a card" bg-background ones turn surface. */}
         {actions && <div className="flex flex-wrap items-center gap-2 [&_.bg-background]:bg-surface">{actions}</div>}

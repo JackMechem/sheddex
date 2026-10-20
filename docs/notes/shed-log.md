@@ -465,3 +465,9 @@ inset edge); the calendar popover anchors to the click point (`usePopover`, fall
 button's rect for keyboard presses); and on desktop a panel button at the start of the calendar
 header hides the day panel (`dayHidden` in the `jam-practice-practice-log-view` settings), giving
 the calendar the full width. Phones are unaffected (the button and the hiding are `lg:` only).
+
+**Day timer and task timers stay in step (2026-10-20):** pausing the day timer
+(`pauseDayPractice` in `DayTimer.tsx`) also pauses a Practice Timer run linked to the Shed Log
+(`session.link`) — before, a task's "Timing" kept going. Resuming such a run from anywhere
+restarts the day timer (`PracticeLogGlobal` watches the engine, as starting one already did).
+Checked in a harness against the real engine and stopwatch. Not on a phone.

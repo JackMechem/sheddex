@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { EmptyCard, PageHeader, PageShell } from "@/components/library/shared";
 import { SavedMixPlayer } from "@/components/recordings/MixPlayer";
+import TakePlayer from "@/components/recordings/TakePlayer";
 import { TuneSelectDialog } from "@/components/recordings/RecordingParts";
 import { LinkIcon, TrashIcon } from "@/components/tools";
 import { formatDuration, formatRecordedAt, recordingsApi, useTuneIndex, useTuneSong } from "@/lib/recordings";
@@ -109,7 +110,7 @@ export default function RecordingPage({ id }: { id: string }) {
             <SavedMixPlayer key={rec._id} recording={rec} songUrl={song.url} songName={song.name} />
           </div>
         ) : (
-          <audio controls src={rec.url} className="w-full" />
+          <TakePlayer url={rec.url} durationSec={rec.durationSec} />
         ))}
 
       <label className="flex flex-col gap-1 text-sm">
