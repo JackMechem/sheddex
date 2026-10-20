@@ -131,3 +131,8 @@ notes as Shed Notes (they're shared teacher → student), task and day-task note
 
 Checked in the esbuild harness: the dialog at 900×1184, the pill in every mode in dark and light,
 and both panels hiding (with the stored flags). Not on a real phone.
+- Narrow panes (2026-10-20): the note pane is a CSS container (`@container`), and the links sit
+  beside the note only when the pane is at least `@4xl` (56rem); narrower, they go below the note
+  (capped at 40% of the height, scrolling). The toolbar wraps, "Saved" and the folder path hide
+  when it's tight, and the title is an auto-growing textarea that wraps instead of being cut off.
+  Before this, at about 1400 px with the sidebar and note list open, the toolbar ran over the links.

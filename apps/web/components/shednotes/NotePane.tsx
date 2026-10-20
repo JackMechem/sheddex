@@ -2,7 +2,7 @@
 
 import { useMutation } from "convex/react";
 import type { EditorView } from "@codemirror/view";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -111,7 +111,21 @@ export default function NotePane({
   const rename = useMutation(api.shedNotes.rename);
   const [draft, setDraft] = useState<string | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const titleText = draft ?? note?.title ?? "";
+  // The title wraps onto more lines rather than being cut off.
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [titleText]);
   const viewRef = useRef<EditorView | null>(null);
   const loaded = !!note;
 
@@ -189,9 +203,12 @@ export default function NotePane({
   const iconBtn = "shrink-0 rounded-full p-1.5 text-muted hover:bg-surface hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row xl:gap-6">
+    // A container: the links sit beside the note only when this pane has room for both (not by
+    // screen width — the sidebar and the note list take some of it).
+    <div className="@container flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 @4xl:flex-row @4xl:gap-6">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" onClick={onBackToList} className="flex shrink-0 items-center gap-1 rounded-full bg-surface py-1.5 pl-2 pr-3 text-sm font-semibold hover:bg-surface-hover lg:hidden">
             <ChevronLeftIcon className="h-4 w-4" /> Notes
           </button>
@@ -202,9 +219,9 @@ export default function NotePane({
           <button type="button" onClick={() => actions.goForward?.()} disabled={!canForward} aria-label="Forward" className={`${iconBtn} hidden lg:block`}>
             <ChevronRightIcon className="h-4 w-4" />
           </button>
-          <span className="hidden truncate text-xs text-muted sm:inline">{note.folder ? `${note.folder.replace(/\//g, " / ")} /` : ""}</span>
+          <span className="hidden min-w-0 truncate text-xs text-muted @2xl:inline">{note.folder ? `${note.folder.replace(/\//g, " / ")} /` : ""}</span>
           <span className="flex-1" />
-          <span className={`hidden shrink-0 text-xs sm:inline ${saveState === "error" ? "font-semibold text-danger" : "text-muted"}`} title={saveError ?? undefined}>
+          <span className={`hidden shrink-0 text-xs @xl:inline ${saveState === "error" ? "font-semibold text-danger" : "text-muted"}`} title={saveError ?? undefined}>
             {SAVE_LABEL[saveState]}
           </span>
           <div className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
@@ -218,13 +235,14 @@ export default function NotePane({
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>
-          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} className="hidden xl:block" />
+          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} className="hidden lg:block" />
         </div>
 
-        <input
+        <textarea
           ref={titleRef}
+          rows={1}
           value={draft ?? note.title}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => setDraft(e.target.value.replace(/\n/g, " "))}
           onBlur={() => void commitTitle()}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -237,7 +255,7 @@ export default function NotePane({
             }
           }}
           aria-label="Note title"
-          className="w-full bg-transparent text-2xl font-extrabold tracking-tight outline-none sm:text-3xl"
+          className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-extrabold tracking-tight outline-none sm:text-3xl"
           style={config.readableLineLength ? { maxWidth: "46rem", marginInline: "auto" } : undefined}
         />
 
@@ -271,10 +289,11 @@ export default function NotePane({
         </div>
       </div>
 
-      <aside className={`shrink-0 border-t border-foreground/10 pt-4 xl:w-72 xl:overflow-y-auto xl:border-l xl:border-t-0 xl:pl-6 xl:pt-1 ${linksOpen ? "" : "xl:hidden"}`}>
+      <aside className={`shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[40%] lg:overflow-y-auto @4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1 ${linksOpen ? "" : "lg:hidden"}`}>
         <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => actions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
       </aside>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}
+    </div>
     </div>
   );
 }
