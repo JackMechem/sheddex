@@ -39,7 +39,7 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "Alt-Space", command: "app:command-palette" },
     { key: "Mod-p", command: "app:command-palette" },
     { key: "Mod-o", command: "app:quick-switcher" },
-    { key: "Mod-Shift-f", command: "app:search" },
+    { key: "Alt-f", command: "app:search" },
     { key: "Mod-,", command: "app:open-settings" },
     { key: "Mod-Alt-ArrowLeft", command: "app:go-back" },
     { key: "Mod-Alt-ArrowRight", command: "app:go-forward" },

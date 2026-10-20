@@ -443,7 +443,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-xl">
             <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7 lg:h-5 lg:w-5" /> <span className="truncate">Shed Notes</span>
           </h1>
-          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Mod-Shift-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
+          <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Alt-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
             <SearchIcon className="h-4 w-4" />
           </button>
           <button

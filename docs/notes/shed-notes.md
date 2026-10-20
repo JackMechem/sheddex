@@ -336,3 +336,8 @@ space (`e.key` isn't " "). On Windows the system may grab Alt-Space for the wind
 still works there. Help text updated. Checked in the harness (Chromium on Linux): Alt+Space opens
 the palette from the list and from inside the editor without typing a space; Ctrl+Space no
 longer does. Not tried on a Mac or Windows.
+
+Same day, also Jack's pick: search (`app:search`) defaults to `Alt-f` instead of `Mod-Shift-f`
+(`/` outside a note still works). Option-F on a Mac types "ƒ", so it matches via `e.code` (KeyF).
+Checked in the harness (opens from the list and inside the editor, no text typed). Not checked:
+whether Chrome on Windows/Linux lets the page take Alt-F before its own menu.

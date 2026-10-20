@@ -29,7 +29,7 @@ function Marked({ text, q }: { text: string; q: string }) {
 }
 
 /**
- * Shed Notes' search menu (/ outside a note, or Ctrl/⌘+Shift+F): note titles, folders and #tags
+ * Shed Notes' search menu (/ outside a note, or Alt/⌥+F): note titles, folders and #tags
  * match right away, and the notes' text is searched on the server, each hit showing the line it
  * was found in. ↑/↓ to move, Enter to open, Escape to close.
  */
