@@ -21,6 +21,7 @@ import type * as communityTunes from "../communityTunes.js";
 import type * as feedback from "../feedback.js";
 import type * as files from "../files.js";
 import type * as follows from "../follows.js";
+import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as lessonSchedule from "../lessonSchedule.js";
 import type * as lessons from "../lessons.js";
@@ -67,6 +68,7 @@ declare const fullApi: ApiFromModules<{
   feedback: typeof feedback;
   files: typeof files;
   follows: typeof follows;
+  github: typeof github;
   http: typeof http;
   lessonSchedule: typeof lessonSchedule;
   lessons: typeof lessons;

@@ -252,3 +252,8 @@ Verified:
   secret yet); the inbox in the harness (IDs assigned oldest first, linking a hash and `#7`, the
   error for junk, search by ID, 1200 and 390 with no overflow). Not checked: a real GitHub
   delivery (the webhook isn't set up), signed in on the real admin page.
+- **Pick… (same day):** each card's Pick… opens a dialog of the repo's recent commits (branch
+  select, default `preview`) and pull requests, from GitHub's API via the admin-only action
+  `github.recentWork` (public repo; optional `GITHUB_TOKEN` for the rate limit), cached 5 minutes
+  in the page; a click links one with its title. Checked against real GitHub data (60 commits on
+  preview, 8 PRs) in the harness at 1200 and 390; the action itself not run signed in.

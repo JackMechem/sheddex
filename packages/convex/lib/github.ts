@@ -3,7 +3,8 @@
  * that feedback; "fixes FB-12" (also fix/fixed/closes/resolves) marks it done once it reaches main.
  */
 
-export const REPO_URL = "https://github.com/JackMechem/sheddex";
+export const REPO = "JackMechem/soniroll";
+export const REPO_URL = `https://github.com/${REPO}`;
 
 export type WorkLink = { kind: "commit" | "pr"; ref: string; url: string; title: string; merged?: boolean; at: number };
 

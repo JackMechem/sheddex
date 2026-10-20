@@ -133,5 +133,10 @@ Set up once for each deployment (dev and prod):
 4. GitHub sends a ping; the webhook's Recent Deliveries should show `200`. Without the secret set
    the endpoint answers `503`; with a wrong one, `401`.
 
+Without the webhook, each inbox card's **Pick…** button lists the repo's recent commits (by
+branch) and pull requests straight from GitHub (`convex/github.ts`, the repo is public), so you can
+link them with a click. GitHub allows 60 of those requests an hour; set `GITHUB_TOKEN` (any
+read-only token) in the Convex env if that's ever not enough.
+
 GitHub lists at most 20 commits in one push, so a push with more than 20 only links those 20 (a
 PR mentioning the ID covers the rest).

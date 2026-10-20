@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
+import Select from "@/components/Select";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { LibraryPage } from "@/components/library/ui";
 import { BugIcon, CloseIcon, FeedbackIcon, FlagIcon, SearchIcon, ShieldIcon, SparkIcon, TrashIcon, UsersIcon } from "@/components/tools";
@@ -556,6 +557,7 @@ function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
   const removeLink = useMutation(api.admin.removeFeedbackLink);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   async function submit() {
     if (!value.trim()) return;
     try {
@@ -595,13 +597,133 @@ function WorkLinks({ id, links }: { id: Id<"feedback">; links: WorkLink[] }) {
           aria-label="Link a commit or pull request"
           className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
         />
-        {value.trim() && (
+        {value.trim() ? (
           <button type="button" onClick={() => void submit()} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-foreground hover:bg-accent-hover">
             Link
+          </button>
+        ) : (
+          <button type="button" onClick={() => setPicking(true)} className="shrink-0 rounded-full bg-background px-3 py-1.5 text-xs font-semibold hover:bg-surface-hover">
+            Pick…
           </button>
         )}
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+      {picking && (
+        <WorkPicker
+          linked={new Set(links.map((l) => l.url))}
+          onPick={(item) => {
+            void add({ id, input: item.url, title: item.title }).catch((e: Error) => setError(e.message));
+          }}
+          onClose={() => setPicking(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+type GitHubItem = { kind: "commit" | "pr"; ref: string; url: string; title: string; detail: string; at: number; merged?: boolean };
+type WorkList = { branches: string[]; items: GitHubItem[] };
+
+// Fetched lists, shared by every card for a few minutes (GitHub allows 60 requests an hour).
+const workCache = new Map<string, { at: number; data: Promise<WorkList> }>();
+
+/** The repo's recent commits (by branch) and pull requests, to link one with a click. */
+function WorkPicker({ linked, onPick, onClose }: { linked: Set<string>; onPick: (item: GitHubItem) => void; onClose: () => void }) {
+  const fetchWork = useAction(api.github.recentWork);
+  const [kind, setKind] = useState<"commits" | "pulls">("commits");
+  const [branch, setBranch] = useState("preview");
+  const [data, setData] = useState<WorkList | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const key = `${kind}:${kind === "commits" ? branch : ""}`;
+    let hit = workCache.get(key);
+    if (!hit || Date.now() - hit.at > 5 * 60_000) {
+      hit = { at: Date.now(), data: fetchWork({ kind, branch }) };
+      workCache.set(key, hit);
+      hit.data.catch(() => workCache.delete(key));
+    }
+    let live = true;
+    hit.data.then(
+      (d) => live && (setData(d), setError(null)),
+      (e: Error) => live && setError(e.message.replace(/^[\s\S]*?Uncaught Error:\s*/, "").split("\n")[0]),
+    );
+    return () => {
+      live = false;
+    };
+  }, [kind, branch, fetchWork]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const t = q.trim().toLowerCase();
+  const shown = (data?.items ?? []).filter((it) => it.kind === (kind === "commits" ? "commit" : "pr") && (!t || `${it.ref} ${it.title} ${it.detail}`.toLowerCase().includes(t)));
+  const date = (ms: number) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-overlay p-4 pt-[8vh]" onMouseDown={onClose}>
+      <div role="dialog" aria-label="Link work from GitHub" className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl shadow-black/25" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center gap-2 border-b border-foreground/10 p-3">
+          <div className="flex rounded-full bg-background p-0.5 text-xs font-semibold">
+            {(["commits", "pulls"] as const).map((k) => (
+              <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full px-3 py-1 ${kind === k ? "bg-surface text-foreground" : "text-muted hover:text-foreground"}`}>
+                {k === "commits" ? "Commits" : "Pull requests"}
+              </button>
+            ))}
+          </div>
+          {kind === "commits" && data && (
+            <Select value={branch} options={data.branches.map((b) => ({ value: b, label: b }))} onChange={setBranch} className="min-w-32" />
+          )}
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search commits" className="min-w-0 flex-1 rounded-full bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent" />
+        </div>
+        <ul className="min-h-0 flex-1 overflow-y-auto p-2">
+          {error ? (
+            <li className="px-3 py-6 text-center text-sm text-danger">{error}</li>
+          ) : !data ? (
+            <li className="flex justify-center py-8">
+              <LoadingSpinner />
+            </li>
+          ) : shown.length === 0 ? (
+            <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches.</li>
+          ) : (
+            shown.map((it) => {
+              const done = linked.has(it.url) || picked.has(it.url);
+              return (
+                <li key={it.url}>
+                  <button
+                    type="button"
+                    disabled={done}
+                    onClick={() => {
+                      onPick(it);
+                      setPicked((p) => new Set(p).add(it.url));
+                    }}
+                    className="flex w-full items-start gap-3 rounded-xl px-3 py-2 text-left hover:bg-surface-hover disabled:opacity-60 disabled:hover:bg-transparent"
+                  >
+                    <span className="mt-0.5 shrink-0 font-mono text-xs font-bold">{it.ref}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{it.title}</span>
+                      <span className="block truncate text-xs text-muted">
+                        {it.detail} · {date(it.at)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-accent">{done ? "Linked" : "Link"}</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+        <div className="flex justify-end border-t border-foreground/10 p-3">
+          <button type="button" onClick={onClose} className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
