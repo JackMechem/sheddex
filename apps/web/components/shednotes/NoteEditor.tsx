@@ -7,7 +7,7 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxHighlighting } from "@codemirror/language";
 import { type Diagnostic, linter } from "@codemirror/lint";
 import { search, searchKeymap } from "@codemirror/search";
-import { Compartment, EditorState, Prec } from "@codemirror/state";
+import { Compartment, EditorState, Prec, Transaction } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers, placeholder as placeholderExt } from "@codemirror/view";
 import { getCM, vim } from "@replit/codemirror-vim";
 import { useEffect, useId, useRef } from "react";
@@ -17,7 +17,7 @@ import { type NoteActions, runCommand } from "./commands";
 import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion } from "./editorSetup";
 import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview";
 import { tables } from "./tables";
-import ScoreEmbeds from "./ScoreEmbeds";
+import ScoreEmbeds, { type ScoreContext } from "./ScoreEmbeds";
 import { ownerFacet } from "./embedStore";
 import { applyVimConfig, registerVimEditor } from "./vimSetup";
 
@@ -40,9 +40,10 @@ export default function NoteEditor({
   lint,
   className = "",
   readOnly = false,
-  lessonId,
+  scoreContext,
   bottomSpace = "40vh",
   fontFamily,
+  syncText,
 }: {
   initialText: string;
   language?: "markdown" | "json";
@@ -58,12 +59,15 @@ export default function NoteEditor({
   className?: string;
   /** Shown, not edited (a student reading lesson notes). */
   readOnly?: boolean;
-  /** Lesson notes: the scores in them are the teacher's, read through this lesson. */
-  lessonId?: string;
+  /** Whose scores can be shown, and through what: a lesson's notes, a shared note, a note's link. */
+  scoreContext?: ScoreContext;
   /** Room below the last line (a full-height editor scrolls past the end; one in a page doesn't). */
   bottomSpace?: string;
   /** This note's font (a CSS font-family), else the site's. */
   fontFamily?: string;
+  /** The text as saved, when nothing typed here is waiting to be saved: if someone else changed
+      it (a shared note, another tab), the editor takes their version. */
+  syncText?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const owner = useId();
@@ -124,7 +128,7 @@ export default function NoteEditor({
           EditorView.theme({ ".cm-content": { paddingBottom: bottomSpace } }),
           ...lang,
           EditorView.updateListener.of((u) => {
-            if (u.docChanged) onChangeRef.current(u.state.doc.toString());
+            if (u.docChanged && !u.transactions.some((t) => t.annotation(Transaction.remote))) onChangeRef.current(u.state.doc.toString());
           }),
         ],
       }),
@@ -202,6 +206,22 @@ export default function NoteEditor({
     if (label) label.className = "cm-vim-mode";
   }, [config.vimMode, readOnly]);
 
+  // Someone else's saved changes → this editor (only the part that changed, so the cursor stays).
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || syncText === undefined) return;
+    const doc = view.state.doc.toString();
+    if (doc === syncText) return;
+    let from = 0;
+    while (from < doc.length && from < syncText.length && doc[from] === syncText[from]) from++;
+    let end = 0;
+    while (end < doc.length - from && end < syncText.length - from && doc[doc.length - 1 - end] === syncText[syncText.length - 1 - end]) end++;
+    view.dispatch({
+      changes: { from, to: doc.length - end, insert: syncText.slice(from, syncText.length - end) },
+      annotations: [Transaction.remote.of(true), Transaction.addToHistory.of(false)],
+    });
+  }, [syncText]);
+
   // The note list → link colours and `[[` suggestions.
   useEffect(() => {
     const view = viewRef.current;
@@ -213,7 +233,7 @@ export default function NoteEditor({
   return (
     <>
       <div ref={host} className={`min-h-0 ${className}`} />
-      {language === "markdown" && <ScoreEmbeds owner={owner} lessonId={lessonId} />}
+      {language === "markdown" && <ScoreEmbeds owner={owner} context={scoreContext} />}
     </>
   );
 }

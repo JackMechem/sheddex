@@ -306,6 +306,14 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of notes) await ctx.db.delete(row._id);
+    // Notes shared by or with this account.
+    for (const index of ["by_owner", "by_user"] as const) {
+      const rows = await ctx.db
+        .query("shedNoteShares")
+        .withIndex(index, (q) => q.eq(index === "by_owner" ? "ownerId" : "userId", userId))
+        .collect();
+      for (const row of rows) await ctx.db.delete(row._id);
+    }
     const noteFolders = await ctx.db
       .query("shedNoteFolders")
       .withIndex("by_user", (q) => q.eq("userId", userId))

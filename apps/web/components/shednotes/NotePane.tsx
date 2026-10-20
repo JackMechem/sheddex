@@ -6,7 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, NoteIcon } from "@/components/tools";
+import { ChevronLeftIcon, ChevronRightIcon, DotsVerticalIcon, MaximizeIcon, MinimizeIcon, NoteIcon, UsersIcon } from "@/components/tools";
 import { FONTS, getFont } from "@/lib/fonts";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
@@ -148,17 +148,36 @@ export default function NotePane({
     void setView({ id: id as Id<"shedNotes">, fullWidth: !fullWidth });
   }, [setView, id, fullWidth]);
 
+  // A note shared with you: what you can do depends on the owner's choice; only the owner renames,
+  // moves, deletes, shares or changes how it looks.
+  const mine = note?.role === "owner";
+  const canEdit = mine || note?.role === "write";
   const paneActions: NoteActions = useMemo(
-    () => ({
-      ...actions,
-      save: flush,
-      toggleFullWidth,
-      renameNote: () => {
-        titleRef.current?.focus();
-        titleRef.current?.select();
-      },
-    }),
-    [actions, flush, toggleFullWidth],
+    () =>
+      mine
+        ? {
+            ...actions,
+            save: flush,
+            toggleFullWidth,
+            renameNote: () => {
+              titleRef.current?.focus();
+              titleRef.current?.select();
+            },
+          }
+        : {
+            ...actions,
+            save: canEdit ? flush : undefined,
+            // Its links point at the owner's notes; yours open if you have one by that name.
+            openNoteByTitle: (title: string) => actions.openNoteByTitle?.(title),
+            createLinkedNote: undefined,
+            renameNote: undefined,
+            moveNote: undefined,
+            deleteNote: undefined,
+            shareNote: undefined,
+            // A score made here would be yours, not the note owner's — so no new notation.
+            openScore: undefined,
+          },
+    [actions, flush, toggleFullWidth, mine, canEdit],
   );
   const titles = useMemo(() => notes.map((n) => ({ title: n.title, folder: n.folder })), [notes]);
 
@@ -205,10 +224,16 @@ export default function NotePane({
         { label: "Command palette", onSelect: () => actions.openCommandPalette?.() },
         { label: "Open a note…", onSelect: () => actions.openQuickSwitcher?.() },
         { label: config.lineNumbers ? "Hide line numbers" : "Show line numbers", onSelect: () => setConfig("lineNumbers", !config.lineNumbers) },
-        { label: "Rename", onSelect: () => paneActions.renameNote?.() },
-        { label: "Move to folder", onSelect: () => actions.moveNote?.() },
+        ...(mine
+          ? [
+              { label: "Share…", onSelect: () => actions.shareNote?.() },
+              { label: "Rename", onSelect: () => paneActions.renameNote?.() },
+              { label: "Move to folder", onSelect: () => actions.moveNote?.() },
+            ]
+          : []),
+        { label: "Export as PDF", onSelect: () => actions.exportPdf?.() },
         { label: "Settings file", onSelect: () => actions.openSettings?.() },
-        { label: "Delete note", danger: true, onSelect: () => actions.deleteNote?.() },
+        ...(mine ? [{ label: "Delete note", danger: true, onSelect: () => actions.deleteNote?.() }] : []),
       ],
     });
   }
@@ -238,7 +263,12 @@ export default function NotePane({
           </button>
           <span className="hidden min-w-0 truncate text-xs text-muted @2xl:inline">{note.folder ? `${note.folder.replace(/\//g, " / ")} /` : ""}</span>
           <span className="flex-1" />
-          <span className={`hidden shrink-0 text-xs @xl:inline ${saveState === "error" ? "font-semibold text-danger" : "text-muted"}`} title={saveError ?? undefined}>
+          {!mine && (
+            <span className="min-w-0 truncate rounded-full bg-surface px-2.5 py-1 text-xs font-semibold text-muted" title={`Shared with you by @${note.owner ?? "someone"}`}>
+              @{note.owner ?? "someone"} · {canEdit ? "can edit" : "view only"}
+            </span>
+          )}
+          <span className={`hidden shrink-0 text-xs @xl:inline ${canEdit ? "" : "!hidden"} ${saveState === "error" ? "font-semibold text-danger" : "text-muted"}`} title={saveError ?? undefined}>
             {SAVE_LABEL[saveState]}
           </span>
           <div className="flex shrink-0 rounded-full bg-surface p-0.5 text-xs font-semibold">
@@ -248,7 +278,13 @@ export default function NotePane({
               </button>
             ))}
           </div>
+          {mine && (
+            <button type="button" onClick={() => actions.shareNote?.()} aria-label="Share" title={withKeys("Share this note", "note:share")} className={iconBtn}>
+              <UsersIcon className="h-4 w-4" />
+            </button>
+          )}
           <VimSwitch on={config.vimMode} onChange={(on) => setConfig("vimMode", on)} keys={keysFor("view:toggle-vim", config.keybindings)} />
+          {mine && (
           <button
             type="button"
             onClick={(e) => {
@@ -269,6 +305,8 @@ export default function NotePane({
           >
             Aa
           </button>
+          )}
+          {mine && (
           <button
             type="button"
             onClick={toggleFullWidth}
@@ -279,10 +317,11 @@ export default function NotePane({
           >
             {fullWidth ? <MinimizeIcon className="h-4 w-4" /> : <MaximizeIcon className="h-4 w-4" />}
           </button>
+          )}
           <button type="button" onClick={openMenu} aria-label="Note options" className={iconBtn}>
             <DotsVerticalIcon className="h-4 w-4" />
           </button>
-          <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} keys={keysFor("view:toggle-links-panel", config.keybindings)} className="hidden lg:block" />
+          {mine && <PanelButton side="right" open={linksOpen} onClick={onToggleLinks} keys={keysFor("view:toggle-links-panel", config.keybindings)} className="hidden lg:block" />}
         </div>
 
         <textarea
@@ -302,19 +341,20 @@ export default function NotePane({
             }
           }}
           aria-label="Note title"
+          readOnly={!mine}
           className="w-full resize-none overflow-hidden bg-transparent text-2xl leading-tight font-extrabold tracking-tight outline-none sm:text-3xl"
           style={{ ...(fullWidth ? {} : { maxWidth: "46rem", marginInline: "auto" }), ...(fontStack ? { fontFamily: fontStack } : {}) }}
         />
 
-        <div className="flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden" style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
+        <div className={`${canEdit ? "flex" : "hidden"} items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none] ${canEdit ? "sm:flex-wrap" : ""} [&::-webkit-scrollbar]:hidden`} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto", width: "100%" }}>
           {FORMAT.map((f) => (
             <button key={f.command} type="button" title={withKeys(f.title, f.command)} aria-label={f.title} onMouseDown={(e) => e.preventDefault()} onClick={() => run(f.command)} className={`shrink-0 rounded-lg bg-surface px-2.5 py-1 text-xs text-foreground hover:bg-surface-hover ${f.className ?? "font-semibold"}`}>
               {f.label}
             </button>
           ))}
-          <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
+          {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
-          </button>
+          </button>}
         </div>
 
         <div className="relative min-h-[55vh] rounded-2xl lg:min-h-0 lg:flex-1">
@@ -326,6 +366,9 @@ export default function NotePane({
             notes={titles}
             actions={paneActions}
             onChange={setBody}
+            readOnly={!canEdit}
+            scoreContext={mine ? undefined : { noteId: id }}
+            syncText={saveState === "saved" ? note.body : undefined}
             onView={(v) => {
               viewRef.current = v;
               onView(v);
@@ -337,7 +380,7 @@ export default function NotePane({
         </div>
       </div>
 
-      <aside className={`shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[40%] lg:overflow-y-auto @4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1 ${linksOpen ? "" : "lg:hidden"}`}>
+      <aside className={`${mine ? "" : "!hidden"} shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[40%] lg:overflow-y-auto @4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1 ${linksOpen ? "" : "lg:hidden"}`}>
         <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => actions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
       </aside>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}

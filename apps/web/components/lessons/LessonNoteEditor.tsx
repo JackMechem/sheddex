@@ -65,7 +65,7 @@ export default function LessonNoteEditor({
       <NoteEditor
         initialText={markdown}
         readOnly={!editable}
-        lessonId={lessonId}
+        scoreContext={{ lessonId }}
         config={config}
         actions={actions}
         onChange={onChange ?? noop}

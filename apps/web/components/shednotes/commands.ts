@@ -40,6 +40,14 @@ export type NoteActions = {
   renameNote?: () => void;
   deleteNote?: () => void;
   moveNote?: () => void;
+  /** Who can see this note, and its link. */
+  shareNote?: () => void;
+  /** This note as a PDF (the print dialog). */
+  exportPdf?: () => void;
+  /** Every note as Markdown files, in a .zip. */
+  exportAll?: () => void;
+  /** Notes from a .zip, a folder or .md files. */
+  importNotes?: () => void;
   goBack?: () => void;
   goForward?: () => void;
   /** The editor's text is saved now (vim's :w). */
@@ -209,6 +217,10 @@ export const COMMANDS: Command[] = [
   { id: "note:rename", name: "Rename this note", needs: "renameNote", run: act("renameNote", (a) => a.renameNote!()) },
   { id: "note:move", name: "Move this note to a folder", needs: "moveNote", run: act("moveNote", (a) => a.moveNote!()) },
   { id: "note:delete", name: "Delete this note", needs: "deleteNote", run: act("deleteNote", (a) => a.deleteNote!()) },
+  { id: "note:share", name: "Share this note", needs: "shareNote", run: act("shareNote", (a) => a.shareNote!()) },
+  { id: "note:export-pdf", name: "Export this note as a PDF", needs: "exportPdf", run: act("exportPdf", (a) => a.exportPdf!()) },
+  { id: "app:export-all", name: "Export every note as Markdown (.zip)", needs: "exportAll", run: act("exportAll", (a) => a.exportAll!()) },
+  { id: "app:import", name: "Import notes (a .zip, a folder or Markdown files)", needs: "importNotes", run: act("importNotes", (a) => a.importNotes!()) },
   { id: "note:close", name: "Close this note", needs: "closeNote", run: act("closeNote", (a) => a.closeNote!()) },
   { id: "note:save", name: "Save now", needs: "save", run: act("save", (a) => a.save!()) },
   { id: "view:toggle-vim", name: "Turn vim mode on or off", needs: "setConfig", run: toggle("vimMode") },

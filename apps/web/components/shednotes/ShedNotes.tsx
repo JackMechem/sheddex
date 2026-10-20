@@ -1,7 +1,7 @@
 "use client";
 
 import type { EditorView } from "@codemirror/view";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
@@ -10,7 +10,8 @@ import { titleKey } from "@jam-practice/core/shedNotes";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import PromptDialog from "@/components/PromptDialog";
-import { DocumentIcon, GearIcon, PlusIcon, SearchIcon } from "@/components/tools";
+import { DocumentIcon, DownloadIcon, GearIcon, PlusIcon, SearchIcon } from "@/components/tools";
+import { notesZip, saveBlob } from "@/lib/exportNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { usePersistedSettings } from "@/lib/usePersistedSettings";
 import { type NoteMeta, errorText, useNoteList, useNotesConfig } from "@/lib/useShedNotes";
@@ -21,6 +22,11 @@ import NotePane from "./NotePane";
 import NoteSearch from "./NoteSearch";
 import Palette, { type PaletteItem } from "./Palette";
 import SettingsPane from "./SettingsPane";
+import ShareDialog from "./ShareDialog";
+import NotePrint from "./NotePrint";
+import ImportDialog from "./ImportDialog";
+import ContextMenu, { type MenuState } from "@/components/ContextMenu";
+import { getFont } from "@/lib/fonts";
 
 export const SETTINGS_ID = "settings";
 
@@ -82,6 +88,13 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const createFolderMut = useMutation(api.shedNotes.createFolder);
   const deleteFolderMut = useMutation(api.shedNotes.deleteFolder);
   const folderList = useQuery(api.shedNotes.folders);
+  const sharedWithMe = useQuery(api.shedNoteShares.sharedWithMe);
+  const leaveMut = useMutation(api.shedNoteShares.leave);
+  const convex = useConvex();
+  const [sharing, setSharing] = useState<NoteMeta | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [moreMenu, setMoreMenu] = useState<MenuState | null>(null);
+  const [printing, setPrinting] = useState<{ id: string; text: string | null } | null>(null);
   const [deletingFolder, setDeletingFolder] = useState<string | null>(null);
 
   const [current, setCurrent] = useState<string | null>(initialId || null);
@@ -142,6 +155,18 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const byKey = useMemo(() => new Map((notes ?? []).map((n) => [titleKey(n.title), n])), [notes]);
   const currentMeta = notes?.find((n) => n.id === current) ?? null;
 
+  const exportAll = useCallback(async () => {
+    setNotice("Getting your notes ready…");
+    try {
+      const data = await convex.query(api.shedNoteShares.exportAll, {});
+      if (!data) return;
+      saveBlob(notesZip(data), `soniroll notes ${new Date().toISOString().slice(0, 10)}.zip`);
+      setNotice(`${data.notes.length} ${data.notes.length === 1 ? "note" : "notes"} exported`);
+    } catch (e) {
+      setNotice(errorText(e));
+    }
+  }, [convex]);
+
   const setConfig = useCallback(
     (key: keyof ShedNotesConfig, value: boolean) => {
       if (!cfg.setValue(key, value)) setNotice("Fix the settings file first — it isn't valid JSON right now.");
@@ -178,6 +203,12 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       closeNote: () => open(back.length ? back[back.length - 1] : null),
       deleteNote: () => currentMeta && setDeleting(currentMeta),
       moveNote: () => currentMeta && setPrompt({ kind: "move", note: currentMeta }),
+      // Only your own notes (a note shared with you isn't in your list).
+      shareNote: () => currentMeta && setSharing(currentMeta),
+      // What's in the editor right now (even the last second of typing).
+      exportPdf: () => current && current !== SETTINGS_ID && setPrinting({ id: current, text: viewRef.current?.state.doc.toString() ?? null }),
+      exportAll: () => void exportAll(),
+      importNotes: () => setImporting(true),
       goBack: () => {
         if (!back.length) return;
         const prev = back[back.length - 1];
@@ -197,7 +228,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         syncUrl(next);
       },
     }),
-    [createNote, createMut, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden],
+    [createNote, createMut, byKey, open, setConfig, cfg.config, back, forward, current, currentMeta, noteItems, commandItems, router, setPanels, listHidden, linksHidden, exportAll],
   );
   useEffect(() => {
     commandItemsRef.current = () =>
@@ -212,7 +243,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   useEffect(() => {
     const onSlash = (e: KeyboardEvent) => {
       if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (palette || notation || prompt || deleting || searching) return;
+      if (palette || notation || prompt || deleting || searching || sharing || printing || importing) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest("input, textarea, select, [contenteditable='true'], .cm-editor")) return;
       e.preventDefault();
@@ -221,12 +252,12 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     };
     window.addEventListener("keydown", onSlash, true);
     return () => window.removeEventListener("keydown", onSlash, true);
-  }, [palette, notation, prompt, deleting, searching]);
+  }, [palette, notation, prompt, deleting, searching, sharing, printing, importing]);
 
   // App keys (the palette, the switcher, new note) work outside the editor too.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (palette || notation || prompt || deleting || searching) return;
+      if (palette || notation || prompt || deleting || searching || sharing || printing || importing) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest(".cm-editor")) return;
       for (const b of cfg.config.keybindings) {
@@ -239,7 +270,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting, searching]);
+  }, [cfg.config.keybindings, actions, palette, notation, prompt, deleting, searching, sharing, printing, importing]);
 
   const listActions = useMemo(
     () => ({
@@ -253,10 +284,15 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
       moveFolderPrompt: (path: string) => setPrompt({ kind: "move-folder", path }),
       deleteFolder: (path: string) => setDeletingFolder(path),
       moveNoteTo: (id: string, folder: string) => void moveMut({ id: id as Id<"shedNotes">, folder }).catch((e) => setNotice(errorText(e))),
+      share: (note: NoteMeta) => setSharing(note),
+      leave: (id: string) => {
+        if (current === id) open(null);
+        void leaveMut({ noteId: id as Id<"shedNotes"> }).catch((e) => setNotice(errorText(e)));
+      },
       moveFolderTo: (path: string, parent: string) =>
         void renameFolderMut({ from: path, to: parent ? `${parent}/${leafOf(path)}` : leafOf(path) }).catch((e) => setNotice(errorText(e))),
     }),
-    [open, createNote, moveMut, renameFolderMut],
+    [open, createNote, moveMut, renameFolderMut, leaveMut, current],
   );
 
   async function submitPrompt(value: string) {
@@ -296,11 +332,30 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           <button type="button" onClick={() => setSearching(true)} aria-label="Search notes" title={`Search notes (/ or ${keyLabel("Mod-Shift-f")})`} className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground">
             <SearchIcon className="h-4 w-4" />
           </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setMoreMenu({
+                x: Math.max(8, r.right - 240),
+                y: r.bottom + 4,
+                items: [
+                  { label: "Export all as Markdown (.zip)", onSelect: () => void exportAll() },
+                  { label: "Import notes…", onSelect: () => setImporting(true) },
+                ],
+              });
+            }}
+            aria-label="Export or import notes"
+            title="Export or import notes"
+            className="shrink-0 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground"
+          >
+            <DownloadIcon className="h-4 w-4" />
+          </button>
           <button type="button" onClick={() => open(SETTINGS_ID)} aria-label="Settings file" title="Settings file" className={`shrink-0 rounded-full p-2 ${current === SETTINGS_ID ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface hover:text-foreground"}`}>
             <GearIcon className="h-4 w-4" />
           </button>
         </div>
-        <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
+        <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
       </aside>
 
       <section className={`min-h-0 min-w-0 flex-1 flex-col ${current ? "flex" : "hidden lg:flex"}`}>
@@ -427,6 +482,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           onCancel={() => setPrompt(null)}
         />
       )}
+      {moreMenu && <ContextMenu menu={moreMenu} onClose={() => setMoreMenu(null)} />}
+      {importing && <ImportDialog onClose={() => setImporting(false)} onDone={setNotice} />}
+      {printing && <PrintNote id={printing.id} text={printing.text} onClose={() => setPrinting(null)} />}
+      {sharing && <ShareDialog noteId={sharing.id} title={sharing.title} onClose={() => setSharing(null)} />}
       {deletingFolder !== null && (
         <ConfirmDialog
           title={`Delete the folder "${leafOf(deletingFolder)}"?`}
@@ -460,5 +519,20 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
         </div>
       )}
     </main>
+  );
+}
+
+/** Export as PDF for one of your notes (or one shared with you). */
+function PrintNote({ id, text, onClose }: { id: string; text: string | null; onClose: () => void }) {
+  const note = useQuery(api.shedNotes.get, { id });
+  if (!note) return null;
+  return (
+    <NotePrint
+      title={note.title}
+      body={text ?? note.body}
+      context={note.role === "owner" ? undefined : { noteId: id }}
+      fontFamily={note.view?.font ? getFont(note.view.font).stack : undefined}
+      onClose={onClose}
+    />
   );
 }

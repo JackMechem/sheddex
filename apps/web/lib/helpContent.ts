@@ -101,6 +101,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       { title: "Link notes", text: "Type [[ and pick a note (or type a new name). Click the link to go there; the note you link to lists this one under Backlinks." },
       { title: "Write notation", text: "Press Notation: the Score Writer editor opens. Write the music, then Add to note. It shows as a score in the note; Edit changes it (in Score Writer too)." },
       { title: "Attach it to your practice", text: "On a routine in the Shed Log (or a day, or a tune), press Add notes to make a note there or attach one you have." },
+      { title: "Share it", text: "Press the people button above a note: add someone by username (they can view or edit), or turn on its link. Notes shared with you are under Shared with me." },
     ],
     features: [
       "Markdown with a live preview: headings, bold, lists, checkboxes, quotes, links",
@@ -110,6 +111,8 @@ export const HELP_TOPICS: HelpTopic[] = [
       "Notes attached to routines, days and tunes",
       "Vim keys, with your own mappings and commands",
       "A settings file for keys, vim and how notes look",
+      "Share a note with other people (view or edit), or by link",
+      "Export a note as a PDF, export every note as Markdown, and import Markdown notes",
     ],
     options: [
       { name: "Preview / Source", text: "Preview hides the markdown marks except where your cursor is, shows checkboxes and draws notation. Source shows the plain text." },
@@ -118,6 +121,9 @@ export const HELP_TOPICS: HelpTopic[] = [
       { name: "Links", text: "Beside a note: what it's attached to, the notes that link to it (backlinks) and the notes it links to." },
       { name: "Search", text: "Press / (outside a note) or Ctrl/⌘-Shift-F to search every note's title and text; Enter opens the one you pick." },
       { name: "Command palette", text: "Ctrl/⌘-Space (or Ctrl/⌘-P — on a Mac ⌘-Space is usually Spotlight) lists every command with its key; Ctrl/⌘-O finds or makes a note by name. Every command has a key: hover a button to see it, or open the settings file's Reference." },
+      { name: "Share", text: "The people button above a note. Add people by username — public profiles are suggested as you type; a private account works if you type its exact username — and set each to Can view or Can edit. The link can be off, only for the people added (they sign in), or for anyone with the link (view only). Only you can rename, move, delete or share your note." },
+      { name: "Export as PDF", text: "In a note's ⋮ menu (or Ctrl/⌘-Alt-P): the note laid out as a page, notation included. Choose Save as PDF in the print dialog." },
+      { name: "Export and import", text: "The ⤓ button by the search: Export all saves a .zip of every note as a Markdown file, in its folders. Import takes that .zip back (titles, folders and fonts come back exactly), or any folder or .zip of Markdown files, like an Obsidian vault. You choose what happens when a title is already yours: skip, replace or keep both." },
       { name: "Settings file", text: "The gear opens shed-notes.json: keybindings, vim mappings (like imap jk <Esc>), your own :commands, and options such as font size and line numbers. Reference lists every command." },
     ],
     tips: ["Renaming a note fixes the [[links]] to it in your other notes.", "Ctrl/⌘-click a link in Source view to follow it."],

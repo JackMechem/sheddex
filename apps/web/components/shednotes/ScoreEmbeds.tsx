@@ -15,14 +15,18 @@ import { useEmbeds } from "./embedStore";
 const noop = () => {};
 
 /** Renders the scores in one editor's ```score blocks into their widgets (see `embedStore`). */
-export default function ScoreEmbeds({ owner, lessonId }: { owner: string; lessonId?: string }) {
+/** Someone else's scores are readable through a lesson's notes, a note shared with you, or a
+    note's link. */
+export type ScoreContext = { lessonId?: string; noteId?: string; token?: string };
+
+export default function ScoreEmbeds({ owner, context }: { owner: string; context?: ScoreContext }) {
   const embeds = useEmbeds().filter((e) => e.owner === owner);
-  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.scoreId} view={e.view} lessonId={lessonId} />, e.el, e.key))}</>;
+  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.scoreId} view={e.view} context={context} />, e.el, e.key))}</>;
 }
 
 /** A score in a note: its title, Edit (the notation editor) and the score itself, read-only. */
-function ScoreEmbed({ scoreId, view, lessonId }: { scoreId: string; view: EditorView; lessonId?: string }) {
-  const row = useQuery(api.scores.get, scoreId ? { id: scoreId, ...(lessonId ? { lessonId } : {}) } : "skip");
+function ScoreEmbed({ scoreId, view, context }: { scoreId: string; view: EditorView; context?: ScoreContext }) {
+  const row = useQuery(api.scores.get, scoreId ? { id: scoreId, ...(context ?? {}) } : "skip");
   const data = row?.data;
   const score = useMemo(() => (data ? cleanScore(data) : row === null ? null : undefined), [data, row]);
   // Someone else's score (a teacher's, in lesson notes) is shown, not edited.

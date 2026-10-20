@@ -3,6 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { hiddenSessions } from "./lessons";
+import { noteAccess } from "./shedNotes";
 
 /**
  * Score Writer's scores — written with the shared notation editor, private to their owner, and
@@ -70,19 +71,41 @@ async function sharedInLesson(ctx: QueryCtx, userId: Id<"users">, ownerId: Id<"u
   return items.some((it) => it.kind === "note" && !(it.sessionId && hidden.has(it.sessionId)) && it.body.includes(scoreId));
 }
 
-/** One score with its music; null when it's gone or you can't see it. Yours, or — with `lessonId`
-    — a teacher's score shown in that lesson's notes (`readOnly` then). */
+/** Whether a score is shown in a Shed Note that the viewer can see (shared with them, or by its
+    link) and that belongs to the score's owner. */
+async function sharedInNote(ctx: QueryCtx, userId: Id<"users"> | null, ownerId: Id<"users">, scoreId: string, noteId?: string, token?: string) {
+  let note = null;
+  if (token) {
+    note = await ctx.db
+      .query("shedNotes")
+      .withIndex("by_link_token", (q) => q.eq("link.token", token))
+      .first();
+    if (note?.link?.access === "invited" && !(await noteAccess(ctx, note, userId))) return false;
+  } else if (noteId) {
+    const id = ctx.db.normalizeId("shedNotes", noteId);
+    note = id ? await ctx.db.get(id) : null;
+    if (note && !(await noteAccess(ctx, note, userId))) return false;
+  }
+  return !!note && note.userId === ownerId && note.body.includes(scoreId);
+}
+
+/** One score with its music; null when it's gone or you can't see it. Yours; or someone else's
+    shown in something you can see — a lesson's notes (`lessonId`), or a Shed Note shared with you
+    or by its link (`noteId` / `token`) — read-only then. */
 export const get = query({
-  args: { id: v.string(), lessonId: v.optional(v.string()) },
-  handler: async (ctx, { id, lessonId }) => {
+  args: { id: v.string(), lessonId: v.optional(v.string()), noteId: v.optional(v.string()), token: v.optional(v.string()) },
+  handler: async (ctx, { id, lessonId, noteId, token }) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
     const scoreId = ctx.db.normalizeId("scores", id);
     if (!scoreId) return null;
     const row = await ctx.db.get(scoreId);
     if (!row) return null;
-    const mine = row.userId === userId;
-    if (!mine && !(lessonId && (await sharedInLesson(ctx, userId, row.userId, scoreId, lessonId)))) return null;
+    const mine = !!userId && row.userId === userId;
+    const visible =
+      mine ||
+      (!!userId && !!lessonId && (await sharedInLesson(ctx, userId, row.userId, scoreId, lessonId))) ||
+      ((!!noteId || !!token) && (await sharedInNote(ctx, userId, row.userId, scoreId, noteId, token)));
+    if (!visible) return null;
     return { id: row._id as string, data: row.data, updatedAt: row.updatedAt, readOnly: !mine };
   },
 });

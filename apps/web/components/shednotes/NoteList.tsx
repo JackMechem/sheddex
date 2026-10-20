@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { useDeferredValue, useMemo, useState } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
-import { ChevronRightIcon, DocumentIcon, DotsVerticalIcon, FolderIcon, FolderOpenIcon, FolderPlusIcon, NotePlusIcon, PlusIcon, SearchIcon } from "@/components/tools";
+import { ChevronRightIcon, DocumentIcon, DotsVerticalIcon, FolderIcon, FolderOpenIcon, FolderPlusIcon, NotePlusIcon, PlusIcon, SearchIcon, UsersIcon } from "@/components/tools";
 import type { NoteMeta } from "@/lib/useShedNotes";
 
 type Folder = { name: string; path: string; folders: Folder[]; notes: NoteMeta[] };
@@ -45,6 +45,9 @@ export type NoteListActions = {
   rename: (note: NoteMeta) => void;
   move: (note: NoteMeta) => void;
   remove: (note: NoteMeta) => void;
+  share: (note: NoteMeta) => void;
+  /** Takes a note someone shared with you out of your list. */
+  leave: (id: string) => void;
   renameFolder: (path: string) => void;
   moveFolderPrompt: (path: string) => void;
   deleteFolder: (path: string) => void;
@@ -53,6 +56,8 @@ export type NoteListActions = {
   /** Drag and drop: a folder into another ("" = the top level). */
   moveFolderTo: (path: string, parent: string) => void;
 };
+
+export type SharedNote = { id: string; title: string; owner: string | null; ownerName: string; role: "read" | "write"; updatedAt: number };
 
 type Dragging = { kind: "note"; id: string; folder: string } | { kind: "folder"; path: string };
 
@@ -64,12 +69,14 @@ const parentOf = (path: string) => (path.includes("/") ? path.slice(0, path.last
 export default function NoteList({
   notes,
   folders,
+  shared = [],
   currentId,
   actions,
   initialQuery = "",
 }: {
   notes: NoteMeta[];
   folders: string[];
+  shared?: SharedNote[];
   currentId: string | null;
   actions: NoteListActions;
   initialQuery?: string;
@@ -80,6 +87,7 @@ export default function NoteList({
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [dragging, setDragging] = useState<Dragging | null>(null);
   const [over, setOver] = useState<string | null>(null);
+  const [sharedOpen, setSharedOpen] = useState(true);
   const query = q.trim().toLowerCase();
   const deferred = useDeferredValue(query);
   const textHits = useQuery(api.shedNotes.search, deferred.length >= 2 && !deferred.startsWith("#") ? { q: deferred } : "skip");
@@ -151,6 +159,7 @@ export default function NoteList({
         { label: "Open", onSelect: () => actions.open(n.id) },
         { label: "Rename", onSelect: () => actions.rename(n) },
         { label: "Move to folder", onSelect: () => actions.move(n) },
+        { label: "Share", onSelect: () => actions.share(n) },
         { label: "Delete", danger: true, onSelect: () => actions.remove(n) },
       ],
     });
@@ -292,6 +301,45 @@ export default function NoteList({
               </li>
             )}
           </>
+        )}
+        {!query && shared.length > 0 && (
+          <li className="mt-3 border-t border-foreground/10 pt-2">
+            <button type="button" aria-expanded={sharedOpen} onClick={() => setSharedOpen((o) => !o)} className="flex w-full items-center gap-1.5 rounded-lg py-1.5 pl-0.5 text-left text-xs font-semibold text-muted hover:text-foreground">
+              <ChevronRightIcon className={`h-3 w-3 shrink-0 transition-transform ${sharedOpen ? "rotate-90" : ""}`} />
+              <UsersIcon className="h-3.5 w-3.5 shrink-0" /> Shared with me
+              <span className="rounded-full bg-background px-1.5 text-[10px] tabular-nums">{shared.length}</span>
+            </button>
+            {sharedOpen && (
+              <ul>
+                {shared.map((n) => (
+                  <li key={`shared:${n.id}`}>
+                    <div className={`group flex items-center rounded-lg pl-1.5 ${n.id === currentId ? "bg-accent/15" : "hover:bg-surface-hover"}`}>
+                      <button type="button" onClick={() => actions.open(n.id)} className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left">
+                        <DocumentIcon className={`h-3.5 w-3.5 shrink-0 ${n.id === currentId ? "text-accent" : "text-muted"}`} />
+                        <span className="min-w-0 flex-1">
+                          <span className={`block truncate text-sm ${n.id === currentId ? "font-semibold" : ""}`}>{n.title}</span>
+                          <span className="block truncate text-xs text-muted">
+                            {n.owner ? `@${n.owner}` : n.ownerName} · {n.role === "write" ? "can edit" : "can view"}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenu({ x: e.clientX, y: e.clientY, items: [{ label: "Open", onSelect: () => actions.open(n.id) }, { label: "Remove from my list", danger: true, onSelect: () => actions.leave(n.id) }] });
+                        }}
+                        aria-label={`Options for ${n.title}`}
+                        className={`${rowBtn} mr-1 lg:opacity-0`}
+                      >
+                        <DotsVerticalIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
         )}
         {!query && notes.length === 0 && folders.length === 0 && <li className="px-2 py-6 text-center text-sm text-muted">No notes yet. Make one with New.</li>}
       </ul>

@@ -670,12 +670,28 @@ export default defineSchema({
     /** How this note is shown: full width (else your general setting), and its font (an id from
         the web app's FONTS; missing = the site's font). */
     view: v.optional(v.object({ fullWidth: v.optional(v.boolean()), font: v.optional(v.string()) })),
+    /** Sharing by link: `token` is in the link; "invited" = only people it's shared with (signed
+        in), "anyone" = anyone with the link can view. Missing = no link. */
+    link: v.optional(v.object({ token: v.string(), access: v.union(v.literal("invited"), v.literal("anyone")) })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_user_title", ["userId", "titleKey"])
+    .index("by_link_token", ["link.token"])
     .searchIndex("search_body", { searchField: "body", filterFields: ["userId"] }),
+
+  /** A Shed Note shared with another account: read ("Can view") or write ("Can edit"). */
+  shedNoteShares: defineTable({
+    noteId: v.id("shedNotes"),
+    ownerId: v.id("users"),
+    userId: v.id("users"),
+    role: v.union(v.literal("read"), v.literal("write")),
+    createdAt: v.number(),
+  })
+    .index("by_note", ["noteId"])
+    .index("by_user", ["userId"])
+    .index("by_owner", ["ownerId"]),
 
   /** Shed Notes folders that exist on their own (so a folder can be empty). A note's `folder`
       also makes its folders exist; this table holds the ones made with New folder. */

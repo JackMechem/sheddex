@@ -34,6 +34,17 @@ async function ownNote(ctx: QueryCtx | MutationCtx, userId: Id<"users">, noteId:
   return note;
 }
 
+/** What `userId` may do with a note: "owner", "write", "read" or null. */
+export async function noteAccess(ctx: QueryCtx | MutationCtx, note: Doc<"shedNotes">, userId: Id<"users"> | null): Promise<"owner" | "write" | "read" | null> {
+  if (!userId) return null;
+  if (note.userId === userId) return "owner";
+  const shares = await ctx.db
+    .query("shedNoteShares")
+    .withIndex("by_note", (q) => q.eq("noteId", note._id))
+    .collect();
+  return shares.find((s) => s.userId === userId)?.role ?? null;
+}
+
 async function allNotes(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
   return ctx.db
     .query("shedNotes")
@@ -71,7 +82,9 @@ export const list = query({
   },
 });
 
-/** One note with its body and what it's attached to. Null when it's gone (or not yours). */
+/** One note with its body and what it's attached to. Null when it's gone (or you can't see it).
+    Shared with you: `role` is "read" or "write", and the owner's own bits (folder, attachments)
+    are left out. */
 export const get = query({
   args: { id: v.string() },
   handler: async (ctx, { id }) => {
@@ -80,7 +93,24 @@ export const get = query({
     const noteId = ctx.db.normalizeId("shedNotes", id);
     if (!noteId) return null;
     const note = await ctx.db.get(noteId);
-    if (!note || note.userId !== userId) return null;
+    if (!note) return null;
+    const role = await noteAccess(ctx, note, userId);
+    if (!role) return null;
+    if (role !== "owner") {
+      const owner = await ctx.db
+        .query("profiles")
+        .withIndex("by_user", (q) => q.eq("userId", note.userId))
+        .first();
+      return {
+        ...meta(note),
+        folder: "",
+        view: note.view ?? {},
+        body: note.body,
+        attached: [] as { target: string; label: string }[],
+        role,
+        owner: owner?.username ?? null,
+      };
+    }
     const attached = await ctx.db
       .query("shedNoteLinks")
       .withIndex("by_note", (q) => q.eq("noteId", noteId))
@@ -90,6 +120,8 @@ export const get = query({
       view: note.view ?? {},
       body: note.body,
       attached: attached.map((a) => ({ target: a.target, label: a.label })),
+      role: "owner" as const,
+      owner: null as string | null,
     };
   },
 });
@@ -176,12 +208,15 @@ export const create = mutation({
   },
 });
 
-/** Saves a note's text (the editor autosaves). */
+/** Saves a note's text (the editor autosaves) — its owner, or someone it's shared with to edit. */
 export const save = mutation({
   args: { id: v.id("shedNotes"), body: v.string() },
   handler: async (ctx, { id, body }) => {
     const userId = await me(ctx);
-    const note = await ownNote(ctx, userId, id);
+    const note = await ctx.db.get(id);
+    if (!note) throw new Error("That note isn't there any more.");
+    const role = await noteAccess(ctx, note, userId);
+    if (role !== "owner" && role !== "write") throw new Error("You can only read this note.");
     if (body.length > MAX_BODY) throw new Error(`A note can hold up to ${MAX_BODY.toLocaleString()} characters.`);
     if (body === note.body) return;
     await ctx.db.patch(id, { body, links: linkKeys(body), tags: findTags(body), updatedAt: Date.now() });
@@ -344,6 +379,11 @@ export const remove = mutation({
       .withIndex("by_note", (q) => q.eq("noteId", id))
       .collect();
     for (const l of links) await ctx.db.delete(l._id);
+    const shares = await ctx.db
+      .query("shedNoteShares")
+      .withIndex("by_note", (q) => q.eq("noteId", id))
+      .collect();
+    for (const s of shares) await ctx.db.delete(s._id);
     await ctx.db.delete(id);
   },
 });
@@ -368,5 +408,76 @@ export const detachNote = mutation({
       .withIndex("by_user_target", (q) => q.eq("userId", userId).eq("target", args.target))
       .collect();
     for (const r of rows) if (r.noteId === args.noteId) await ctx.db.delete(r._id);
+  },
+});
+
+/** Import (a chunk of) notes — from an export's .zip, or a folder of Markdown files. A note whose
+    title you already have is skipped, replaces yours, or comes in as a copy ("Title 2"). Folders
+    are made too (they can be empty). */
+export const importNotes = mutation({
+  args: {
+    notes: v.array(
+      v.object({
+        title: v.string(),
+        folder: v.string(),
+        body: v.string(),
+        view: v.optional(v.object({ fullWidth: v.optional(v.boolean()), font: v.optional(v.string()) })),
+        createdAt: v.optional(v.number()),
+        updatedAt: v.optional(v.number()),
+      }),
+    ),
+    folders: v.array(v.string()),
+    clash: v.union(v.literal("skip"), v.literal("replace"), v.literal("copy")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await me(ctx);
+    if (args.notes.length > 100 || args.folders.length > 2000) throw new Error("Too many notes at once.");
+    const now = Date.now();
+    const result = { created: 0, replaced: 0, skipped: 0 };
+
+    const rows = await folderRows(ctx, userId);
+    const have = new Set(rows.map((r) => r.path));
+    for (const f of args.folders) {
+      const path = cleanFolder(f);
+      if (!path || have.has(path) || have.size >= 2000) continue;
+      have.add(path);
+      await ctx.db.insert("shedNoteFolders", { userId, path, createdAt: now });
+    }
+
+    for (const n of args.notes) {
+      const title = cleanTitle(n.title) || "Untitled";
+      const body = n.body.slice(0, MAX_BODY);
+      const folder = cleanFolder(n.folder);
+      const view = n.view && (n.view.fullWidth !== undefined || n.view.font) ? { ...(n.view.fullWidth !== undefined ? { fullWidth: n.view.fullWidth } : {}), ...(n.view.font ? { font: n.view.font.slice(0, 40) } : {}) } : undefined;
+      const existing = await ctx.db
+        .query("shedNotes")
+        .withIndex("by_user_title", (q) => q.eq("userId", userId).eq("titleKey", titleKey(title)))
+        .first();
+      if (existing && args.clash === "skip") {
+        result.skipped++;
+        continue;
+      }
+      if (existing && args.clash === "replace") {
+        await ctx.db.patch(existing._id, { body, folder, links: linkKeys(body), tags: findTags(body), updatedAt: now, ...(view ? { view } : {}) });
+        result.replaced++;
+        continue;
+      }
+      let final = title;
+      for (let i = 2; existing && (await titleTaken(ctx, userId, titleKey(final))); i++) final = `${title} ${i}`;
+      await ctx.db.insert("shedNotes", {
+        userId,
+        title: final,
+        titleKey: titleKey(final),
+        folder,
+        body,
+        links: linkKeys(body),
+        tags: findTags(body),
+        ...(view ? { view } : {}),
+        createdAt: n.createdAt ?? now,
+        updatedAt: n.updatedAt ?? now,
+      });
+      result.created++;
+    }
+    return result;
   },
 });

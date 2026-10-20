@@ -48,6 +48,10 @@ export const DEFAULT_CONFIG: ShedNotesConfig = {
     { key: "F2", command: "note:rename" },
     { key: "Alt-m", command: "note:move" },
     { key: "Mod-Alt-Backspace", command: "note:delete" },
+    { key: "Mod-Alt-u", command: "note:share" },
+    { key: "Mod-Alt-p", command: "note:export-pdf" },
+    { key: "Mod-Alt-e", command: "app:export-all" },
+    { key: "Mod-Alt-i", command: "app:import" },
     { key: "Alt-w", command: "note:close" },
     { key: "Mod-s", command: "note:save" },
     // How it looks

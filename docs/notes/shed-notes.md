@@ -203,3 +203,61 @@ Lora stick to one note and not another, Ctrl+Alt+F toggles.
   into a folder, a folder (with its note) into another, a folder into its own subfolder refused,
   a note to the top level, deleting a folder moving its contents up. Not checked with real mouse
   drags (Playwright's dragTo is flaky on this list; the HTML drag events were checked directly).
+
+**Sharing, PDF, export and import (2026-10-20):**
+- **Sharing** (`packages/convex/shedNoteShares.ts`, table `shedNoteShares` {noteId, ownerId,
+  userId, role read|write}). `shedNotes.noteAccess(ctx, note, userId)` → "owner" | "write" | "read"
+  | null is the one check: `get` returns shared notes with `role` and `owner` (username) and hides
+  the owner's folder and attachments; `save` needs owner or write; rename, move, setView, delete
+  and all sharing calls stay owner-only. `suggest` lists **public** profiles only; `shareWith`
+  takes any exact username (private accounts too). Max 50 people per note. `leave` takes a shared
+  note out of your list. Deleting a note deletes its shares; account deletion cascades both ways
+  (`by_owner`, `by_user`).
+- **Links:** `shedNotes.link` {token, access "invited" | "anyone"}, index `by_link_token`
+  (`link.token`). Off → on makes a new token; switching invited ↔ anyone keeps it. `/note/<token>`
+  (`SharedNotePage`) shows the note as a page (`byLink`: ok / gone / sign-in / not-shared), with
+  "Edit/Open in Shed Notes" for people who have access, and Save as PDF. A link is always view
+  only; editing is only for people added with Can edit.
+- **Scores in shared notes:** `scores.get` takes `{ lessonId? noteId? token? }` (`ScoreContext`,
+  passed as `NoteEditor`'s `scoreContext`); a score shows if it's the note owner's and its id is in
+  that note's text, and the viewer can see the note. Collaborators get no Notation button (a score
+  they made would be theirs, invisible to the owner).
+- **UI:** `ShareDialog.tsx` (username box with suggestions and arrow keys, Can view / Can edit per
+  person, ×, the link `Select` and Copy — turning the link on copies it). `NotePane`: owner-only
+  controls (people button, Aa, full width, rename, move, delete, links panel) hidden on shared
+  notes, a "@owner · can edit / view only" pill, read-only editor and no formatting bar for
+  view-only. `NoteList` has a "Shared with me" section (owner, role; ⋮ → Remove from my list).
+- **Live changes:** `NoteEditor` takes `syncText` (the saved body, passed only while nothing typed
+  is waiting to save); when it differs from the editor it applies just the changed span with
+  `Transaction.remote` (not re-saved, not in undo history). So a collaborator's saved edits (or
+  another tab's) show up. It's last-write-wins, not real-time merging: if two people type at once,
+  the later save wins.
+- **PDF:** CodeMirror only draws what's on screen, so printing the editor would lose most of a
+  long note. `NoteDocument.tsx` renders the note statically with `marked` (GFM tables and
+  checkboxes, `[[links]]` as pills, `==highlight==`; raw HTML is escaped, links limited to
+  http(s)/mailto/site paths, images to https) and the ```score / ```abc blocks as music.
+  `NotePrint.tsx` portals it to `<body>` as a full-screen page, waits for the music (`data-ready`,
+  max 6 s), sets `document.title` (the PDF's file name) and calls `window.print()`; print CSS in
+  `globals.css` (`.note-print`) hides everything else and prints dark on white whatever the theme.
+  Note ⋮ → Export as PDF (`note:export-pdf`, Ctrl/⌘-Alt-P) uses the editor's current text.
+- **Export all** (⤓ by the search, `app:export-all`, Ctrl/⌘-Alt-E): `exportAll` query →
+  `lib/exportNotes.ts` `notesZip` → `lib/zip.ts` `makeZip` (stored, CRC32, UTF-8 names; no
+  dependency). `soniroll notes/<folders>/<title>.md`, empty folders included, file names made safe
+  (`safeName`) with " (2)" on clashes, plus `soniroll-notes.json` (each file's exact title, folder,
+  view and dates).
+- **Import** (`ImportDialog.tsx`, `app:import`, Ctrl/⌘-Alt-I): a .zip or .md files, or a folder
+  (`webkitdirectory`). `readZip` handles stored and deflated (`DecompressionStream("deflate-raw")`)
+  zips. Each zip is read on its own; the shared top folder is dropped; with the metadata file the
+  titles/folders/fonts come back exactly, otherwise folders come from paths and titles from file
+  names; dot folders (`.obsidian`) and `__MACOSX` skipped. `shedNotes.importNotes` takes ≤100
+  notes per call (the client chunks, ~4 MB max), with `clash` skip / replace / copy ("Title 2").
+  Score blocks keep their ids, so notation only comes back in the same account.
+- Checked: the zip writer with `unzip -t`; export → import round trip and a zip made by `zip -r`
+  (deflated, with `.obsidian`) through the real functions in Node; in the harness (fake backend):
+  sharing with a suggested public user and a typed private one, changing a role, the link
+  settings, a shared-with-me note (editable, owner controls hidden), the PDF view (no `<script>`,
+  no `javascript:` link, wikilink pill, ABC drawn, print called once), print media screenshot,
+  export download, importing two zips at once, `/note/<token>` at 390 (light) and 1440 (dark), no
+  overflow, no console errors. **Not checked:** anything against the real backend signed in
+  (two real accounts sharing, the "invited" link signed in/out), a real print dialog / PDF file,
+  folder picking in a real browser, Safari/Firefox.

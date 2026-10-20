@@ -59,7 +59,9 @@ export default function PrivacyPage() {
             whoever has it. Recordings attached to a shared setlist can be played by them too. A shared tune shows its keys, tempos, chord chart, the
             files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. A shared file
             can be opened, downloaded and copied the same way; your username shows only if your profile is public. Stop sharing
-            at any time and the link stops working.
+            at any time and the link stops working. A Shed Note you share with someone (by username) can be read by them, and changed by them if you
+            let them edit; they see your username. A note&apos;s link opens it for the people you shared it with or, if you choose, for anyone who has the
+            link (to read, with your username and the scores in it). Turn the link off or remove someone and they can&apos;t open it any more.
           </li>
           <li>
             <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you
