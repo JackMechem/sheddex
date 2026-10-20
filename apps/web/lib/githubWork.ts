@@ -1,4 +1,4 @@
-import { REPO } from "@jam-practice/convex/lib/github";
+import { REPO, feedbackRefs, issueRefs } from "@jam-practice/convex/lib/github";
 
 /**
  * The repo's recent commits and pull requests, fetched from the browser (the repo is public and
@@ -7,7 +7,19 @@ import { REPO } from "@jam-practice/convex/lib/github";
  * limit is just the admin's own. Each list is kept for 5 minutes.
  */
 
-export type GitHubItem = { kind: "commit" | "pr"; ref: string; url: string; title: string; detail: string; at: number; merged?: boolean };
+export type GitHubItem = {
+  kind: "commit" | "pr";
+  ref: string;
+  url: string;
+  title: string;
+  detail: string;
+  at: number;
+  merged?: boolean;
+  /** PRs: "open", "closed" or "merged", and what the title and description point at. */
+  state?: string;
+  fbRefs?: number[];
+  issueRefs?: number[];
+};
 
 const cache = new Map<string, { at: number; data: Promise<unknown> }>();
 
@@ -48,7 +60,7 @@ export async function recentCommits(branch: string): Promise<GitHubItem[]> {
 }
 
 export async function recentPulls(): Promise<GitHubItem[]> {
-  const pulls = await gh<{ number: number; html_url: string; title: string; state: string; merged_at: string | null; updated_at: string; head: { ref: string }; base: { ref: string } }[]>(
+  const pulls = await gh<{ number: number; html_url: string; title: string; body: string | null; state: string; merged_at: string | null; updated_at: string; head: { ref: string }; base: { ref: string } }[]>(
     "/pulls?state=all&sort=updated&direction=desc&per_page=50",
   );
   return pulls.map((p) => ({
@@ -59,6 +71,9 @@ export async function recentPulls(): Promise<GitHubItem[]> {
     detail: `${p.head.ref} → ${p.base.ref} · ${p.merged_at ? "merged" : p.state}`,
     at: Date.parse(p.updated_at),
     merged: !!p.merged_at,
+    state: p.merged_at ? "merged" : p.state,
+    fbRefs: feedbackRefs(`${p.title}\n${p.body ?? ""}`).mentioned,
+    issueRefs: issueRefs(`${p.title}\n${p.body ?? ""}`),
   }));
 }
 

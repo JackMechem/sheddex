@@ -70,6 +70,8 @@ export const opVal = v.union(
   v.object({ op: v.literal("removeLink"), id: v.string(), url: v.string() }),
   v.object({ op: v.literal("setIssue"), id: v.string(), issue: v.union(issueVal, v.null()) }),
   v.object({ op: v.literal("number") }),
+  v.object({ op: v.literal("issueState"), id: v.string(), state: v.string() }),
+  v.object({ op: v.literal("prState"), id: v.string(), url: v.string(), state: v.string(), ref: v.string(), title: v.string() }),
 );
 
 async function rowById(ctx: MutationCtx, id: string) {
@@ -100,6 +102,12 @@ export const applyLocal = internalMutation({
       }
       case "removeLink":
         return ctx.db.patch(row._id, { links: (row.links ?? []).filter((l) => l.url !== op.url), updatedAt: now });
+      case "prState":
+        return applyPrState(ctx, row, op, now);
+      case "issueState": {
+        if (!row.issue || row.issue.state === op.state) return;
+        return ctx.db.patch(row._id, { issue: { ...row.issue, state: op.state }, status: issueStatus(op.state, row.status), updatedAt: now });
+      }
       case "setIssue": {
         const moveOn = op.issue && (row.status === "new" || row.status === "seen");
         return ctx.db.patch(row._id, { issue: op.issue ?? undefined, ...(moveOn ? { status: "planned" as const } : {}), updatedAt: now });
@@ -159,6 +167,41 @@ export const markForwarded = internalMutation({
   },
 });
 
+/** A PR's state on a feedback (linking it if it isn't yet). Merged or closed — and it wasn't
+    already — closes the feedback; the state is remembered, so reopening the feedback by hand
+    sticks. */
+async function applyPrState(ctx: MutationCtx, row: Doc<"feedback">, pr: { url: string; state: string; ref: string; title: string }, now: number) {
+  const links = row.links ?? [];
+  const existing = links.find((l) => l.url === pr.url);
+  if (existing?.state === pr.state) return;
+  const link = { kind: "pr" as const, ref: pr.ref, url: pr.url, title: (existing?.title || pr.title).slice(0, 200), merged: pr.state === "merged", state: pr.state, at: existing?.at ?? now };
+  const next = existing ? links.map((l) => (l.url === pr.url ? link : l)) : [...links, link].slice(-30);
+  const finished = pr.state === "merged" || pr.state === "closed";
+  await ctx.db.patch(row._id, { links: next, ...(finished ? { status: "closed" as const } : {}), updatedAt: now });
+}
+
+/** From the webhook: a PR changed. It applies to feedback that has it linked, that it mentions
+    (FB-12), or whose GitHub issue it points at (#11). */
+export const prEvent = internalMutation({
+  args: { url: v.string(), ref: v.string(), title: v.string(), state: v.string(), fbRefs: v.array(v.number()), issueRefs: v.array(v.number()) },
+  handler: async (ctx, a) => {
+    await ensureNumbers(ctx);
+    const now = Date.now();
+    for (const r of await ctx.db.query("feedback").withIndex("by_createdAt").order("desc").take(2000)) {
+      const linked = (r.links ?? []).some((l) => l.url === a.url);
+      const mentioned = (r.number !== undefined && a.fbRefs.includes(r.number)) || (!!r.issue && a.issueRefs.includes(r.issue.number));
+      if (linked || mentioned) await applyPrState(ctx, r, a, now);
+    }
+  },
+});
+
+/** A feedback's status when its GitHub issue opens or closes: closed (resolved or not) → Closed;
+    reopened → back to Planned. */
+function issueStatus(state: string, status: Doc<"feedback">["status"]): Doc<"feedback">["status"] {
+  if (state === "closed") return "closed";
+  return status === "done" || status === "closed" ? "planned" : status;
+}
+
 /** The feedback whose GitHub issue is `number` (for the issues webhook). */
 export const setStatusForIssue = internalMutation({
   args: { issueNumber: v.number(), state: v.string() },
@@ -166,8 +209,7 @@ export const setStatusForIssue = internalMutation({
     // Few rows have issues; the inbox is small enough to scan.
     for (const r of await ctx.db.query("feedback").withIndex("by_createdAt").order("desc").take(2000)) {
       if (r.issue?.number !== issueNumber) continue;
-      const status = state === "closed" ? "done" : r.status === "done" || r.status === "closed" ? "planned" : r.status;
-      await ctx.db.patch(r._id, { issue: { ...r.issue, state }, status, updatedAt: Date.now() });
+      await ctx.db.patch(r._id, { issue: { ...r.issue, state }, status: issueStatus(state, r.status), updatedAt: Date.now() });
     }
   },
 });
