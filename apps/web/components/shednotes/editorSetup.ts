@@ -6,6 +6,15 @@ import { Facet } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 
+/** Icons for the suggestion menu, as CSS masks so they take the theme's colours (DocumentIcon,
+    NotePlusIcon and PlusIcon from components/tools). */
+const maskIcon = (paths: string) =>
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>${paths}</svg>`)}")`;
+const ICON_DOC = maskIcon("<path d='M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z'/><path d='M14 3v5h5M9 13h6M9 17h4'/>");
+const ICON_NOTE_PLUS = maskIcon("<path d='M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z'/><path d='M14 3v5h5M12 11v6M9 14h6'/>");
+const ICON_PLUS = maskIcon("<path d='M12 5v14M5 12h14'/>");
+
+
 /** The editor's look, all from the theme's tokens so it follows every preset, light and dark. */
 export const editorTheme = EditorView.theme({
   "&": { color: "var(--foreground)", backgroundColor: "transparent", height: "100%" },
@@ -64,18 +73,46 @@ export const editorTheme = EditorView.theme({
   ".cm-searchMatch": { backgroundColor: "color-mix(in oklab, var(--accent) 22%, transparent)" },
   ".cm-searchMatch-selected": { backgroundColor: "color-mix(in oklab, var(--accent) 45%, transparent)" },
   ".cm-tooltip": { backgroundColor: "var(--surface)", color: "var(--foreground)", border: "1px solid color-mix(in oklab, var(--foreground) 12%, transparent)", borderRadius: "12px", overflow: "hidden", boxShadow: "0 10px 30px rgb(0 0 0 / 0.18)" },
-  ".cm-tooltip.cm-tooltip-autocomplete > ul": { fontFamily: "inherit", maxHeight: "16rem", fontSize: "0.9em" },
+  // The suggestion menu: padded, rounded rows, an icon per kind, the folder as a small pill.
+  ".cm-tooltip.cm-tooltip-autocomplete": { padding: "4px" },
+  ".cm-tooltip.cm-tooltip-autocomplete > ul": { fontFamily: "inherit", maxHeight: "18rem", minWidth: "15rem", maxWidth: "min(26rem, 90vw)", fontSize: "0.9em" },
+  ".cm-tooltip-autocomplete > ul > li": { display: "flex", alignItems: "center", gap: "8px", padding: "5px 8px !important", borderRadius: "8px", lineHeight: "1.4" },
+  ".cm-tooltip-autocomplete > ul > li::before": {
+    content: "''",
+    flexShrink: "0",
+    width: "15px",
+    height: "15px",
+    backgroundColor: "var(--muted)",
+    mask: `${ICON_DOC} center / contain no-repeat`,
+  },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "color-mix(in oklab, var(--accent) 18%, transparent)", color: "var(--foreground)" },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]::before": { backgroundColor: "var(--accent)" },
+  ".cm-completionLabel": { minWidth: "0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   ".cm-completionMatchedText": { textDecoration: "none", fontWeight: "800" },
-  ".cm-tooltip-autocomplete > ul > li": { padding: "4px 10px !important" },
-  ".cm-tooltip-autocomplete > ul > li[aria-selected]": { backgroundColor: "color-mix(in oklab, var(--accent) 20%, transparent)", color: "var(--foreground)" },
-  ".cm-completionDetail": { color: "var(--muted)", fontStyle: "normal", marginLeft: "8px" },
+  ".cm-completionDetail": {
+    marginLeft: "auto !important",
+    flexShrink: "0",
+    maxWidth: "45%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontStyle: "normal",
+    fontSize: "11px",
+    fontWeight: "500",
+    color: "var(--muted)",
+    backgroundColor: "color-mix(in oklab, var(--foreground) 7%, transparent)",
+    padding: "1px 7px",
+    borderRadius: "999px",
+  },
   ".cm-completionIcon": { display: "none" },
   // "Create “…”" — the last choice when linking a note that doesn't exist yet.
-  ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", borderTop: "1px solid color-mix(in oklab, var(--foreground) 10%, transparent)" },
-  ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { content: "'+'", marginRight: "6px", fontWeight: "800" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-create": { color: "var(--accent)", fontWeight: "600", marginTop: "2px" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-create::before": { backgroundColor: "var(--accent)", mask: `${ICON_PLUS} center / contain no-repeat` },
   // "New from “…”" — making a note from a template, at the top of the `[[` suggestions.
   ".cm-tooltip-autocomplete > ul > li.cm-completion-template": { color: "var(--accent)", fontWeight: "600" },
-  ".cm-tooltip-autocomplete > ul > completion-section": { display: "block", padding: "6px 10px 2px", fontSize: "11px", fontWeight: "600", color: "var(--muted)" },
+  ".cm-tooltip-autocomplete > ul > li.cm-completion-template::before": { backgroundColor: "var(--accent)", mask: `${ICON_NOTE_PLUS} center / contain no-repeat` },
+  ".cm-tooltip-autocomplete > ul > completion-section": { display: "block", borderBottom: "none !important", padding: "6px 8px 3px", fontSize: "11px", fontWeight: "600", color: "var(--muted)", opacity: "1" },
+  ".cm-tooltip-autocomplete > ul > completion-section:not(:first-child)": { marginTop: "4px", paddingTop: "8px", borderTop: "1px solid color-mix(in oklab, var(--foreground) 8%, transparent)" },
   // A template's {{blank}}.
   ".cm-template-var": { backgroundColor: "color-mix(in oklab, var(--accent) 14%, transparent)", color: "var(--accent)", borderRadius: "6px", padding: "0 2px", fontWeight: "600" },
   ".cm-diagnostic-error": { borderLeftColor: "var(--danger)" },
@@ -199,7 +236,6 @@ export function wikilinkCompletion(ctx: CompletionContext): CompletionResult | n
     options.push({
       label: t.name,
       displayLabel: `New from “${t.name}”`,
-      detail: "template",
       type: "template",
       section: TEMPLATES_SECTION,
       apply: (view: EditorView, _c: Completion, f: number, to: number) => {
@@ -221,7 +257,7 @@ export function wikilinkCompletion(ctx: CompletionContext): CompletionResult | n
   if (typed && actions.createLinkedNote && !notes.some((n) => titleKey(n.title) === titleKey(typed))) {
     options.push({
       label: `Create “${typed}”`,
-      detail: "new note, in this folder",
+      detail: "new note",
       type: "create",
       section: NOTES_SECTION,
       boost: -99,

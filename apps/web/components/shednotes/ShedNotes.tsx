@@ -26,6 +26,7 @@ import ShareDialog from "./ShareDialog";
 import NotePrint from "./NotePrint";
 import ImportDialog from "./ImportDialog";
 import TemplateFillDialog, { type NoteTemplate } from "./TemplateFillDialog";
+import ListResizer, { clampListWidth, LIST_DEFAULT } from "./ListResizer";
 import TemplatesPane from "./TemplatesPane";
 import { fillTemplate } from "@/lib/noteTemplates";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
@@ -35,9 +36,9 @@ export const SETTINGS_ID = "settings";
 export const TEMPLATES_ID = "templates";
 const isNoteId = (id: string | null): id is string => !!id && id !== SETTINGS_ID && id !== TEMPLATES_ID;
 
-/** Which side panels are folded away (this device). */
+/** Which side panels are folded away, and how wide the note list is (this device). */
 const VIEW_KEY = "jam-practice-shed-notes-view";
-const VIEW_DEFAULTS = { listHidden: false, linksHidden: false };
+const VIEW_DEFAULTS = { listHidden: false, linksHidden: false, listWidth: LIST_DEFAULT };
 
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -120,7 +121,10 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
   const [searching, setSearching] = useState(false);
   const [listQuery, setListQuery] = useState<{ q: string; n: number } | null>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const [{ listHidden, linksHidden }, setPanels] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  const [{ listHidden, linksHidden, listWidth }, setPanels] = usePersistedSettings(VIEW_KEY, VIEW_DEFAULTS);
+  // While dragging the list's edge: the width shown, saved only on release.
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const shownListWidth = dragWidth ?? clampListWidth(listWidth);
 
   useEffect(() => {
     if (!notice) return;
@@ -430,7 +434,9 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
 
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-6 pt-[calc(env(safe-area-inset-top)+4.5rem)] sm:px-6 lg:h-full lg:flex-row lg:gap-6 lg:px-6 lg:pb-4 lg:pt-6">
-      <aside className={`min-h-0 flex-col gap-3 lg:w-72 lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
+      <aside
+        style={{ "--list-w": `${shownListWidth}px` } as React.CSSProperties}
+        className={`relative min-h-0 flex-col gap-3 lg:w-[var(--list-w)] lg:shrink-0 ${current ? "hidden" : "flex"} ${current && listHidden ? "" : "lg:flex"}`}>
         <div className="flex items-center gap-2">
           <h1 className="flex min-w-0 flex-1 items-center gap-2 text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-xl">
             <DocumentIcon className="h-6 w-6 shrink-0 text-accent sm:h-7 sm:w-7 lg:h-5 lg:w-5" /> <span className="truncate">Shed Notes</span>
@@ -462,6 +468,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
           </button>
         </div>
         <NoteList key={listQuery?.n ?? 0} notes={notes} folders={folderList ?? []} shared={sharedWithMe ?? []} templateCount={templates?.length ?? 0} templatesOpen={current === TEMPLATES_ID} currentId={current} actions={listActions} initialQuery={listQuery?.q} />
+        <ListResizer width={shownListWidth} onPreview={setDragWidth} onCommit={(w) => setPanels({ listWidth: w })} />
       </aside>
 
       <section className={`min-h-0 min-w-0 flex-1 flex-col ${current ? "flex" : "hidden lg:flex"}`}>

@@ -298,3 +298,22 @@ Lora stick to one note and not another, Ctrl+Alt+F toggles.
   template warning then Replace; renaming "Scales" updating links in notes and in the template; 390
   dark (Templates page, the fill sheet), no overflow or errors. Not checked against the real backend
   signed in, or score copying with a real score.
+
+## 2026-10-20: the New menu, a resizable note list, a tidier `[[` menu
+
+- **+ New** in the note list opens a menu (New note · From a template… (only when there are
+  templates) · New folder) instead of the "From template" / "New folder" text buttons that sat
+  in the Folders/Recent row.
+- **Resizable note list** on wide screens (`ListResizer.tsx`): a handle in the gap, drawn like
+  the main sidebar's. Width is 220–520px, kept on this device as `listWidth` in the
+  `jam-practice-shed-notes-view` settings; dragging previews live and saves once on release; arrow
+  keys nudge it, double-click resets to 288. A plain click doesn't move it (it only saves after
+  a 3px drag). The heading shrinks to `lg:text-xl` so "Shed Notes" fits at the narrow end.
+- **`[[` suggestion menu restyled** (`editorTheme` in `editorSetup.ts`): padded list, rounded
+  rows, an icon per row (CSS masks of DocumentIcon / NotePlusIcon / PlusIcon, so they take theme
+  colours), the folder as a small pill on the right, no CodeMirror underline under section
+  headers (needs `!important`). The template rows lost their "template" detail (the section
+  says it); Create's detail is now "new note".
+- Verified in the esbuild harness: menu items, drag/click/double-click widths, reload keeps the
+  width, `[[` menu at 1300 light and 390 dark, no handle or overflow at 390. Not checked signed
+  in on the real backend.

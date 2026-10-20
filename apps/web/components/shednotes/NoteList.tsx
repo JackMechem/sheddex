@@ -268,7 +268,22 @@ export default function NoteList({
           <SearchIcon className="h-4 w-4 shrink-0 text-muted" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes or #tags" aria-label="Search notes" className="min-w-0 flex-1 bg-transparent text-base outline-none lg:text-sm" />
         </label>
-        <button type="button" onClick={() => actions.newNote("")} className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
+        <button
+          type="button"
+          aria-haspopup="menu"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            setMenu({
+              x: r.right - 208,
+              y: r.bottom + 4,
+              items: [
+                { label: "New note", icon: <PlusIcon className="h-4 w-4" />, onSelect: () => actions.newNote("") },
+                ...(templateCount > 0 ? [{ label: "From a template…", icon: <NotePlusIcon className="h-4 w-4" />, onSelect: actions.newFromTemplate }] : []),
+                { label: "New folder", icon: <FolderPlusIcon className="h-4 w-4" />, onSelect: () => actions.newFolder("") },
+              ],
+            });
+          }}
+          className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover">
           <PlusIcon className="h-4 w-4" /> New
         </button>
       </div>
@@ -279,15 +294,6 @@ export default function NoteList({
               {s === "folders" ? "Folders" : "Recent"}
             </button>
           ))}
-          <span className="flex-1" />
-          {templateCount > 0 && (
-            <button type="button" onClick={actions.newFromTemplate} className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 font-semibold text-muted hover:text-foreground">
-              <NotePlusIcon className="h-3.5 w-3.5" /> From template
-            </button>
-          )}
-          <button type="button" onClick={() => actions.newFolder("")} className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 font-semibold text-muted hover:text-foreground">
-            <FolderPlusIcon className="h-3.5 w-3.5" /> New folder
-          </button>
         </div>
       )}
       <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 pb-2" {...(!query && sort === "folders" ? dropProps("") : {})}>
