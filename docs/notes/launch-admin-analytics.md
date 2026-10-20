@@ -292,3 +292,11 @@ Verified:
   checks linked issues against GitHub's list when it loads (browser, 5-minute cache) and applies
   any difference, so it works without the webhook. Checked in the harness against the real repo
   (#11 open on GitHub corrected a stale "closed").
+- **Merged or closed PRs close the feedback (same day):** a PR that's linked to a feedback,
+  mentions its FB-number, or points at its GitHub issue (`#11`) closes it when merged or closed
+  (`applyPrState` / `prEvent` in `inboxCore.ts`; the webhook's `pull_request` event — the old
+  "fixes FB-n merged into main → done" rule for PRs is replaced). Each PR link now stores its last
+  `state`, so a feedback reopened by hand isn't closed again by the same PR. The admin inbox does
+  the same check against GitHub's PR list when it loads. Checked in the harness with the real
+  merged PR #8 (closed the feedback once, nothing on the next refresh) and the `#n` / `FB-n`
+  parsing in Node.

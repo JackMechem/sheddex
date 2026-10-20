@@ -6,7 +6,12 @@
 export const REPO = "JackMechem/soniroll";
 export const REPO_URL = `https://github.com/${REPO}`;
 
-export type WorkLink = { kind: "commit" | "pr"; ref: string; url: string; title: string; merged?: boolean; at: number };
+export type WorkLink = { kind: "commit" | "pr"; ref: string; url: string; title: string; merged?: boolean; state?: string; at: number };
+
+/** Issue/PR numbers a text points at with "#12" (not FB-12). */
+export function issueRefs(text: string): number[] {
+  return [...new Set([...text.matchAll(/(?:^|[^\w-])#(\d{1,6})\b/g)].map((m) => Number(m[1])))];
+}
 
 /** A commit hash or a GitHub commit / pull request link (or "#12" for a PR) → a link. */
 export function parseWorkRef(input: string, title = ""): Omit<WorkLink, "at"> | null {

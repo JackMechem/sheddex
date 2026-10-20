@@ -4,7 +4,7 @@ import { useAction } from "convex/react";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { api } from "@jam-practice/convex/_generated/api";
 import type { Row } from "@jam-practice/convex/inbox";
-import { recentIssues } from "@/lib/githubWork";
+import { recentIssues, recentPulls } from "@/lib/githubWork";
 
 /**
  * The admin inbox, read through `inbox.list` (an action, because on dev and previews it reaches
@@ -56,6 +56,26 @@ export function useInbox() {
         } catch {
           // GitHub's limit, or a shared inbox that doesn't know this yet: try again next refresh.
         }
+      }
+      // PRs merged or closed on GitHub: feedback they're linked to, mention (FB-12) or whose issue
+      // they point at (#11) is closed — once per change in the PR's state.
+      try {
+        const current = state.rows ?? rows;
+        const pulls = await recentPulls();
+        let any = false;
+        for (const r of current) {
+          for (const pr of pulls) {
+            const link = r.links.find((l) => l.url === pr.url);
+            const mentioned = (r.number !== null && !!pr.fbRefs?.includes(r.number)) || (!!r.issue && !!pr.issueRefs?.includes(r.issue.number));
+            if (!link && !mentioned) continue;
+            if (link?.state === pr.state) continue;
+            await applyAction({ op: { op: "prState", id: r.id, url: pr.url, state: pr.state ?? "open", ref: pr.ref, title: pr.title }, where: r.where });
+            any = true;
+          }
+        }
+        if (any) set({ rows: (await listAction({})).rows });
+      } catch {
+        // As above: try again next refresh.
       }
     } catch (e) {
       set({ error: errorText(e) });

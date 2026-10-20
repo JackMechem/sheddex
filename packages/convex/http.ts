@@ -2,7 +2,7 @@ import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
-import { feedbackRefs, validSignature } from "./lib/github";
+import { feedbackRefs, issueRefs, validSignature } from "./lib/github";
 import { hub } from "./inbox";
 
 const http = httpRouter();
@@ -15,8 +15,9 @@ const MAIN = "main";
  * GitHub webhook (repo Settings → Webhooks: `<deployment>.convex.site/github-webhook`, JSON, the
  * secret in the GITHUB_WEBHOOK_SECRET env var, events: pushes, pull requests and issues). A commit
  * message or PR title/description that mentions FB-<number> links it to that feedback; "fixes
- * FB-<number>" marks it done once it's on main (a push to main, or a PR merged into main); closing
- * a feedback's GitHub issue marks it closed (reopening moves it back to planned).
+ * FB-<number>" in a commit marks it done once it's pushed to main. A PR that's linked to a feedback,
+ * mentions its FB-number or points at its GitHub issue (#11) closes it when merged or closed, and
+ * closing a feedback's GitHub issue closes it too (reopening moves it back to planned).
  */
 http.route({
   path: "/github-webhook",
@@ -55,17 +56,19 @@ http.route({
         linked++;
       }
     } else if (event === "pull_request") {
-      const pr = payload.pull_request as { number: number; html_url: string; title: string; body: string | null; merged: boolean; base: { ref: string } };
-      const { mentioned, fixes } = feedbackRefs(`${pr.title}\n${pr.body ?? ""}`);
-      const mergedToMain = pr.merged && pr.base.ref === MAIN;
-      for (const number of mentioned) {
-        await ctx.runMutation(internal.feedback.linkWork, {
-          number,
-          link: { kind: "pr", ref: `#${pr.number}`, url: pr.html_url, title: pr.title, merged: pr.merged, at: now },
-          done: mergedToMain && fixes.includes(number),
-        });
-        linked++;
-      }
+      // A PR opened, edited, merged or closed: feedback it's linked to, mentions (FB-12) or whose
+      // issue it points at (#11) follows — merged or closed closes the feedback.
+      const pr = payload.pull_request as { number: number; html_url: string; title: string; body: string | null; merged: boolean; state: string };
+      const text = `${pr.title}\n${pr.body ?? ""}`;
+      await ctx.runMutation(internal.inboxCore.prEvent, {
+        url: pr.html_url,
+        ref: `#${pr.number}`,
+        title: pr.title,
+        state: pr.merged ? "merged" : pr.state,
+        fbRefs: feedbackRefs(text).mentioned,
+        issueRefs: issueRefs(text),
+      });
+      linked++;
     }
     return new Response(JSON.stringify({ ok: true, linked }), { status: 200, headers: { "content-type": "application/json" } });
   }),
