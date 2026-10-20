@@ -5,6 +5,7 @@ import SwitchRow from "@/components/SwitchRow";
 import { CloseIcon, PencilIcon, RepeatIcon, SearchIcon } from "@/components/tools";
 import { DEFAULT_CONFIG, type ShedNotesConfig, resetCommandKey, setCommandKey, setConfigValue, setVimValue } from "@/lib/shedNotesConfig";
 import { COMMANDS, COMMAND_BY_ID, keyLabel } from "./commands";
+import VimGuide from "./VimGuide";
 
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -114,6 +115,12 @@ export default function SettingsForm({ text, setText, config, broken }: { text: 
           )}
           <span className="text-xs text-muted">Add or change these in the JSON tab, under &quot;vim&quot; → &quot;exCommands&quot;.</span>
         </div>
+        <details className="group rounded-xl bg-background p-3">
+          <summary className="cursor-pointer select-none text-sm font-semibold text-accent">How to write mappings</summary>
+          <div className="pt-3">
+            <VimGuide leader={config.vim.leader} />
+          </div>
+        </details>
       </Section>
     </div>
   );

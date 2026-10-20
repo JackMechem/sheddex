@@ -1,5 +1,6 @@
-import { Vim } from "@replit/codemirror-vim";
-import type { EditorView } from "@codemirror/view";
+import { Vim, getCM } from "@replit/codemirror-vim";
+import { Prec } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { type ShedNotesConfig, parseVimrcLine } from "@/lib/shedNotesConfig";
 import { COMMAND_BY_ID, type NoteActions, runCommand } from "./commands";
 
@@ -63,6 +64,7 @@ export function applyVimConfig(config: ShedNotesConfig): string[] {
   if (key === lastApplied) return lastErrors;
   lastApplied = key;
   Vim.mapclear();
+  heldMappings = [];
   const errors: string[] = [];
   for (const line of config.vim.mappings) {
     const parsed = parseVimrcLine(line, config.vim.leader);
@@ -72,6 +74,8 @@ export function applyVimConfig(config: ShedNotesConfig): string[] {
       if (parsed.kind === "unmap") Vim.unmap(parsed.lhs, parsed.mode as string);
       else if (parsed.noremap) Vim.noremap(parsed.lhs, parsed.rhs, parsed.mode as string);
       else Vim.map(parsed.lhs, parsed.rhs, parsed.mode as string);
+      const keys = parsed.kind === "map" ? (parsed.lhs.match(KEY_TOKEN) ?? []) : [];
+      if (parsed.kind === "map" && parsed.mode !== "insert" && keys.length > 1) heldMappings.push({ lhs: parsed.lhs, keys, mode: parsed.mode });
     } catch (e) {
       errors.push(`"${line}": ${(e as Error).message}`);
     }
@@ -98,3 +102,91 @@ function vimErrors(config: ShedNotesConfig): string[] {
   }
   return [...new Set(out)];
 }
+
+// ---------------------------------------------------------------- waiting for the rest of a mapping
+
+/*
+ * Vim waits after the first key of a mapping like `<leader>ff` to see what comes next. The vim
+ * library doesn't when that first key already does something on its own (Space moves right, `,`
+ * repeats a search) — it runs it at once, so the mapping could never be typed. So for normal- and
+ * visual-mode mappings longer than one key, Shed Notes holds the keys itself: while what's typed
+ * is the start of a mapping, keys are held (up to a second, like vim's timeoutlen); when it's a
+ * whole mapping, the mapping runs; otherwise the held keys go to vim as if just typed.
+ */
+
+const KEY_TOKEN = /<(?:[CSMA]-)*\w+>|./gi;
+const WAIT_MS = 1000;
+let heldMappings: { lhs: string; keys: string[]; mode: "normal" | "visual" | undefined }[] = [];
+
+type VimState = { insertMode?: boolean; visualMode?: boolean; inputState?: { keyBuffer: string[]; operator?: string | null } };
+type HeldCM = { state: { vim?: VimState } };
+const VimApi = Vim as unknown as {
+  vimKeyFromEvent: (e: KeyboardEvent, vim: VimState) => string | undefined;
+  handleKey: (cm: HeldCM, key: string, origin?: string) => unknown;
+};
+
+const sameKey = (a: string, b: string) => a === b || (a.length > 1 && a.toLowerCase() === b.toLowerCase());
+
+/** One editor's held keys. */
+class Held {
+  keys: string[] = [];
+  timer: ReturnType<typeof setTimeout> | null = null;
+  clear() {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.keys = [];
+  }
+  /** Gives the held keys to vim one by one, as if typed now. */
+  flush(cm: HeldCM) {
+    const keys = this.keys;
+    this.clear();
+    for (const k of keys) VimApi.handleKey(cm, k, "user");
+  }
+}
+const heldOf = new WeakMap<EditorView, Held>();
+
+export const vimMappingWait = Prec.highest(
+  EditorView.domEventHandlers({
+    keydown(e, view) {
+      const held = heldOf.get(view) ?? new Held();
+      heldOf.set(view, held);
+      const cm = getCM(view) as HeldCM | null;
+      const vim = cm?.state.vim;
+      if (!cm || !vim || vim.insertMode || !heldMappings.length) {
+        held.clear();
+        return false;
+      }
+      // Halfway through something of vim's own (a count, an operator): leave it to vim.
+      if (!held.keys.length && (vim.inputState?.keyBuffer.length || vim.inputState?.operator)) return false;
+      const key = VimApi.vimKeyFromEvent(e, vim);
+      if (!key) return false; // a modifier on its own
+      const mode = vim.visualMode ? "visual" : "normal";
+      const typed = [...held.keys, key];
+      const fits = heldMappings.filter((m) => (!m.mode || m.mode === mode) && m.keys.length >= typed.length && typed.every((k, i) => sameKey(k, m.keys[i])));
+      if (!fits.length) {
+        if (!held.keys.length) return false;
+        held.flush(cm);
+        // This key wasn't part of a mapping after all: let vim have it, after the held ones.
+        VimApi.handleKey(cm, key, "user");
+        e.preventDefault();
+        return true;
+      }
+      e.preventDefault();
+      const whole = fits.find((m) => m.keys.length === typed.length);
+      if (whole && !fits.some((m) => m.keys.length > typed.length)) {
+        held.clear();
+        VimApi.handleKey(cm, whole.lhs, "user");
+        return true;
+      }
+      held.clear();
+      held.keys = typed;
+      held.timer = setTimeout(() => {
+        if (whole) {
+          held.clear();
+          VimApi.handleKey(cm, whole.lhs, "user");
+        } else held.flush(cm);
+      }, WAIT_MS);
+      return true;
+    },
+  }),
+);

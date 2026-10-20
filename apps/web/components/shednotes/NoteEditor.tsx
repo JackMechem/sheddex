@@ -19,7 +19,7 @@ import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview
 import { tables } from "./tables";
 import ScoreEmbeds, { type ScoreContext } from "./ScoreEmbeds";
 import { ownerFacet } from "./embedStore";
-import { applyVimConfig, registerVimEditor } from "./vimSetup";
+import { applyVimConfig, registerVimEditor, vimMappingWait } from "./vimSetup";
 
 /**
  * The Shed Notes editor (CodeMirror 6, the editor Obsidian is built on): markdown with live
@@ -166,7 +166,7 @@ export default function NoteEditor({
     }));
     view.dispatch({
       effects: [
-        c.vim.reconfigure(config.vimMode && !readOnly ? vim({ status: true }) : []),
+        c.vim.reconfigure(config.vimMode && !readOnly ? [vimMappingWait, vim({ status: true })] : []),
         c.keys.reconfigure(Prec.highest(keymap.of(keys))),
         c.live.reconfigure(liveFacet.of(language === "markdown" && config.livePreview)),
         c.words.reconfigure(wordCompletionFacet.of(language === "markdown" && config.wordCompletion)),

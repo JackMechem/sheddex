@@ -415,3 +415,25 @@ returns `filter: false` (CodeMirror keeps our order, asks again each letter), ma
 case ("Pra" → "Practice"). Checked in the harness: pra → your "Pratt's", practice, practical,
 practically; arp → arpeggio…; synco → syncopated, syncopation; Met → Metal, Method, Methods,
 Metronome; arrows + Enter and Tab fill in. English only.
+
+## 2026-10-20: leader mappings actually work; a vim mapping guide
+
+Jack's `nmap <leader>ff :palette<CR>` did nothing. Cause (in @replit/codemirror-vim-core's
+`matchCommand`): a **full** match beats a partial one immediately, so a mapping whose first key
+already does something alone (Space = move right, `,` = repeat search) can never be typed — every
+leader mapping was dead with the default `<Space>` leader. `Vim.unmap` can drop the built-in key,
+but the library tracks a fixed `defaultKeymapLength`, so removing built-ins breaks `mapclear` (run
+on every settings change). Fix: `vimMappingWait` in `vimSetup.ts`, a highest-precedence keydown
+handler put in the vim compartment, holds keys while they're the start of a normal/visual
+mapping longer than one key (vim's `Vim.vimKeyFromEvent` names them), runs the mapping via
+`Vim.handleKey(cm, wholeLhs)` (a whole sequence matches the user mapping in one go), and
+otherwise feeds the held keys to vim one by one; a lone prefix key runs after 1 s (vim's
+timeoutlen). Skipped in insert mode (the library already waits there, e.g. `imap jk <Esc>`) and
+while vim has a count/operator pending. Checked in the harness: `<leader>ff` opens the palette,
+`,x`→`dd`, Space alone moves right after the wait, Space+l moves two, Space types in insert mode,
+`j`→`gj` still works.
+
+`VimGuide.tsx`: the docs Jack asked for — a mapping piece by piece (modes, nore, unmap, special
+keys, comments), the leader (current one named) and the wait, running commands (`:w`, `:q`,
+`:wq`, `:e`, `:new`, `:cmd id`, exCommands), examples, and troubleshooting. Shown under "How to
+write mappings" in Settings → Vim and in the JSON tab's Reference; a Help entry points to it.

@@ -6,6 +6,7 @@ import { DEFAULT_CONFIG_TEXT, type ShedNotesConfig } from "@/lib/shedNotesConfig
 import { COMMANDS, COMMAND_BY_ID, type NoteActions, keysFor } from "./commands";
 import NoteEditor from "./NoteEditor";
 import SettingsForm from "./SettingsForm";
+import VimGuide from "./VimGuide";
 import { applyVimConfig } from "./vimSetup";
 
 const OPTIONS: [keyof ShedNotesConfig, string][] = [
@@ -102,9 +103,7 @@ export default function SettingsPane({
           </div>
           <div className="flex flex-col gap-1.5">
             <h3 className="font-semibold text-muted">Vim</h3>
-            <p className="text-muted">
-              Built in: <code>:w</code> saves now, <code>:q</code> closes the note, <code>:e Title</code> opens a note (making it if it&apos;s new), <code>:new</code> makes one, <code>:cmd id</code> runs any command below. Mappings can call your own commands: <code>nnoremap &lt;leader&gt;n :notation&lt;CR&gt;</code>.
-            </p>
+            <VimGuide leader={config.vim.leader} />
           </div>
           <div className="flex flex-col gap-1">
             <h3 className="font-semibold text-muted">Commands</h3>
