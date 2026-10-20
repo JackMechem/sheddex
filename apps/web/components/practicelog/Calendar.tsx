@@ -791,16 +791,17 @@ function TimeGrid({
                       onClick={(e) => open(e, b.target)}
                       title={`${b.title}: ${formatTime(b.start)} – ${formatTime(b.end)}${b.tasks.length ? `\n${b.tasks.join(", ")}` : ""}${b.drag ? "\nDrag to move it" : ""}`}
                       {...handle(b.drag, (e) => (((e.clientY - e.currentTarget.getBoundingClientRect().top) / hourPx) * 60))}
-                      className={`absolute z-[1] overflow-hidden rounded-md text-left leading-tight transition-[filter,box-shadow] hover:z-[2] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${single ? "px-2 py-1 text-xs" : "px-1 py-0.5 text-[11px]"} ${b.skipped ? "opacity-40 line-through" : ""} ${b.drag ? DRAGGABLE : ""}`}
+                      className={`absolute z-[1] overflow-hidden rounded-md text-left leading-tight transition-[filter,box-shadow] hover:z-[2] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-accent ${single ? "py-1 pl-4 pr-2 text-xs" : "py-0.5 pl-2.5 pr-1 text-[11px]"} ${b.skipped ? "opacity-40 line-through" : ""} ${b.drag ? DRAGGABLE : ""}`}
                       style={{
                         top,
                         height,
                         left: `calc(${(b.lane / b.lanes) * 100}% + 1px)`,
                         width: `calc(${100 / b.lanes}% - 2px)`,
                         background: `color-mix(in srgb, ${b.color} ${complete ? 45 : 22}%, var(--surface))`,
-                        boxShadow: `inset 3px 0 0 ${b.color}`,
                       }}
                     >
+                      {/* The same rounded bar down the left as the routine cards in the day panel. */}
+                      <span aria-hidden className={`absolute w-1 rounded-full ${single ? "bottom-1.5 left-1.5 top-1.5" : "bottom-1 left-1 top-1"}`} style={{ background: b.color }} />
                       <span className="flex items-center gap-1 font-semibold">
                         {b.icon !== undefined && <RoutineIcon icon={b.icon} color={b.colorIdx ?? 0} size="xs" />}
                         {complete && <CheckIcon className="h-3 w-3 shrink-0" />}
