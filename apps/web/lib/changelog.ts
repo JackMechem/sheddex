@@ -33,6 +33,27 @@ export const CHANGE_KINDS: { kind: ChangeKind; label: string }[] = [
 
 export const RELEASES: Release[] = [
   {
+    version: "0.10.1",
+    date: "2026-10-20",
+    title: "Pictures in notes, templates and faster typing",
+    summary: "Paste pictures into Shed Notes, start notes from templates, and get word suggestions as you type.",
+    changes: [
+      { kind: "new", text: "**Pictures and files in notes:** paste a picture or drop files into a note and they're saved to your Files and shown right there. **File** above a note puts in anything from your Files: PDFs, recordings, audio and video play in the note." },
+      { kind: "new", text: "**Templates** for notes, with blanks you fill in (in the title too) — start a note from one with [[, the command palette or an empty note." },
+      { kind: "new", text: "**Word suggestions** as you type in notes: up to four words that finish what you're typing, yours first (Enter or Tab fills one in). Off until you turn it on in Shed Notes' settings." },
+      { kind: "new", text: "A **Settings page** for Shed Notes: switches, text size, every command's key (press the pencil and the new key to change it) and vim options. The JSON file is still there to edit." },
+      { kind: "new", text: "**Vim mappings** with your leader key work (like nmap <leader>ff :app:search<CR>), and any command can run after a colon. Settings → Vim has a guide with examples." },
+      { kind: "new", text: "**Shift-Enter** on a link opens that note." },
+      { kind: "improved", text: "New keys: **Alt/⌥-Space** opens the command palette, **Alt/⌥-F** searches your notes and **Ctrl-`** switches live preview on and off." },
+      { kind: "improved", text: "**New** opens a menu: a note, one from a template, or a folder. Drag the note list's edge to make it wider or narrower." },
+      { kind: "improved", text: "A note's view options, Share and the rest are together in its **⋮ menu**, each with an icon." },
+      { kind: "improved", text: "The links panel moves **under the note** when you close it, like on a phone." },
+      { kind: "improved", text: "A note given a name you already use gets \" - 1\" (or the next free number)." },
+      { kind: "improved", text: "A tidier [[ link menu, and the Shed Notes title fits in the note list." },
+      { kind: "fixed", text: "The collapsed sidebar no longer shows two expand buttons." },
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-10-20",
     title: "Shed Notes and Score Writer",
@@ -40,12 +61,9 @@ export const RELEASES: Release[] = [
     changes: [
       { kind: "new", text: "**Shed Notes**: notes in markdown that look finished as you type. Link notes with [[ ]] and see what links back, use folders and #tags, and search everything." },
       { kind: "new", text: "Attach notes to a **routine on a day**, a **day**, a **tune** or your **lessons** with Add notes — a new note, or one you already have." },
-      { kind: "new", text: "**Vim keys** in notes if you want them, and settings for your own keys, vim mappings and commands — as a page of switches or as the JSON file." },
-      { kind: "new", text: "**Pictures and files in notes:** paste a picture or drop files into a note and they're saved to your Files and shown right there. **File** above a note puts in anything from your Files: PDFs, recordings, audio and video play in the note." },
-      { kind: "new", text: "**Word suggestions** as you type in notes: up to four words that finish what you're typing, yours first (Enter or Tab fills one in). Off until you turn it on in Shed Notes' settings." },
+      { kind: "new", text: "**Vim keys** in notes if you want them, and a settings file for your own keys, vim mappings and commands." },
       { kind: "new", text: "**Score Writer**: write music in notation — treble or bass clef, any key and time, notes typed or clicked onto the staff, chord symbols — and play it back." },
       { kind: "new", text: "Put **notation in any note**: it's a Score Writer score, shown right in the note." },
-      { kind: "new", text: "**Templates** for notes, with blanks you fill in (in the title too) — start a note from one with [[, the command palette or an empty note." },
       { kind: "new", text: "**Share a note** with other people by username (they can view or edit), or by link — just for them, or for anyone with it." },
       { kind: "new", text: "Save a note as a **PDF**, **export** all your notes as Markdown files, and **import** them again (or any folder of Markdown notes)." },
       { kind: "improved", text: "**Lesson notes** are written in the Shed Notes editor, notation included, and students see it all." },
