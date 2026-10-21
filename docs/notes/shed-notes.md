@@ -496,3 +496,62 @@ Export as PDF markup (files in order, code block untouched). `tsc`, eslint, Conv
 **Not verified:** a real upload to Convex signed in, the shared-link page / shared-with-you / lesson student
 seeing someone else's picture on the real backend, real clipboard pastes from other apps (only synthetic
 paste events), iOS/Android paste, very large pictures.
+
+## Share the notes a note links to (2026-10-20, on `preview`)
+
+Jack: "an option when sharing a page to also share the pages linked in the page your sharing". Work moved
+to `preview` (fast-forwarded to `feat/shed-notes`, which had all the Shed Notes work).
+
+- **One switch in Share** ("Also share the N notes it links to"; shown when the note links to notes that
+  exist, or it's on), stored as `shedNotes.shareLinked`. "Also shared: A, B" lists them when on.
+- **Dynamic, not copied shares:** `noteAccess` (shedNotes.ts) now also grants access when a note of the
+  same owner that's shared with you directly has `shareLinked` and links to this note — you get that
+  note's role (Can edit → can edit the linked notes too). One level only. It follows the text: linking a
+  note later shares it; unlinking, turning the switch off, or removing the person ends it — no rows to
+  clean up. Every place that checks `noteAccess` (get, save, scores and files in notes) follows.
+- **Link:** `/note/<token>?n=Title` opens a linked note through the shared note's link
+  (`byLink({token, note})`, `linkedThrough`), same "invited"/"anyone" rule as the note itself. `byLink`
+  returns `linked` (title keys that open from this page: the link's note and its linked notes that
+  exist) and `parent`. `SharedNotePage` turns those [[links]] into real links (`NoteDocument`'s
+  `linkHref`/`onLink`; router push), shows a back button to the shared note, and mutes links it can't
+  open (`.note-doc-wikilink-closed`). Scores/files in a linked note use `{token, noteId}`;
+  `sharedInNote` accepts that pair.
+- **In Shed Notes:** `sharedWithMe` lists linked notes too, with `via` (the linking note's title; shown
+  as "linked from X", and no "Remove from my list" since it comes with that note) and `ownerId`.
+  Clicking a [[link]] in someone else's note opens **their** note when it's shared with you (else yours
+  by that name, as before); `shedNotes.get` returns `ownerId` for this.
+- Help (Share), changelog 0.10.1, privacy updated.
+
+**Verified** in the harness (mock backend; a temporary `next dev` on port 3100, since the usual dev
+server wasn't running, stopped afterwards): the switch and its stored value, "linked from" in Shared with
+me, clicking a link in a shared note opening the owner's note, the link page (linked notes clickable,
+a missing note and an unshared note not, child page with back button, back via its link), 390 px dark.
+`tsc`, eslint, Convex push to dev. **Not verified:** the real backend with two accounts (access through a
+linked note, editing it, the "invited" link signed in/out), and performance for someone with many shares
+(`noteAccess` now reads the viewer's shares when there's no direct one).
+
+### Follow-up: all the way down (2026-10-20)
+
+Jack: "it should share ALL the sub pages including sub pages of sub pages". `shareLinked` now covers every
+note the shared note **leads to** through links, at any depth: `reachableNotes(ctx, root, stopAt?)` in
+`shedNotes.ts` walks the owner's notes breadth-first through `links` (by `by_user_title`, cycles and
+missing notes skipped, never another account's notes, capped at `MAX_SHARED_LINKED` = 300 notes) and
+stops early when looking for one note. `sharedAlong(parent, note)` and `linkedThrough` use it, so
+`noteAccess`, the link page (`byLink`'s `linked` = every reachable note), "Shared with me" (`via` = the
+shared note) and scores/files in those notes (`sharedInNote`) all follow. The switch reads "Also share
+linked notes (N)" with N counting every reachable note, listed under it. Checked with a Node script
+against the real `reachableNotes`/`sharedAlong`/`linkedThrough` (a fake db: depth 3, a loop, a missing
+link, another owner's note with the same title, switch off) and in the harness (a sub-sub-note opening from
+the link page, the dialog listing all three). Not checked on the real backend with two accounts; a note
+web of hundreds of notes costs one index read per note on every access check through it.
+
+### Follow-up: every level or one level (2026-10-20)
+
+Jack: "make an option to share all sub pages or just one level". `shedNotes.shareDepth` (`"one"`; missing =
+every level, so notes already switched on keep going all the way down). `reachableNotes` stops after the
+first level's links when it's `"one"`, so access, the link page, Shared with me and embeds all follow.
+In Share, once the switch is on, a `Select` under it: "Every level (their linked notes too)" / "One level
+(only notes this links to)" (`setShareLinked({on, depth})`); the count in the switch's label and the
+"Also shared" list follow the choice. Checked with the Node script (one level → only direct links;
+deeper notes refused by `sharedAlong`/`linkedThrough`) and in the harness at 390 px dark (3 → 2 notes,
+Private dropped, stored `"one"`).

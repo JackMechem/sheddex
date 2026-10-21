@@ -3,7 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { hiddenSessions } from "./lessons";
-import { noteAccess } from "./shedNotes";
+import { noteAccess, sharedAlong } from "./shedNotes";
 
 /**
  * Score Writer's scores — written with the shared notation editor, private to their owner, and
@@ -82,6 +82,12 @@ export async function sharedInNote(ctx: QueryCtx, userId: Id<"users"> | null, ow
       .withIndex("by_link_token", (q) => q.eq("link.token", token))
       .first();
     if (note?.link?.access === "invited" && !(await noteAccess(ctx, note, userId))) return false;
+    // A note the link's note links to and shares (`/note/<token>?n=Title`).
+    if (note && noteId && noteId !== note._id) {
+      const id = ctx.db.normalizeId("shedNotes", noteId);
+      const linked = id ? await ctx.db.get(id) : null;
+      note = linked && (await sharedAlong(ctx, note, linked)) ? linked : null;
+    }
   } else if (noteId) {
     const id = ctx.db.normalizeId("shedNotes", noteId);
     note = id ? await ctx.db.get(id) : null;

@@ -458,7 +458,9 @@ input[type="range"].slider.slider-reward:not(:disabled):active::-moz-range-thumb
 .note-doc table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
 .note-doc th, .note-doc td { border: 1px solid color-mix(in oklab, var(--foreground) 15%, transparent); padding: 0.4em 0.7em; text-align: left; vertical-align: top; }
 .note-doc th { font-weight: 700; background: var(--surface); }
-.note-doc-wikilink { display: inline-block; border-radius: 999px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; padding: 0 0.55em; font-size: 0.95em; }
+.note-doc-wikilink { text-decoration: none !important; display: inline-block; border-radius: 999px; background: color-mix(in oklab, var(--accent) 15%, transparent); color: var(--accent); font-weight: 600; padding: 0 0.55em; font-size: 0.95em; }
+.note-doc a.note-doc-wikilink-open:hover { background: color-mix(in oklab, var(--accent) 25%, transparent); }
+.note-doc-wikilink-closed { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 15%, transparent); }
 .note-doc-score, .note-doc-abc, .note-doc .note-file { break-inside: avoid; margin: 1em 0; }
 .note-doc-abc svg { max-width: 100%; }
 .note-doc-abc .cm-abc-empty, .note-doc-abc .cm-abc-warning { font-size: 12px; color: var(--muted); }
