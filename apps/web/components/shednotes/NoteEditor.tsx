@@ -1,29 +1,35 @@
 "use client";
 
-import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxHighlighting } from "@codemirror/language";
 import { type Diagnostic, linter } from "@codemirror/lint";
 import { search, searchKeymap } from "@codemirror/search";
-import { Compartment, EditorState, Prec } from "@codemirror/state";
+import { Compartment, EditorState, Prec, Transaction } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers, placeholder as placeholderExt } from "@codemirror/view";
 import { getCM, vim } from "@replit/codemirror-vim";
-import { useEffect, useId, useRef } from "react";
+import { useConvexAuth, useMutation } from "convex/react";
+import { useEffect, useId, useRef, useState } from "react";
+import { api } from "@jam-practice/convex/_generated/api";
 import { titleKey } from "@jam-practice/core/shedNotes";
+import { errorText, uploadFile } from "@/lib/files";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteActions, runCommand } from "./commands";
-import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion } from "./editorSetup";
+import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion, wordCompletion, wordCompletionFacet } from "./editorSetup";
 import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview";
-import ScoreEmbeds from "./ScoreEmbeds";
+import { tables } from "./tables";
+import ScoreEmbeds, { type ScoreContext } from "./ScoreEmbeds";
 import { ownerFacet } from "./embedStore";
-import { applyVimConfig, registerVimEditor } from "./vimSetup";
+import FileEmbeds, { FilePickDialog } from "./FileEmbeds";
+import { embedText, fileActionsFacet, fileEmbeds, insertOnOwnLine, uploadIntoNote } from "./fileEmbedSetup";
+import { applyVimConfig, registerVimEditor, vimMappingWait } from "./vimSetup";
 
 /**
  * The Shed Notes editor (CodeMirror 6, the editor Obsidian is built on): markdown with live
- * preview, `[[` suggestions, notation blocks, search (Ctrl/⌘-F), and vim when the settings file
- * turns it on. `language="json"` is the settings file itself. The text is only read when it
+ * preview, `[[` suggestions, notation blocks, files (paste or drop a picture: it goes to your
+ * Files and shows in the note), search (Ctrl/⌘-F), and vim when the settings file turns it on. `language="json"` is the settings file itself. The text is only read when it
  * mounts — give it a `key` per note.
  */
 export default function NoteEditor({
@@ -39,8 +45,10 @@ export default function NoteEditor({
   lint,
   className = "",
   readOnly = false,
-  lessonId,
+  scoreContext,
   bottomSpace = "40vh",
+  fontFamily,
+  syncText,
 }: {
   initialText: string;
   language?: "markdown" | "json";
@@ -56,10 +64,15 @@ export default function NoteEditor({
   className?: string;
   /** Shown, not edited (a student reading lesson notes). */
   readOnly?: boolean;
-  /** Lesson notes: the scores in them are the teacher's, read through this lesson. */
-  lessonId?: string;
+  /** Whose scores can be shown, and through what: a lesson's notes, a shared note, a note's link. */
+  scoreContext?: ScoreContext;
   /** Room below the last line (a full-height editor scrolls past the end; one in a page doesn't). */
   bottomSpace?: string;
+  /** This note's font (a CSS font-family), else the site's. */
+  fontFamily?: string;
+  /** The text as saved, when nothing typed here is waiting to be saved: if someone else changed
+      it (a shared note, another tab), the editor takes their version. */
+  syncText?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const owner = useId();
@@ -67,7 +80,14 @@ export default function NoteEditor({
   const actionsRef = useRef(actions);
   const onChangeRef = useRef(onChange);
   const lintRef = useRef(lint);
-  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes", Compartment> | null>(null);
+  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes" | "words" | "files", Compartment> | null>(null);
+
+  // Files: pasted or dropped ones go up to your Files (signed in, in a note you can write in).
+  const { isAuthenticated } = useConvexAuth();
+  const canUpload = isAuthenticated && !readOnly && language === "markdown";
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const createFile = useMutation(api.files.create);
+  const [picking, setPicking] = useState<EditorView | null>(null);
 
   useEffect(() => {
     actionsRef.current = actions;
@@ -86,13 +106,15 @@ export default function NoteEditor({
       look: new Compartment(),
       attrs: new Compartment(),
       notes: new Compartment(),
+      words: new Compartment(),
+      files: new Compartment(),
     };
     compartments.current = c;
     const getActions = () => actionsRef.current;
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, autocompletion({ override: [wikilinkCompletion], icons: false }), actionsFacet.of(getActions), ownerFacet.of(owner)];
+        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion, wordCompletion], icons: false, optionClass: (c) => (c.type ? `cm-completion-${c.type}` : "") }), actionsFacet.of(getActions), ownerFacet.of(owner), fileEmbeds];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -101,6 +123,10 @@ export default function NoteEditor({
           // Your keybindings first and highest, so they win over vim's own keys (like Obsidian).
           c.keys.of([]),
           c.vim.of([]),
+          // Tab also takes a suggestion (Enter does already); with none open it does what it did.
+          Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+          c.words.of([]),
+          c.files.of([]),
           history(),
           drawSelection(),
           closeBrackets(),
@@ -120,7 +146,7 @@ export default function NoteEditor({
           EditorView.theme({ ".cm-content": { paddingBottom: bottomSpace } }),
           ...lang,
           EditorView.updateListener.of((u) => {
-            if (u.docChanged) onChangeRef.current(u.state.doc.toString());
+            if (u.docChanged && !u.transactions.some((t) => t.annotation(Transaction.remote))) onChangeRef.current(u.state.doc.toString());
           }),
         ],
       }),
@@ -147,19 +173,23 @@ export default function NoteEditor({
     applyVimConfig(config);
     const keys = config.keybindings.map((b) => ({
       key: b.key,
-      preventDefault: true,
+      // Keys with Ctrl/Alt/⌘ never reach the browser (Ctrl-P mustn't print); a plain or Shift key
+      // that does nothing here (Shift-Enter off a link) still types as usual.
+      preventDefault: /(^|-)(mod|ctrl|c|meta|cmd|m|alt|a)-/i.test(b.key),
       run: (v: EditorView) => runCommand(b.command, { view: v, actions: actionsRef.current }),
     }));
     view.dispatch({
       effects: [
-        c.vim.reconfigure(config.vimMode && !readOnly ? vim({ status: true }) : []),
+        c.vim.reconfigure(config.vimMode && !readOnly ? [vimMappingWait, vim({ status: true })] : []),
         c.keys.reconfigure(Prec.highest(keymap.of(keys))),
         c.live.reconfigure(liveFacet.of(language === "markdown" && config.livePreview)),
+        c.words.reconfigure(wordCompletionFacet.of(language === "markdown" && config.wordCompletion)),
         c.gutter.reconfigure(config.lineNumbers || language === "json" ? lineNumbers() : []),
         c.look.reconfigure(
           EditorView.theme({
             ".cm-content": {
               fontSize: `${config.fontSize}px`,
+              ...(fontFamily && language === "markdown" ? { fontFamily } : {}),
               ...(config.readableLineLength && language === "markdown" ? { maxWidth: "46rem", marginInline: "auto", width: "100%" } : {}),
               ...(language === "json" ? { fontFamily: "var(--font-mono, ui-monospace), monospace", fontSize: `${Math.max(12, config.fontSize - 3)}px` } : {}),
             },
@@ -174,7 +204,7 @@ export default function NoteEditor({
         ),
       ],
     });
-  }, [config, language, readOnly]);
+  }, [config, language, readOnly, fontFamily]);
 
   // Vim's status bar is drawn as a floating pill (styles in editorSetup.ts): the editor carries the
   // mode as data-vim-mode, and the mode label gets a class to restyle.
@@ -197,6 +227,42 @@ export default function NoteEditor({
     if (label) label.className = "cm-vim-mode";
   }, [config.vimMode, readOnly]);
 
+  // Someone else's saved changes → this editor (only the part that changed, so the cursor stays).
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || syncText === undefined) return;
+    const doc = view.state.doc.toString();
+    if (doc === syncText) return;
+    let from = 0;
+    while (from < doc.length && from < syncText.length && doc[from] === syncText[from]) from++;
+    let end = 0;
+    while (end < doc.length - from && end < syncText.length - from && doc[doc.length - 1 - end] === syncText[syncText.length - 1 - end]) end++;
+    view.dispatch({
+      changes: { from, to: doc.length - end, insert: syncText.slice(from, syncText.length - end) },
+      annotations: [Transaction.remote.of(true), Transaction.addToHistory.of(false)],
+    });
+  }, [syncText]);
+
+  // What the editor can do with files (none signed out or read-only).
+  useEffect(() => {
+    const view = viewRef.current;
+    const c = compartments.current;
+    if (!view || !c || language !== "markdown") return;
+    const actions = canUpload
+      ? {
+          upload: async (file: File, name: string) => {
+            try {
+              return await uploadFile(file, () => generateUploadUrl(), (args) => createFile(args), undefined, name);
+            } catch (e) {
+              throw new Error(errorText(e, `Couldn't upload ${name}.`));
+            }
+          },
+          pick: (v: EditorView) => setPicking(v),
+        }
+      : null;
+    view.dispatch({ effects: c.files.reconfigure(fileActionsFacet.of(actions)) });
+  }, [canUpload, language, generateUploadUrl, createFile]);
+
   // The note list → link colours and `[[` suggestions.
   useEffect(() => {
     const view = viewRef.current;
@@ -208,7 +274,28 @@ export default function NoteEditor({
   return (
     <>
       <div ref={host} className={`min-h-0 ${className}`} />
-      {language === "markdown" && <ScoreEmbeds owner={owner} lessonId={lessonId} />}
+      {language === "markdown" && <ScoreEmbeds owner={owner} context={scoreContext} />}
+      {language === "markdown" && <FileEmbeds owner={owner} context={scoreContext} />}
+      {picking && (
+        <FilePickDialog
+          onPick={(ref, name) => {
+            const v = picking;
+            setPicking(null);
+            insertOnOwnLine(v, v.state.selection.main.head, embedText(name.replace(/\.\w+$/, ""), ref));
+            v.focus();
+          }}
+          onUpload={(files) => {
+            const v = picking;
+            setPicking(null);
+            void uploadIntoNote(v, files, v.state.selection.main.head);
+            v.focus();
+          }}
+          onClose={() => {
+            picking.focus();
+            setPicking(null);
+          }}
+        />
+      )}
     </>
   );
 }

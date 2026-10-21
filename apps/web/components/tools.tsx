@@ -443,6 +443,45 @@ export function FileIcon({ className }: { className?: string }) {
 }
 
 /** A page with lines — a PDF or document. */
+/** A folder (closed). */
+export function FolderIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+
+/** A folder, open. */
+export function FolderOpenIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 17V7a2 2 0 012-2h4l2 2h7a2 2 0 012 2v1" />
+      <path d="M3 17l2.2-6.2A2 2 0 017.1 9.5H20a1.5 1.5 0 011.4 2l-2 5.6A2 2 0 0117.5 19H5a2 2 0 01-2-2z" />
+    </svg>
+  );
+}
+
+/** A folder with a plus: new folder. */
+export function FolderPlusIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <path d="M12 10.5v5M9.5 13h5" />
+    </svg>
+  );
+}
+
+/** A page with a plus: new note. */
+export function NotePlusIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5M12 11v6M9 14h6" />
+    </svg>
+  );
+}
+
 /** Score Writer: a staff with a note on it. */
 export function ScoreIcon({ className }: { className?: string }) {
   return (
@@ -805,6 +844,24 @@ export function SparkIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
       <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" />
+    </svg>
+  );
+}
+
+export function KeyboardIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8" />
+    </svg>
+  );
+}
+
+export function CommandIcon({ className }: { className?: string }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M9 6v12M15 6v12M6 9h12M6 15h12" />
+      <path d="M9 9H6.5A2.5 2.5 0 1 1 9 6.5zM15 9h2.5A2.5 2.5 0 1 0 15 6.5zM9 15H6.5A2.5 2.5 0 1 0 9 17.5zM15 15h2.5a2.5 2.5 0 1 1-2.5 2.5z" />
     </svg>
   );
 }

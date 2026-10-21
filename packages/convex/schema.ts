@@ -667,12 +667,53 @@ export default defineSchema({
     body: v.string(),
     links: v.array(v.string()),
     tags: v.array(v.string()),
+    /** How this note is shown: full width (else your general setting), and its font (an id from
+        the web app's FONTS; missing = the site's font). */
+    view: v.optional(v.object({ fullWidth: v.optional(v.boolean()), font: v.optional(v.string()) })),
+    /** Sharing by link: `token` is in the link; "invited" = only people it's shared with (signed
+        in), "anyone" = anyone with the link can view. Missing = no link. */
+    link: v.optional(v.object({ token: v.string(), access: v.union(v.literal("invited"), v.literal("anyone")) })),
+    /** The template it was made from (or last had applied), if any. */
+    templateId: v.optional(v.id("shedNoteTemplates")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_user_title", ["userId", "titleKey"])
+    .index("by_link_token", ["link.token"])
     .searchIndex("search_body", { searchField: "body", filterFields: ["userId"] }),
+
+  /** A Shed Note shared with another account: read ("Can view") or write ("Can edit"). */
+  shedNoteShares: defineTable({
+    noteId: v.id("shedNotes"),
+    ownerId: v.id("users"),
+    userId: v.id("users"),
+    role: v.union(v.literal("read"), v.literal("write")),
+    createdAt: v.number(),
+  })
+    .index("by_note", ["noteId"])
+    .index("by_user", ["userId"])
+    .index("by_owner", ["ownerId"]),
+
+  /** Shed Notes folders that exist on their own (so a folder can be empty). A note's `folder`
+      also makes its folders exist; this table holds the ones made with New folder. */
+  /** Shed Notes templates: not notes themselves. `title` and `body` can hold {{variables}}, asked
+      for when a note is made from the template. */
+  shedNoteTemplates: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    /** The new note's title, with {{variables}}; empty = ask for a title. */
+    title: v.string(),
+    body: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  shedNoteFolders: defineTable({
+    userId: v.id("users"),
+    path: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   /** A Shed Note attached to something outside Shed Notes: a day, a routine on a day, or a tune
       (`target` from `packages/core/shedNotes.ts`'s `targetKey`). `label` is what it was called

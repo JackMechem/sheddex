@@ -94,6 +94,16 @@ export default function CreditsPage() {
         </p>
       </LegalSection>
 
+      <LegalSection title="Word list">
+        <p>
+          Shed Notes&apos; word suggestions come from{" "}
+          <LegalLink href="http://wordlist.aspell.net/">SCOWL</LegalLink> (Spell Checker Oriented
+          Word Lists), copyright 2000–2016 by Kevin Atkinson, used under its permissive license (the
+          full notice is at the top of the word list file soniroll serves), with some music words
+          added by soniroll.
+        </p>
+      </LegalSection>
+
       <LegalSection title="Typeface">
         <p>
           Chord Charts sets chord symbols in{" "}

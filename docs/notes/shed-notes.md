@@ -136,3 +136,363 @@ and both panels hiding (with the stored flags). Not on a real phone.
   (capped at 40% of the height, scrolling). The toolbar wraps, "Saved" and the folder path hide
   when it's tight, and the title is an auto-growing textarea that wraps instead of being cut off.
   Before this, at about 1400 px with the sidebar and note list open, the toolbar ran over the links.
+
+**Tables, links, page pills (2026-10-20):**
+- Tables (`components/shednotes/tables.ts`): a `StateField` finds GFM tables by lines (skipping
+  code fences) and draws each as an HTML table (alignment from the dashes line; bold, italic,
+  strikethrough, code and links in cells, escaped first) while the cursor is elsewhere; clicking a
+  cell puts the cursor in it. With the cursor in it, the source lines get `cm-table-src` (fixed-
+  width, nothing adding width). Tab / Shift+Tab (`Prec.high`) re-pads every column
+  (`formatTable`) and selects the next / previous cell's text; Tab in the last cell adds a row.
+  "Table" in the formatting row (`editor:insert-table`) inserts a 3-column starter.
+- Links: a link opens on a plain click whenever it's drawn as a link (`data-live`), Ctrl/⌘-click
+  any time — before, a click near where the cursor was did nothing. Bare `https://…` (GFM `URL`)
+  and `<…>` autolinks are links too. `openHref`: web in a new tab, site paths ("/tunes") through
+  `NoteActions.openPath` (the router), mailto/tel as they are.
+- `[[note]]` links and links to site pages are `cm-page-pill`: accent-tinted rounded pills with a
+  page icon (a CSS mask); a missing note is a dashed pill.
+- Checked in the editor harness: the table drawn with its alignments, all five kinds of link
+  opening the right way with the cursor on their line, cell click → source, Tab tidying and
+  selecting, a new row from the last cell. Not on a phone.
+
+**Keys for everything, and a search menu (2026-10-20):**
+- `DEFAULT_CONFIG.keybindings` now gives every command a key (40; checked: none missing, no
+  duplicates). The settings file's `keybindings` are merged on top: a key listed there replaces
+  that key's built-in command, `"command": ""` turns it off — so files written before keep
+  getting new built-in keys. Keys show as "⌘⇧F" / "Ctrl+Shift+F" (`keyLabel`, `keysFor` in
+  `commands.ts`) in the palette, the Reference and the buttons' tooltips. Browser-reserved keys
+  (Ctrl-N/T/W, Ctrl-Shift-Q, Ctrl-1…9) are avoided; headings are Ctrl/⌘-Alt-1…6.
+- New commands: `app:search`, `view:toggle-note-list`, `view:toggle-links-panel`.
+- Search menu (`NoteSearch.tsx`): `/` outside a note (a capture-phase listener that stops the
+  site's tool search on this page; the tool search is still in the sidebar) or Ctrl/⌘-Shift-F.
+  Titles, folders and #tags match at once, text through `shedNotes.search`, which now returns
+  the excerpt around the first matching word; matches highlighted. A search button sits by the gear.
+- Checked in the full-page harness: / opens it (and types a slash inside a note), a text match
+  opens its note, Ctrl+Shift+F from the editor, heading / bullet / numbered / quote / table /
+  rename / note-list keys, palette key labels.
+
+**Create a note from a link (2026-10-20):** typing `[[` with a name no note has adds a last
+suggestion, **Create “…”** (`wikilinkCompletion`, type "create", styled by `optionClass`): it
+inserts the link and makes the note (`NoteActions.createLinkedNote`) in the current note's folder,
+staying on the current note. Clicking a link to a missing note now also makes it in the current
+note's folder (was the top level). Lesson notes don't offer it (no `createLinkedNote` there).
+Checked in the harness: `[[Bass lines` → Create → note in "Practice", link inserted, still on the
+same note; clicking a dashed link made "Ear training plan" in "Practice" and opened it.
+
+**Per-note width and font (2026-10-20):** `shedNotes.view` ({ fullWidth?, font? }), set by
+`shedNotes.setView` (null clears; doesn't touch `updatedAt`). The note pane's toolbar has a font
+`Select` (the site's `FONTS`, or "Site font") and a full-width button (`view:toggle-full-width`,
+Ctrl/⌘-Alt-F); the note's choice overrides the general `readableLineLength`, and the font applies
+to the title and the editor (`NoteEditor`'s `fontFamily`). Checked in the harness: full width and
+Lora stick to one note and not another, Ctrl+Alt+F toggles.
+
+**Folders: empty folders, clearer tree, drag and drop (2026-10-20):**
+- `shedNoteFolders` (userId, path): folders made with New folder, so they can be empty (account
+  deletion cascades it). The tree is these plus every note's `folder`. `shedNotes.createFolder`,
+  `renameFolder` (also a move: everything inside goes along, subfolders and notes; refuses to put
+  a folder inside itself), `deleteFolder` (what's inside moves up to the parent; no note is
+  deleted), `folders` (the list).
+- `NoteList.tsx` rewritten: folder icons (open/closed), bold names, counts, a guide line down
+  each folder's contents, "Empty" for an empty folder; on every folder row New note here, New
+  folder inside and ⋮ (rename — name only; move — the folder to go into; delete). New folder no
+  longer makes a note.
+- Drag and drop (HTML5, mouse): notes onto folders, folders into folders, and onto the "Drop here
+  for the top level" strip at the bottom. Phones use Move in the ⋮ menus.
+- The note toolbar's font menu became an "Aa" button (it was wrapping the toolbar).
+- Checked in the harness: empty folder, subfolder and note from the row buttons, a note dragged
+  into a folder, a folder (with its note) into another, a folder into its own subfolder refused,
+  a note to the top level, deleting a folder moving its contents up. Not checked with real mouse
+  drags (Playwright's dragTo is flaky on this list; the HTML drag events were checked directly).
+
+**Sharing, PDF, export and import (2026-10-20):**
+- **Sharing** (`packages/convex/shedNoteShares.ts`, table `shedNoteShares` {noteId, ownerId,
+  userId, role read|write}). `shedNotes.noteAccess(ctx, note, userId)` → "owner" | "write" | "read"
+  | null is the one check: `get` returns shared notes with `role` and `owner` (username) and hides
+  the owner's folder and attachments; `save` needs owner or write; rename, move, setView, delete
+  and all sharing calls stay owner-only. `suggest` lists **public** profiles only; `shareWith`
+  takes any exact username (private accounts too). Max 50 people per note. `leave` takes a shared
+  note out of your list. Deleting a note deletes its shares; account deletion cascades both ways
+  (`by_owner`, `by_user`).
+- **Links:** `shedNotes.link` {token, access "invited" | "anyone"}, index `by_link_token`
+  (`link.token`). Off → on makes a new token; switching invited ↔ anyone keeps it. `/note/<token>`
+  (`SharedNotePage`) shows the note as a page (`byLink`: ok / gone / sign-in / not-shared), with
+  "Edit/Open in Shed Notes" for people who have access, and Save as PDF. A link is always view
+  only; editing is only for people added with Can edit.
+- **Scores in shared notes:** `scores.get` takes `{ lessonId? noteId? token? }` (`ScoreContext`,
+  passed as `NoteEditor`'s `scoreContext`); a score shows if it's the note owner's and its id is in
+  that note's text, and the viewer can see the note. Collaborators get no Notation button (a score
+  they made would be theirs, invisible to the owner).
+- **UI:** `ShareDialog.tsx` (username box with suggestions and arrow keys, Can view / Can edit per
+  person, ×, the link `Select` and Copy — turning the link on copies it). `NotePane`: owner-only
+  controls (people button, Aa, full width, rename, move, delete, links panel) hidden on shared
+  notes, a "@owner · can edit / view only" pill, read-only editor and no formatting bar for
+  view-only. `NoteList` has a "Shared with me" section (owner, role; ⋮ → Remove from my list).
+- **Live changes:** `NoteEditor` takes `syncText` (the saved body, passed only while nothing typed
+  is waiting to save); when it differs from the editor it applies just the changed span with
+  `Transaction.remote` (not re-saved, not in undo history). So a collaborator's saved edits (or
+  another tab's) show up. It's last-write-wins, not real-time merging: if two people type at once,
+  the later save wins.
+- **PDF:** CodeMirror only draws what's on screen, so printing the editor would lose most of a
+  long note. `NoteDocument.tsx` renders the note statically with `marked` (GFM tables and
+  checkboxes, `[[links]]` as pills, `==highlight==`; raw HTML is escaped, links limited to
+  http(s)/mailto/site paths, images to https) and the ```score / ```abc blocks as music.
+  `NotePrint.tsx` portals it to `<body>` as a full-screen page, waits for the music (`data-ready`,
+  max 6 s), sets `document.title` (the PDF's file name) and calls `window.print()`; print CSS in
+  `globals.css` (`.note-print`) hides everything else and prints dark on white whatever the theme.
+  Note ⋮ → Export as PDF (`note:export-pdf`, Ctrl/⌘-Alt-P) uses the editor's current text.
+- **Export all** (⤓ by the search, `app:export-all`, Ctrl/⌘-Alt-E): `exportAll` query →
+  `lib/exportNotes.ts` `notesZip` → `lib/zip.ts` `makeZip` (stored, CRC32, UTF-8 names; no
+  dependency). `soniroll notes/<folders>/<title>.md`, empty folders included, file names made safe
+  (`safeName`) with " (2)" on clashes, plus `soniroll-notes.json` (each file's exact title, folder,
+  view and dates).
+- **Import** (`ImportDialog.tsx`, `app:import`, Ctrl/⌘-Alt-I): a .zip or .md files, or a folder
+  (`webkitdirectory`). `readZip` handles stored and deflated (`DecompressionStream("deflate-raw")`)
+  zips. Each zip is read on its own; the shared top folder is dropped; with the metadata file the
+  titles/folders/fonts come back exactly, otherwise folders come from paths and titles from file
+  names; dot folders (`.obsidian`) and `__MACOSX` skipped. `shedNotes.importNotes` takes ≤100
+  notes per call (the client chunks, ~4 MB max), with `clash` skip / replace / copy ("Title - 1").
+  Score blocks keep their ids, so notation only comes back in the same account.
+- Checked: the zip writer with `unzip -t`; export → import round trip and a zip made by `zip -r`
+  (deflated, with `.obsidian`) through the real functions in Node; in the harness (fake backend):
+  sharing with a suggested public user and a typed private one, changing a role, the link
+  settings, a shared-with-me note (editable, owner controls hidden), the PDF view (no `<script>`,
+  no `javascript:` link, wikilink pill, ABC drawn, print called once), print media screenshot,
+  export download, importing two zips at once, `/note/<token>` at 390 (light) and 1440 (dark), no
+  overflow, no console errors. **Not checked:** anything against the real backend signed in
+  (two real accounts sharing, the "invited" link signed in/out), a real print dialog / PDF file,
+  folder picking in a real browser, Safari/Firefox.
+
+**Templates (2026-10-20):**
+- Table `shedNoteTemplates` {userId, name (unique per account, case-insensitive), title (the new
+  note's title with variables; empty = ask for a title), body} — **not notes**: not in the list,
+  links, search or export. `packages/convex/shedNoteTemplates.ts` (list, create, update, remove;
+  max 200). Account deletion cascades. `shedNotes.templateId` records the template a note was made
+  from / last had applied (`create` takes `templateId`; `setTemplate`).
+- Variables (`apps/web/lib/noteTemplates.ts`): `{{name}}` (spaces inside allowed, names match
+  case-insensitively, each asked once); built-ins `{{date}}` (YYYY-MM-DD), `{{time}}` (HH:mm) and
+  `{{title}}` (the new note's final title) fill themselves. `{{ }}` (empty) is left alone. Live
+  preview shows blanks as accent pills (`cm-template-var`).
+- `TemplatesPane.tsx` (current id `TEMPLATES_ID = "templates"`, opened from the Templates row at the
+  bottom of the note list, or `app:open-templates`, Ctrl/⌘-Alt-J): list + editor (name, title,
+  "Asked for: …", the body in `NoteEditor` with notation allowed). Autosaves ~0.7 s after typing.
+- `TemplateFillDialog.tsx` asks for the variables (plus a Title box when the template has no title
+  and it's a new note) and previews the filled title.
+- Ways in: (1) `[[` — `wikilinkCompletion` adds "New from “Name”" options in a Templates section
+  ranked above Notes, matched on the template name (`displayLabel` shows the long label); picking
+  one asks for the blanks, makes the note in the current folder and replaces the typed `[[…` with
+  `[[Title]]` (or inserts at the cursor if the text moved). (2) `note:new-from-template` (Alt-T):
+  pick a template in the palette; the new note is linked at the cursor if one of your notes is
+  open, else opened. Also "From template" in the list's toolbar and on the empty start screen
+  (phones have no keys). (3) An empty note of yours shows "Start from a template:" chips (6, then
+  More…; "Make a template" when there are none). (4) ⋮ → "Apply a template…" / "Change template
+  (now X)…" / `note:apply-template` (Alt-Shift-T): if the note has text, a ConfirmDialog warns it
+  will be deleted; then the editor's whole text is replaced (an ordinary edit, so it autosaves and
+  Ctrl-Z undoes it), the template recorded, and the note renamed if the template has a title.
+- Scores in a template are **copied** for each note made from it (`instantiate` in ShedNotes:
+  `scores.get` + `scores.create`), so editing the music in a note doesn't change the template.
+- Renaming a note already rewrote `[[Old]]` in all your notes (`shedNotes.rename`); it now rewrites
+  templates' text too. Not shared notes owned by others (they can't link to yours).
+- Checked in the harness (fake backend): making a template; `[[Les` → New from “Lesson” → blanks →
+  note "2026-10-20 lesson with Ella" made with the template's id and linked in place; Alt-T → palette
+  → note linked at the cursor; an empty note's chip applying the template (title renamed); Change
+  template warning then Replace; renaming "Scales" updating links in notes and in the template; 390
+  dark (Templates page, the fill sheet), no overflow or errors. Not checked against the real backend
+  signed in, or score copying with a real score.
+
+## 2026-10-20: the New menu, a resizable note list, a tidier `[[` menu
+
+- **+ New** in the note list opens a menu (New note · From a template… (only when there are
+  templates) · New folder) instead of the "From template" / "New folder" text buttons that sat
+  in the Folders/Recent row.
+- **Resizable note list** on wide screens (`ListResizer.tsx`): a handle in the gap, drawn like
+  the main sidebar's. Width is 220–520px, kept on this device as `listWidth` in the
+  `jam-practice-shed-notes-view` settings; dragging previews live and saves once on release; arrow
+  keys nudge it, double-click resets to 288. A plain click doesn't move it (it only saves after
+  a 3px drag). The heading shrinks to `lg:text-xl` so "Shed Notes" fits at the narrow end.
+- **`[[` suggestion menu restyled** (`editorTheme` in `editorSetup.ts`): padded list, rounded
+  rows, an icon per row (CSS masks of DocumentIcon / NotePlusIcon / PlusIcon, so they take theme
+  colours), the folder as a small pill on the right, no CodeMirror underline under section
+  headers (needs `!important`). The template rows lost their "template" detail (the section
+  says it); Create's detail is now "new note".
+- Verified in the esbuild harness: menu items, drag/click/double-click widths, reload keeps the
+  width, `[[` menu at 1300 light and 390 dark, no handle or overflow at 390. Not checked signed
+  in on the real backend.
+
+## 2026-10-20: duplicate titles get " - 1", " - 2"
+
+Jack asked that a new note whose title is taken gets " - 1" (or whichever number is free) instead
+of failing. `uniqueTitle` in `packages/core/shedNotes.ts` now numbers from 1 as "Title - N" (it
+was "Title 2"); `create`, `importNotes` (Keep both) and the `[[`/palette/template paths all go
+through it. Applying a template whose title clashes renames with `rename({ unique: true })`, which
+numbers the same way and shows a notice. A plain rename you type still refuses a taken title
+(so a typo doesn't silently become "X - 1"). Checked `uniqueTitle` with a Node script; tsc in
+web, convex and mobile; pushed to dev. Not clicked through in a browser.
+
+## 2026-10-20: the command palette's default key is Alt-Space
+
+Jack's pick. `Alt-Space` replaces `Mod-Space` in `DEFAULT_CONFIG.keybindings`; `Mod-p` stays.
+`matchesKey` now reads Space from `e.code` too, because Option-Space on a Mac types a no-break
+space (`e.key` isn't " "). On Windows the system may grab Alt-Space for the window menu; Ctrl-P
+still works there. Help text updated. Checked in the harness (Chromium on Linux): Alt+Space opens
+the palette from the list and from inside the editor without typing a space; Ctrl+Space no
+longer does. Not tried on a Mac or Windows.
+
+Same day, also Jack's pick: search (`app:search`) defaults to `Alt-f` instead of `Mod-Shift-f`
+(`/` outside a note still works). Option-F on a Mac types "ƒ", so it matches via `e.code` (KeyF).
+Checked in the harness (opens from the list and inside the editor, no text typed). Not checked:
+whether Chrome on Windows/Linux lets the page take Alt-F before its own menu.
+
+Same day: **Shift-Enter** also follows the link under the cursor (`editor:follow-link`, next to
+Mod-Enter). The editor's keymap had `preventDefault: true` on every binding, which would have
+swallowed Shift-Enter everywhere; now only keys with Ctrl/Alt/⌘ always stop the browser, and a
+plain/Shift key whose command does nothing falls through (Shift-Enter off a link makes a new
+line). Checked in the harness: on `[[Scales]]` it opens Scales; at the end of a line it adds a
+line. Not checked in vim mode.
+
+## 2026-10-20: the note toolbar folded into ⋮
+
+Jack asked for the note header's Preview/Source switch, Share, Vim switch, font (Aa) and full
+width to move into the ⋮ menu, and for every ⋮ item to have an icon. The header is now just
+back/forward, the save state, ⋮ and the links-panel button. The menu, in groups: Live preview ✓,
+Vim keys ✓, Line numbers ✓, Full width ✓ (640px+ only), Font: X… (opens the font list in its
+place, each font's "Aa" drawn in that font) · Share…, Rename, Move to folder, Apply/Change
+template…, Export as PDF · Command palette, Open a note…, Settings file · Delete note. Shortcut
+hints show at the end (first key only, none under 640px).
+
+`ContextMenu` gained optional `checked` (a ✓, role menuitemcheckbox), `hint`, `divider` and a
+`width` on `MenuState`; it scrolls when taller than the window, and now closes *before* running
+the item so an item can open a submenu. Other menus look the same. New icons in `tools.tsx`:
+`KeyboardIcon`, `CommandIcon`. Checked in the harness at 1300 light and 390 dark (Vim toggles
+from the menu, font list picks Lora). Not checked signed in.
+
+## 2026-10-20: links under the note when the panel is closed; Ctrl-` for live preview
+
+- The right-hand panel button no longer hides the links panel: closed, the panel moves under the
+  note (as on a phone), lined up with the note's text column (unless full width), up to 35% of
+  the height with its own scroll. The button reads "Move the links under/beside the note"; the
+  `view:toggle-links-panel` command's name matches. Same stored `linksHidden` setting.
+- Live preview's default key is `Ctrl-`` ` (Ctrl on a Mac too, since ⌘-` switches windows),
+  replacing Mod-e. Checked in the harness: toggles inside the editor (no backtick typed) and
+  outside it.
+
+## 2026-10-20: word suggestions, and a settings page in front of the JSON
+
+**Word suggestions** (`wordCompletion`, off by default; `view:toggle-word-completion`):
+`wordCompletion` in `editorSetup.ts` is a second CodeMirror completion source next to the `[[`
+one. It offers words (4+ letters) from the open note — skipping fenced code/notation blocks — and
+from your note titles, ranked by how often they come up, once 2 letters of a word are typed. Never
+inside `[[`, after `#`, or inside code, URLs or HTML (syntax-tree check). Word rows have no icon
+(`cm-completion-word`); optionClass is now `cm-completion-${type}`. Enter accepts (CodeMirror's
+completion keymap); a `Tab → acceptCompletion` keymap at highest precedence takes one too, and
+falls through to tables/indent when none is open. A `words` compartment carries the setting.
+
+**Settings page**: the gear now opens "Settings" with two tabs over the same file. *Settings*
+(`SettingsForm.tsx`): switches (live preview, word suggestions, vim, line numbers, readable line
+length, spellcheck), a text size slider, a searchable list of every command with its keys
+(pencil records a key — needs Ctrl/Alt/⌘, an F key or Shift-Enter; Esc stops; warns when it takes
+a key from another command; × removes the key; ↺ goes back to the built-in), and vim leader,
+mappings (a textarea, one per line) and a read-only list of :commands. *JSON*: the file as before,
+with Reference and the problems list. Every form change rewrites the file through helpers in
+`shedNotesConfig.ts` (`setConfigValue`, `setVimValue`, `setCommandKey`, `resetCommandKey`), so it
+reads as if typed by hand: a rebind turns the built-in keys off (`"command": ""`) and adds the
+new one. When the JSON doesn't parse, the form says so and changes nothing.
+
+Gotcha for tests: the JSON editor only draws the lines on screen, so check the stored settings
+(`__db.settings`), not the editor's text. Verified in the harness: suggestions on/off, Enter and
+Tab fill in, none inside `[[`, none from an abc block; switching on from the form; recording
+Alt-L for live preview saves and works; 390 dark has no overflow. Not checked signed in.
+
+Same day, reworked after Jack's feedback ("only works for words already on the page… figure out
+what word I'm typing… like 4"): suggestions now finish the word from a **dictionary** too. Up to
+four, in order: your words (this note minus code blocks, plus note titles; most used first), then
+`public/shed-notes/words-en.txt` — 39k words, most common first, fetched once (349 KB, ~140 KB
+gzipped) the first time a suggestion is wanted. It's SCOWL levels 10–35 (wordlist-english, MIT
+package; SCOWL's own permissive notice is kept at the top of the file and the source is credited
+on /credits) plus a hand-written list of music words ranked just after the most common words;
+within a tier, plain words before their -s/-ed/-ing/-ly forms, then shorter first. Rebuild with
+`apps/web/scripts/build-word-list.mjs` (instructions at its top). The source is now async and
+returns `filter: false` (CodeMirror keeps our order, asks again each letter), matching the typed
+case ("Pra" → "Practice"). Checked in the harness: pra → your "Pratt's", practice, practical,
+practically; arp → arpeggio…; synco → syncopated, syncopation; Met → Metal, Method, Methods,
+Metronome; arrows + Enter and Tab fill in. English only.
+
+## 2026-10-20: leader mappings actually work; a vim mapping guide
+
+Jack's `nmap <leader>ff :palette<CR>` did nothing. Cause (in @replit/codemirror-vim-core's
+`matchCommand`): a **full** match beats a partial one immediately, so a mapping whose first key
+already does something alone (Space = move right, `,` = repeat search) can never be typed — every
+leader mapping was dead with the default `<Space>` leader. `Vim.unmap` can drop the built-in key,
+but the library tracks a fixed `defaultKeymapLength`, so removing built-ins breaks `mapclear` (run
+on every settings change). Fix: `vimMappingWait` in `vimSetup.ts`, a highest-precedence keydown
+handler put in the vim compartment, holds keys while they're the start of a normal/visual
+mapping longer than one key (vim's `Vim.vimKeyFromEvent` names them), runs the mapping via
+`Vim.handleKey(cm, wholeLhs)` (a whole sequence matches the user mapping in one go), and
+otherwise feeds the held keys to vim one by one; a lone prefix key runs after 1 s (vim's
+timeoutlen). Skipped in insert mode (the library already waits there, e.g. `imap jk <Esc>`) and
+while vim has a count/operator pending. Checked in the harness: `<leader>ff` opens the palette,
+`,x`→`dd`, Space alone moves right after the wait, Space+l moves two, Space types in insert mode,
+`j`→`gj` still works.
+
+`VimGuide.tsx`: the docs Jack asked for — a mapping piece by piece (modes, nore, unmap, special
+keys, comments), the leader (current one named) and the wait, running commands (`:w`, `:q`,
+`:wq`, `:e`, `:new`, `:cmd id`, exCommands), examples, and troubleshooting. Shown under "How to
+write mappings" in Settings → Vim and in the JSON tab's Reference; a Help entry points to it.
+
+Same day: **any command id works as a `:` command** — `nmap <leader>fg :app:search<CR>`. Vim's ex
+parser reads `\w+` as the name (`app`) and the rest as `argString` (`:search`), so `vimSetup.ts`
+defines one ex command per id prefix (`app`, `note`, `editor`, `view`, taken from COMMAND_BY_ID)
+that runs prefix + rest (words after the id are its argument). Ex lookup takes the longest
+defined prefix, so `editor` doesn't hit `:e`. From visual mode vim has already collapsed the
+selection when an ex command runs (`:'<,'>`); `runById` restores it from `vim.lastSelection`
+(inclusive end; whole lines for V) when the command has a range, so
+`vnoremap <leader>b :editor:toggle-bold<CR>` bolds the selection. Checked in the harness: `<leader>fg`
+opens search; `ve` then `<leader>b` gives `**Jthird**`. Guide and help updated.
+
+## Pictures and files in notes (2026-10-20)
+
+Jack: "paste images and have them display nicely in notes… it should go to the files also… embed anything in
+the files into a note somehow".
+
+- **Syntax:** a line that is only `![name](file:<ref>)` shows the file. `<ref>` is an upload's id (`files`
+  table), or `<kind>/<id>` for anything else on the Files page (`recording/…`, `song/…`, `lesson/…`,
+  `handin/<sub>:<file>`; not profile images). `![name|300](…)` sets a picture's width. A lone
+  `![…](https://…)` shows that web picture. Standard markdown, so exports stay readable (the `file:` refs
+  only resolve inside soniroll). Embeds inside fenced code are ignored.
+- **Backend:** `files.embed({ref, lessonId?, noteId?, token?})`: yours, or someone else's when the note /
+  lesson that shows it is one you can see — the same checks as scores in notes (`sharedInNote`,
+  `sharedInLesson`, now exported from `scores.ts`, matching on `file:<ref>` in the body). `sharedInNote` now
+  also accepts an owner who has **edit** access to the note (a collaborator's pasted picture is stored in
+  their account), for scores too. Returns name, type, size, date, URL. No new table: pasted files are
+  ordinary `files` rows, so they're on the Files page, count toward the 100 MB, and account deletion
+  already removes them. Deleting the file leaves a "isn't available" card in the note.
+- **Editor** (`fileEmbedSetup.ts` — not `fileEmbeds.ts`, which would clash with `FileEmbeds.tsx` on
+  case-insensitive disks): paste (only when the clipboard has files and no plain text, so spreadsheet cells
+  still paste as text) or drop uploads through `fileActionsFacet` (set by `NoteEditor` when signed in and
+  not read-only). While uploading, a `pendingField` block widget says "Uploading … to your files…" at the
+  spot (its position maps through edits); nothing goes into the text until the file is saved, so closing a
+  note mid-upload leaves no broken line (the file is still in Files). Errors show in red for 8 s with ×;
+  an out-of-room error drops the rest of the batch. Pasted `image.png` is renamed
+  `Pasted image YYYY-MM-DD HHMMSS.png`. `insertOnOwnLine` always ends the line, so typing on doesn't join
+  the embed line (found in testing: the picture stopped showing).
+- **Rendering:** `FileWidget` in `livePreview.ts` (in the same state field as notation; live preview only)
+  registers an empty box in `embedStore` (now `{kind: "score" | "file", id}`), and `FileEmbeds.tsx` portals
+  `FileEmbedView` into it: picture (max 36rem tall, ⤢ / double-click → `FilePreviewDialog`), PDF (card with
+  Open + an iframe from `sm` up, hidden in print), audio/video players, other files a Download card.
+  Clicking it (not its controls) puts the cursor on the source line. `NoteDocument` (Export as PDF, a
+  note's link page) renders the same view and waits for pictures to load before printing.
+- **Insert a file:** the **File** button above a note (and in lesson notes) or `editor:insert-file` opens
+  `FilePickDialog`: everything in `files.storage`, searchable, plus Upload.
+- Word suggestions ignore link/file addresses now (ids were becoming suggestions).
+- Help (steps, features, "Pictures and files"), Files help, changelog (0.10.0), privacy (people who can open
+  a note can see and download its files; a collaborator's pasted pictures are in their account).
+
+**Verified** in the harness (nix Chromium, mock backend that captures the upload): pasting a canvas PNG
+(pending line, then the picture; typing on after it), the picker inserting a PDF (frame + Open), a
+recording (`recording/r9`, audio player) and a .zip (Download card); search in the picker; an
+out-of-room error; dropping a .txt at the end; `|200` width; a missing file's card; 390 px dark (no
+overflow), click → source line with the dashed box, ⤢ → full-size dialog; source mode shows no widgets;
+Export as PDF markup (files in order, code block untouched). `tsc`, eslint, Convex push to dev, and
+`files.embed` with bad refs on dev (null).
+**Not verified:** a real upload to Convex signed in, the shared-link page / shared-with-you / lesson student
+seeing someone else's picture on the real backend, real clipboard pastes from other apps (only synthetic
+paste events), iOS/Android paste, very large pictures.
