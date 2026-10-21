@@ -544,3 +544,14 @@ against the real `reachableNotes`/`sharedAlong`/`linkedThrough` (a fake db: dept
 link, another owner's note with the same title, switch off) and in the harness (a sub-sub-note opening from
 the link page, the dialog listing all three). Not checked on the real backend with two accounts; a note
 web of hundreds of notes costs one index read per note on every access check through it.
+
+### Follow-up: every level or one level (2026-10-20)
+
+Jack: "make an option to share all sub pages or just one level". `shedNotes.shareDepth` (`"one"`; missing =
+every level, so notes already switched on keep going all the way down). `reachableNotes` stops after the
+first level's links when it's `"one"`, so access, the link page, Shared with me and embeds all follow.
+In Share, once the switch is on, a `Select` under it: "Every level (their linked notes too)" / "One level
+(only notes this links to)" (`setShareLinked({on, depth})`); the count in the switch's label and the
+"Also shared" list follow the choice. Checked with the Node script (one level → only direct links;
+deeper notes refused by `sharedAlong`/`linkedThrough`) and in the harness at 390 px dark (3 → 2 notes,
+Private dropped, stored `"one"`).

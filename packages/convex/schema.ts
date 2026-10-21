@@ -676,6 +676,8 @@ export default defineSchema({
     /** Whoever can open this note (shared with them, or its link) can also open every note it
         leads to through links: the notes it links to, theirs, and so on. */
     shareLinked: v.optional(v.boolean()),
+    /** How far `shareLinked` goes: "one" = only the notes it links to; missing = all the way down. */
+    shareDepth: v.optional(v.literal("one")),
     /** The template it was made from (or last had applied), if any. */
     templateId: v.optional(v.id("shedNoteTemplates")),
     createdAt: v.number(),

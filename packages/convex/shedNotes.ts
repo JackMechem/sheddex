@@ -39,14 +39,19 @@ export const MAX_SHARED_LINKED = 300;
 
 /**
  * Every note of the owner's that `root` leads to by following [[links]] — the notes it links to,
- * the notes those link to, and so on (not `root` itself), nearest first. With `stopAt` (a title
- * key), stops as soon as that note is found.
+ * the notes those link to, and so on (not `root` itself), nearest first; only the first level when
+ * the note shares just that (`shareDepth: "one"`). With `stopAt` (a title key), stops as soon as
+ * that note is found.
  */
 export async function reachableNotes(ctx: QueryCtx, root: Doc<"shedNotes">, stopAt?: string): Promise<Doc<"shedNotes">[]> {
   const out: Doc<"shedNotes">[] = [];
   const seen = new Set([root.titleKey]);
   const queue = [...root.links];
+  // The first level is `root.links`; anything queued after it is deeper.
+  let firstLevel = root.links.length;
+  const oneLevel = root.shareDepth === "one";
   while (queue.length && out.length < MAX_SHARED_LINKED) {
+    if (oneLevel && firstLevel-- <= 0) break;
     const key = queue.shift()!;
     if (seen.has(key)) continue;
     seen.add(key);

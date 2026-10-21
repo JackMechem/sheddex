@@ -40,7 +40,7 @@ export const RELEASES: Release[] = [
     changes: [
       { kind: "new", text: "**Pictures and files in notes:** paste a picture or drop files into a note and they're saved to your Files and shown right there. **File** above a note puts in anything from your Files: PDFs, recordings, audio and video play in the note." },
       { kind: "new", text: "**Templates** for notes, with blanks you fill in (in the title too) — start a note from one with [[, the command palette or an empty note." },
-      { kind: "new", text: "**Share a note with everything it links to**: one switch in Share, and the people you shared with (and the link) can open the notes it links to, the notes those link to, and so on." },
+      { kind: "new", text: "**Share a note with what it links to**: one switch in Share, and the people you shared with (and the link) can open the notes it links to — every level down, or just one." },
       { kind: "new", text: "**Word suggestions** as you type in notes: up to four words that finish what you're typing, yours first (Enter or Tab fills one in). Off until you turn it on in Shed Notes' settings." },
       { kind: "new", text: "A **Settings page** for Shed Notes: switches, text size, every command's key (press the pencil and the new key to change it) and vim options. The JSON file is still there to edit." },
       { kind: "new", text: "**Vim mappings** with your leader key work (like nmap <leader>ff :app:search<CR>), and any command can run after a colon. Settings → Vim has a guide with examples." },

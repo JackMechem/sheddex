@@ -10,7 +10,8 @@ import { linkedThrough, noteAccess, reachableNotes } from "./shedNotes";
  * Sharing Shed Notes: with other accounts by username ("Can view" or "Can edit"), and by link —
  * only for the people it's shared with ("invited"), or for anyone with the link (view only). The
  * owner alone shares, changes permissions and sets the link. With `shareLinked` on, every note it
- * leads to through links (and theirs, all the way down) is shared the same way. Plus the owner's export of everything.
+ * leads to through links (and theirs, all the way down — or just the first level, `shareDepth`) is
+ * shared the same way. Plus the owner's export of everything.
  */
 
 async function me(ctx: QueryCtx | MutationCtx) {
@@ -59,6 +60,7 @@ export const sharing = query({
       people: await Promise.all(shares.map(async (s) => ({ ...(await person(ctx, s.userId)), role: s.role }))),
       link: note.link ?? null,
       shareLinked: !!note.shareLinked,
+      shareDepth: note.shareDepth === "one" ? ("one" as const) : ("all" as const),
       linked: (await reachableNotes(ctx, note)).map((n) => n.title),
     };
   },
@@ -67,11 +69,11 @@ export const sharing = query({
 /** Also share every note this one leads to through links (all the way down) — with the same
     people (same role) and through its link — or stop. */
 export const setShareLinked = mutation({
-  args: { noteId: v.id("shedNotes"), on: v.boolean() },
-  handler: async (ctx, { noteId, on }) => {
+  args: { noteId: v.id("shedNotes"), on: v.boolean(), depth: v.optional(v.union(v.literal("one"), v.literal("all"))) },
+  handler: async (ctx, { noteId, on, depth }) => {
     const userId = await me(ctx);
     await myNote(ctx, userId, noteId);
-    await ctx.db.patch(noteId, { shareLinked: on || undefined });
+    await ctx.db.patch(noteId, { shareLinked: on || undefined, ...(depth ? { shareDepth: depth === "one" ? ("one" as const) : undefined } : {}) });
   },
 });
 
