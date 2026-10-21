@@ -529,3 +529,18 @@ a missing note and an unshared note not, child page with back button, back via i
 `tsc`, eslint, Convex push to dev. **Not verified:** the real backend with two accounts (access through a
 linked note, editing it, the "invited" link signed in/out), and performance for someone with many shares
 (`noteAccess` now reads the viewer's shares when there's no direct one).
+
+### Follow-up: all the way down (2026-10-20)
+
+Jack: "it should share ALL the sub pages including sub pages of sub pages". `shareLinked` now covers every
+note the shared note **leads to** through links, at any depth: `reachableNotes(ctx, root, stopAt?)` in
+`shedNotes.ts` walks the owner's notes breadth-first through `links` (by `by_user_title`, cycles and
+missing notes skipped, never another account's notes, capped at `MAX_SHARED_LINKED` = 300 notes) and
+stops early when looking for one note. `sharedAlong(parent, note)` and `linkedThrough` use it, so
+`noteAccess`, the link page (`byLink`'s `linked` = every reachable note), "Shared with me" (`via` = the
+shared note) and scores/files in those notes (`sharedInNote`) all follow. The switch reads "Also share
+linked notes (N)" with N counting every reachable note, listed under it. Checked with a Node script
+against the real `reachableNotes`/`sharedAlong`/`linkedThrough` (a fake db: depth 3, a loop, a missing
+link, another owner's note with the same title, switch off) and in the harness (a sub-sub-note opening from
+the link page, the dialog listing all three). Not checked on the real backend with two accounts; a note
+web of hundreds of notes costs one index read per note on every access check through it.

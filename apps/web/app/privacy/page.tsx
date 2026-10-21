@@ -62,7 +62,7 @@ export default function PrivacyPage() {
             at any time and the link stops working. A Shed Note you share with someone (by username) can be read by them, and changed by them if you
             let them edit; they see your username. A note&apos;s link opens it for the people you shared it with or, if you choose, for anyone who has the
             link (to read, with your username and the scores in it). If you also share the notes it links to, the same people and link can open
-            those notes too, including notes you link to later. Pictures and files you put in a note (pasting one saves it to your files) can
+            every note it leads to through links (and the notes those link to, and so on), including ones you link later. Pictures and files you put in a note (pasting one saves it to your files) can
             be seen, played and downloaded by everyone who can open that note, and by your students when they&apos;re in a lesson&apos;s notes; a
             picture someone else pastes into a note you share with them is stored in their account. Turn the link off or remove someone and they
             can&apos;t open it any more.

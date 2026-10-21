@@ -673,8 +673,8 @@ export default defineSchema({
     /** Sharing by link: `token` is in the link; "invited" = only people it's shared with (signed
         in), "anyone" = anyone with the link can view. Missing = no link. */
     link: v.optional(v.object({ token: v.string(), access: v.union(v.literal("invited"), v.literal("anyone")) })),
-    /** Whoever can open this note (shared with them, or its link) can also open the notes it
-        links to (one level: not the notes those link to). */
+    /** Whoever can open this note (shared with them, or its link) can also open every note it
+        leads to through links: the notes it links to, theirs, and so on. */
     shareLinked: v.optional(v.boolean()),
     /** The template it was made from (or last had applied), if any. */
     templateId: v.optional(v.id("shedNoteTemplates")),

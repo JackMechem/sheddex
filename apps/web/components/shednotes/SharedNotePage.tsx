@@ -33,8 +33,8 @@ function Message({ title, text, children }: { title: string; text: string; child
  * A Shed Note opened from its link (`/note/<token>`): read-only, as a page. "Anyone with the link"
  * notes open for everyone; "only people added" notes ask you to sign in, and say so if the note
  * isn't shared with your account. People who can open it in Shed Notes (to edit) get a button.
- * When the note shares the notes it links to, those links open them here (`?n=Title`), with a way
- * back to the note the link is for.
+ * When the note shares the notes it links to (all the way down), those links open them here
+ * (`?n=Title`), with a way back to the note the link is for.
  */
 export default function SharedNotePage({ token, note }: { token: string; note?: string }) {
   const router = useRouter();
