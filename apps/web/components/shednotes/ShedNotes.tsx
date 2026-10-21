@@ -502,6 +502,7 @@ export default function ShedNotes({ initialId }: { initialId?: string }) {
             onNotice={setNotice}
             onTag={(tag) => setListQuery((q) => ({ q: `#${tag}`, n: (q?.n ?? 0) + 1 }))}
             onOpen={(id) => open(id)}
+            shared={sharedWithMe ?? []}
             listOpen={!listHidden}
             onToggleList={() => setPanels({ listHidden: !listHidden })}
             linksOpen={!linksHidden}

@@ -1,5 +1,8 @@
 "use client";
 
+import { titleKey } from "@jam-practice/core/shedNotes";
+import type { SharedNote } from "./NoteList";
+
 import { useMutation } from "convex/react";
 import type { EditorView } from "@codemirror/view";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -106,6 +109,7 @@ export default function NotePane({
   onNotice,
   onTag,
   onOpen,
+  shared = [],
   listOpen,
   onToggleList,
   linksOpen,
@@ -125,6 +129,8 @@ export default function NotePane({
   onNotice: (text: string) => void;
   onTag: (tag: string) => void;
   onOpen: (id: string) => void;
+  /** Notes shared with you (a shared note's links open the owner's notes from here). */
+  shared?: SharedNote[];
   listOpen: boolean;
   onToggleList: () => void;
   linksOpen: boolean;
@@ -190,8 +196,14 @@ export default function NotePane({
         : {
             ...actions,
             save: canEdit ? flush : undefined,
-            // Its links point at the owner's notes; yours open if you have one by that name.
-            openNoteByTitle: (title: string) => actions.openNoteByTitle?.(title),
+            // Its links point at the owner's notes: theirs opens if it's shared with you (as the
+            // notes a shared note links to can be), else yours by that name.
+            openNoteByTitle: (title: string) => {
+              const key = titleKey(title);
+              const theirs = shared.find((s) => s.ownerId === note?.ownerId && titleKey(s.title) === key);
+              if (theirs) onOpen(theirs.id);
+              else actions.openNoteByTitle?.(title);
+            },
             createLinkedNote: undefined,
             renameNote: undefined,
             moveNote: undefined,
@@ -202,7 +214,7 @@ export default function NotePane({
             // A score made here would be yours, not the note owner's — so no new notation.
             openScore: undefined,
           },
-    [actions, flush, toggleFullWidth, mine, canEdit],
+    [actions, flush, toggleFullWidth, mine, canEdit, shared, note?.ownerId, onOpen],
   );
   const titles = useMemo(() => notes.map((n) => ({ title: n.title, folder: n.folder })), [notes]);
 
@@ -425,7 +437,7 @@ export default function NotePane({
       <aside className={`${mine ? "" : "!hidden"} shrink-0 border-t border-foreground/10 pt-4 lg:max-h-[35%] lg:overflow-y-auto ${linksOpen ? "@4xl:max-h-none @4xl:w-72 @4xl:border-l @4xl:border-t-0 @4xl:pl-6 @4xl:pt-1" : ""}`}>
         {/* Under the note, lined up with its text column. */}
         <div className={linksOpen ? "@4xl:!max-w-none" : ""} style={fullWidth ? undefined : { maxWidth: "46rem", marginInline: "auto" }}>
-          <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => actions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
+          <LinksPanel note={note} body={note.body} notes={notes} onOpen={onOpen} onOpenTitle={(t) => paneActions.openNoteByTitle?.(t, { create: true })} onTag={onTag} />
         </div>
       </aside>
       {menu && <ContextMenu menu={menu} onClose={() => setMenu(null)} />}

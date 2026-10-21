@@ -7,6 +7,7 @@ import { api } from "@jam-practice/convex/_generated/api";
 import type { Id } from "@jam-practice/convex/_generated/dataModel";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Select from "@/components/Select";
+import SwitchRow from "@/components/SwitchRow";
 import { CheckIcon, CloseIcon, LinkIcon } from "@/components/tools";
 import UserAvatar from "@/components/UserAvatar";
 import { errorText } from "@/lib/useShedNotes";
@@ -31,7 +32,8 @@ export const noteLinkUrl = (token: string) => `${typeof window === "undefined" ?
 /**
  * Share one note: add people by username (public profiles are suggested while typing; a private
  * account works by typing its exact username), give each "Can view" or "Can edit", and set the
- * note's link — off, only the people added, or anyone with it (view only).
+ * note's link — off, only the people added, or anyone with it (view only). "Also share the notes it
+ * links to" lets the same people (same role) and the same link open the notes it links to.
  */
 export default function ShareDialog({ noteId, title, onClose }: { noteId: string; title: string; onClose: () => void }) {
   const id = noteId as Id<"shedNotes">;
@@ -40,6 +42,7 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
   const setRole = useMutation(api.shedNoteShares.setRole);
   const unshare = useMutation(api.shedNoteShares.unshare);
   const setLink = useMutation(api.shedNoteShares.setLink);
+  const setShareLinked = useMutation(api.shedNoteShares.setShareLinked);
   const [name, setName] = useState("");
   const [role, setNewRole] = useState<Role>("read");
   const [active, setActive] = useState(-1);
@@ -201,6 +204,27 @@ export default function ShareDialog({ noteId, title, onClose }: { noteId: string
                     );
                   })}
                 </ul>
+              </div>
+            )}
+
+            {sharing && (sharing.linked.length > 0 || sharing.shareLinked) && (
+              <div className="flex flex-col gap-1.5 border-t border-foreground/10 pt-4">
+                <SwitchRow
+                  label={`Also share the ${sharing.linked.length === 1 ? "note" : `${sharing.linked.length} notes`} it links to`}
+                  checked={sharing.shareLinked}
+                  onChange={(on) => {
+                    setError(null);
+                    void setShareLinked({ noteId: id, on })
+                      .then(() => setStatus(on ? "Linked notes shared too" : "Linked notes not shared"))
+                      .catch((e) => setError(errorText(e)));
+                  }}
+                  hint="The people above (with the same Can view or Can edit) and the link can also open the notes this one links to, and click through to them. Only those notes, not the notes they link to. It follows the links: a note you link later is shared too, one you unlink isn't any more."
+                />
+                {sharing.shareLinked && sharing.linked.length > 0 && (
+                  <p className="text-xs text-muted">
+                    Also shared: <span className="font-semibold text-foreground">{sharing.linked.join(", ")}</span>
+                  </p>
+                )}
               </div>
             )}
 

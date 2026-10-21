@@ -4,12 +4,13 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { noteSnippet } from "@jam-practice/core/shedNotes";
 import { normalizeUsername } from "@jam-practice/core/username";
-import { noteAccess } from "./shedNotes";
+import { linkedThrough, noteAccess } from "./shedNotes";
 
 /**
  * Sharing Shed Notes: with other accounts by username ("Can view" or "Can edit"), and by link —
  * only for the people it's shared with ("invited"), or for anyone with the link (view only). The
- * owner alone shares, changes permissions and sets the link. Plus the owner's export of everything.
+ * owner alone shares, changes permissions and sets the link. With `shareLinked` on, the notes it
+ * links to are shared the same way (one level). Plus the owner's export of everything.
  */
 
 async function me(ctx: QueryCtx | MutationCtx) {
@@ -44,7 +45,21 @@ const sharesOfNote = (ctx: QueryCtx | MutationCtx, noteId: Id<"shedNotes">) =>
     .withIndex("by_note", (q) => q.eq("noteId", noteId))
     .collect();
 
-/** Who a note is shared with, and its link (owner only). */
+/** The owner's notes that `note` links to (the ones that exist), by title. */
+async function linkedNotes(ctx: QueryCtx, note: Doc<"shedNotes">) {
+  const out: Doc<"shedNotes">[] = [];
+  for (const key of note.links.slice(0, 200)) {
+    const hit = await ctx.db
+      .query("shedNotes")
+      .withIndex("by_user_title", (q) => q.eq("userId", note.userId).eq("titleKey", key))
+      .first();
+    if (hit && hit._id !== note._id) out.push(hit);
+  }
+  return out;
+}
+
+/** Who a note is shared with, its link, and whether the notes it links to go with it (owner
+    only). */
 export const sharing = query({
   args: { noteId: v.id("shedNotes") },
   handler: async (ctx, { noteId }) => {
@@ -56,7 +71,20 @@ export const sharing = query({
     return {
       people: await Promise.all(shares.map(async (s) => ({ ...(await person(ctx, s.userId)), role: s.role }))),
       link: note.link ?? null,
+      shareLinked: !!note.shareLinked,
+      linked: (await linkedNotes(ctx, note)).map((n) => n.title),
     };
+  },
+});
+
+/** Also share the notes this one links to — with the same people (same role) and through its link —
+    or stop. */
+export const setShareLinked = mutation({
+  args: { noteId: v.id("shedNotes"), on: v.boolean() },
+  handler: async (ctx, { noteId, on }) => {
+    const userId = await me(ctx);
+    await myNote(ctx, userId, noteId);
+    await ctx.db.patch(noteId, { shareLinked: on || undefined });
   },
 });
 
@@ -166,31 +194,56 @@ export const sharedWithMe = query({
       .query("shedNoteShares")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    const out = [];
+    type Row = { id: string; title: string; snippet: string; updatedAt: number; role: "read" | "write"; owner: string | null; ownerName: string; ownerId: string; via: string | null };
+    const out = new Map<string, Row>();
+    const add = async (note: Doc<"shedNotes">, role: "read" | "write", via: string | null) => {
+      const had = out.get(note._id);
+      // Shared directly beats shared through a link; "Can edit" beats "Can view".
+      if (had && (had.via === null || via !== null) && (had.role === "write" || role === "read")) return;
+      const owner = await person(ctx, note.userId);
+      out.set(note._id, {
+        id: note._id as string,
+        title: note.title,
+        snippet: noteSnippet(note.body),
+        updatedAt: note.updatedAt,
+        role: had?.role === "write" ? "write" : role,
+        owner: owner.username,
+        ownerName: owner.name ?? "someone",
+        ownerId: note.userId as string,
+        via: had && had.via === null ? null : via,
+      });
+    };
     for (const s of shares) {
       const note = await ctx.db.get(s.noteId);
       if (!note) continue;
-      const owner = await person(ctx, note.userId);
-      out.push({ id: note._id as string, title: note.title, snippet: noteSnippet(note.body), updatedAt: note.updatedAt, role: s.role, owner: owner.username, ownerName: owner.name ?? "someone" });
+      await add(note, s.role, null);
+      if (note.shareLinked) for (const linked of await linkedNotes(ctx, note)) await add(linked, s.role, note.title);
     }
-    return out.sort((a, b) => b.updatedAt - a.updatedAt);
+    return [...out.values()].sort((a, b) => b.updatedAt - a.updatedAt);
   },
 });
 
 /** A note opened from its link. "anyone": everyone sees it; "invited": only its owner and the
-    people it's shared with (signed in). `role` says what the viewer can do in Shed Notes. */
+    people it's shared with (signed in). `role` says what the viewer can do in Shed Notes. With
+    `note` (a title), one of the notes it links to, when it shares them (`shareLinked`).
+    `linked` are the title keys that open from this page (the link's note and the notes it shares);
+    `parent` is the link's own note when showing one of those. */
 export const byLink = query({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    const note = await ctx.db
+  args: { token: v.string(), note: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const root = await ctx.db
       .query("shedNotes")
-      .withIndex("by_link_token", (q) => q.eq("link.token", token))
+      .withIndex("by_link_token", (q) => q.eq("link.token", args.token))
       .first();
-    if (!note?.link) return { status: "gone" as const };
+    if (!root?.link) return { status: "gone" as const };
     const userId = await getAuthUserId(ctx);
+    if (root.link.access === "invited" && !(await noteAccess(ctx, root, userId))) return { status: userId ? ("not-shared" as const) : ("sign-in" as const) };
+    const note = args.note ? await linkedThrough(ctx, root, args.note) : root;
+    if (!note) return { status: "gone" as const };
     const access = await noteAccess(ctx, note, userId);
-    if (note.link.access === "invited" && !access) return { status: userId ? ("not-shared" as const) : ("sign-in" as const) };
     const owner = await person(ctx, note.userId);
+    // Only notes that exist (a link to a note not written yet stays a plain pill).
+    const linked = root.shareLinked ? [root.titleKey, ...(await linkedNotes(ctx, root)).map((n) => n.titleKey)] : [];
     return {
       status: "ok" as const,
       id: note._id as string,
@@ -201,6 +254,8 @@ export const byLink = query({
       ownerName: owner.name ?? "someone",
       role: access,
       updatedAt: note.updatedAt,
+      linked: note.links.filter((k) => linked.includes(k)),
+      parent: note === root ? null : { title: root.title },
     };
   },
 });

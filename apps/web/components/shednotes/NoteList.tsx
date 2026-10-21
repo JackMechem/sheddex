@@ -61,7 +61,8 @@ export type NoteListActions = {
   moveFolderTo: (path: string, parent: string) => void;
 };
 
-export type SharedNote = { id: string; title: string; owner: string | null; ownerName: string; role: "read" | "write"; updatedAt: number };
+/** `via`: shared because a note shared with you links to it (that note's title). */
+export type SharedNote = { id: string; title: string; owner: string | null; ownerName: string; ownerId: string; role: "read" | "write"; updatedAt: number; via: string | null };
 
 type Dragging = { kind: "note"; id: string; folder: string } | { kind: "folder"; path: string };
 
@@ -339,6 +340,7 @@ export default function NoteList({
                           <span className={`block truncate text-sm ${n.id === currentId ? "font-semibold" : ""}`}>{n.title}</span>
                           <span className="block truncate text-xs text-muted">
                             {n.owner ? `@${n.owner}` : n.ownerName} · {n.role === "write" ? "can edit" : "can view"}
+                            {n.via && ` · linked from ${n.via}`}
                           </span>
                         </span>
                       </button>
@@ -346,7 +348,12 @@ export default function NoteList({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setMenu({ x: e.clientX, y: e.clientY, items: [{ label: "Open", onSelect: () => actions.open(n.id) }, { label: "Remove from my list", danger: true, onSelect: () => actions.leave(n.id) }] });
+                          setMenu({ x: e.clientX, y: e.clientY, items: [
+                              { label: "Open", onSelect: () => actions.open(n.id) },
+                              // A linked note comes and goes with the note that links to it.
+                              ...(n.via ? [] : [{ label: "Remove from my list", danger: true, onSelect: () => actions.leave(n.id) }]),
+                            ],
+                          });
                         }}
                         aria-label={`Options for ${n.title}`}
                         className={`${rowBtn} mr-1 lg:opacity-0`}

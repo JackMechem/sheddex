@@ -2,7 +2,10 @@
 
 import { useQuery } from "convex/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { titleKey } from "@jam-practice/core/shedNotes";
+import { BackButton } from "@/components/library/shared";
 import { api } from "@jam-practice/convex/_generated/api";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { SignInButtons } from "@/components/practicelog/ShedLogGate";
@@ -30,9 +33,12 @@ function Message({ title, text, children }: { title: string; text: string; child
  * A Shed Note opened from its link (`/note/<token>`): read-only, as a page. "Anyone with the link"
  * notes open for everyone; "only people added" notes ask you to sign in, and say so if the note
  * isn't shared with your account. People who can open it in Shed Notes (to edit) get a button.
+ * When the note shares the notes it links to, those links open them here (`?n=Title`), with a way
+ * back to the note the link is for.
  */
-export default function SharedNotePage({ token }: { token: string }) {
-  const shared = useQuery(api.shedNoteShares.byLink, { token });
+export default function SharedNotePage({ token, note }: { token: string; note?: string }) {
+  const router = useRouter();
+  const shared = useQuery(api.shedNoteShares.byLink, { token, ...(note ? { note } : {}) });
   const [printing, setPrinting] = useState(false);
 
   if (shared === undefined) {
@@ -47,7 +53,9 @@ export default function SharedNotePage({ token }: { token: string }) {
   if (shared.status === "gone") {
     return (
       <Shell>
-        <Message title="This note isn't available" text="It isn't shared by link anymore, or the link is wrong." />
+        <Message title="This note isn't available" text={note ? "It isn't shared through this link, or it was renamed or deleted." : "It isn't shared by link anymore, or the link is wrong."}>
+          {note && <BackButton href={`/note/${token}`} label="The shared note" className="ml-0" />}
+        </Message>
       </Shell>
     );
   }
@@ -70,10 +78,20 @@ export default function SharedNotePage({ token }: { token: string }) {
 
   if (shared.status !== "ok") return null;
   const font = shared.view?.font ? getFont(shared.view.font).stack : undefined;
+  const base = `/note/${token}`;
+  const open = new Set(shared.linked);
+  // A link to the note the link is for goes back to it; the notes it shares open with `?n=`.
+  const linkHref = (target: string) => {
+    const key = titleKey(target);
+    if (!open.has(key)) return null;
+    return shared.parent && key === titleKey(shared.parent.title) ? base : `${base}?n=${encodeURIComponent(target)}`;
+  };
+  const context = shared.parent ? { token, noteId: shared.id } : { token };
   const updated = new Date(shared.updatedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   return (
     <Shell>
       <header className="flex flex-col gap-3">
+        {shared.parent && <BackButton href={base} label={shared.parent.title} />}
         <p className="flex flex-wrap items-center gap-x-2 text-sm font-semibold text-muted">
           <DocumentIcon className="h-4 w-4 text-accent" /> Shed Note · shared by
           {shared.owner ? (
@@ -99,8 +117,8 @@ export default function SharedNotePage({ token }: { token: string }) {
           </button>
         </div>
       </header>
-      <NoteDocument body={shared.body} context={{ token }} fontFamily={font} />
-      {printing && <NotePrint title={shared.title} body={shared.body} context={{ token }} fontFamily={font} subtitle={`Shared by ${shared.owner ? `@${shared.owner}` : shared.ownerName}`} onClose={() => setPrinting(false)} />}
+      <NoteDocument body={shared.body} context={context} fontFamily={font} linkHref={linkHref} onLink={(href) => router.push(href)} />
+      {printing && <NotePrint title={shared.title} body={shared.body} context={context} fontFamily={font} subtitle={`Shared by ${shared.owner ? `@${shared.owner}` : shared.ownerName}`} onClose={() => setPrinting(false)} />}
     </Shell>
   );
 }

@@ -58,7 +58,7 @@ md.use({
       },
       renderer(token) {
         const { target, heading, alias } = parseLinkInner((token as unknown as { inner: string }).inner);
-        return `<span class="note-doc-wikilink">${esc(alias ?? (heading ? `${target} › ${heading}` : target))}</span>`;
+        return `<span class="note-doc-wikilink" data-target="${esc(target)}">${esc(alias ?? (heading ? `${target} › ${heading}` : target))}</span>`;
       },
     },
     {
@@ -158,10 +158,52 @@ function AbcBlock({ abc }: { abc: string }) {
   return <div ref={el} className="note-doc-abc" />;
 }
 
-export default function NoteDocument({ body, context, fontFamily, className = "" }: { body: string; context?: ScoreContext; fontFamily?: string; className?: string }) {
-  const parts = useMemo(() => splitNote(body).map((p) => (p.kind === "md" ? { ...p, html: md.parse(p.text, { async: false }) as string } : p)), [body]);
+const unesc = (s: string) => s.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+
+/** `linkHref` turns the [[links]] it has an address for into links (the rest stay pills);
+    `onLink` opens them in place instead of loading the page again. */
+export default function NoteDocument({
+  body,
+  context,
+  fontFamily,
+  className = "",
+  linkHref,
+  onLink,
+}: {
+  body: string;
+  context?: ScoreContext;
+  fontFamily?: string;
+  className?: string;
+  linkHref?: (target: string) => string | null;
+  onLink?: (href: string) => void;
+}) {
+  const parts = useMemo(
+    () =>
+      splitNote(body).map((p) => {
+        if (p.kind !== "md") return p;
+        let html = md.parse(p.text, { async: false }) as string;
+        if (linkHref) {
+          html = html.replace(/<span class="note-doc-wikilink" data-target="([^"]*)">([\s\S]*?)<\/span>/g, (all, target: string, label: string) => {
+            const href = linkHref(unesc(target));
+            // A note this page can't open: shown, but plainly not a link.
+            return href ? `<a class="note-doc-wikilink note-doc-wikilink-open" href="${esc(href)}" data-note-link="">${label}</a>` : all.replace('class="note-doc-wikilink"', 'class="note-doc-wikilink note-doc-wikilink-closed"');
+          });
+        }
+        return { ...p, html };
+      }),
+    [body, linkHref],
+  );
   return (
-    <div className={`note-doc ${className}`} style={fontFamily ? { fontFamily } : undefined}>
+    <div
+      className={`note-doc ${className}`}
+      style={fontFamily ? { fontFamily } : undefined}
+      onClick={(e) => {
+        const a = (e.target as HTMLElement).closest<HTMLAnchorElement>("a[data-note-link]");
+        if (!a || !onLink || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        onLink(a.getAttribute("href")!);
+      }}
+    >
       {parts.map((p, i) =>
         p.kind === "md" ? (
           <div key={i} dangerouslySetInnerHTML={{ __html: (p as { html: string }).html }} />

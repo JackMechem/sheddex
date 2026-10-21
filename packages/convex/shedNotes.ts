@@ -34,7 +34,9 @@ async function ownNote(ctx: QueryCtx | MutationCtx, userId: Id<"users">, noteId:
   return note;
 }
 
-/** What `userId` may do with a note: "owner", "write", "read" or null. */
+/** What `userId` may do with a note: "owner", "write", "read" or null. Shared with them directly,
+    or linked from a note of the same owner that's shared with them and shares its linked notes
+    (`shareLinked`) — then they get that note's role. */
 export async function noteAccess(ctx: QueryCtx | MutationCtx, note: Doc<"shedNotes">, userId: Id<"users"> | null): Promise<"owner" | "write" | "read" | null> {
   if (!userId) return null;
   if (note.userId === userId) return "owner";
@@ -42,7 +44,31 @@ export async function noteAccess(ctx: QueryCtx | MutationCtx, note: Doc<"shedNot
     .query("shedNoteShares")
     .withIndex("by_note", (q) => q.eq("noteId", note._id))
     .collect();
-  return shares.find((s) => s.userId === userId)?.role ?? null;
+  const direct = shares.find((s) => s.userId === userId)?.role;
+  if (direct === "write") return direct;
+  let role: "write" | "read" | null = direct ?? null;
+  const mine = await ctx.db
+    .query("shedNoteShares")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const s of mine) {
+    if (s.ownerId !== note.userId || s.noteId === note._id || (role === "read" && s.role === "read")) continue;
+    const parent = await ctx.db.get(s.noteId);
+    if (parent?.shareLinked && parent.links.includes(note.titleKey)) role = s.role === "write" ? "write" : (role ?? "read");
+    if (role === "write") break;
+  }
+  return role;
+}
+
+/** A note reached through another note's link (`/note/<token>?n=Title`): the owner's note with
+    that title, if the linking note shares its linked notes and links to it. */
+export async function linkedThrough(ctx: QueryCtx, parent: Doc<"shedNotes">, title: string): Promise<Doc<"shedNotes"> | null> {
+  const key = titleKey(title);
+  if (!parent.shareLinked || !parent.links.includes(key)) return null;
+  return await ctx.db
+    .query("shedNotes")
+    .withIndex("by_user_title", (q) => q.eq("userId", parent.userId).eq("titleKey", key))
+    .first();
 }
 
 async function allNotes(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
@@ -110,6 +136,7 @@ export const get = query({
         templateId: null as string | null,
         role,
         owner: owner?.username ?? null,
+        ownerId: note.userId as string,
       };
     }
     const attached = await ctx.db
@@ -124,6 +151,7 @@ export const get = query({
       templateId: (note.templateId ?? null) as string | null,
       role: "owner" as const,
       owner: null as string | null,
+      ownerId: note.userId as string,
     };
   },
 });
