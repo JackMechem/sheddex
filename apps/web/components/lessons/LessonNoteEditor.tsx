@@ -1,12 +1,13 @@
 "use client";
 
 import type { EditorView } from "@codemirror/view";
+import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import ScoreDialog from "@/components/notation/ScoreDialog";
 import { type NoteActions, runCommand } from "@/components/shednotes/commands";
 import NoteEditor from "@/components/shednotes/NoteEditor";
 import { FORMAT, VimSwitch } from "@/components/shednotes/NotePane";
-import { NoteIcon } from "@/components/tools";
+import { ImageIcon, NoteIcon } from "@/components/tools";
 import { useNotesConfig } from "@/lib/useShedNotes";
 
 const noop = () => {};
@@ -30,6 +31,7 @@ export default function LessonNoteEditor({
   onChange?: (markdown: string) => void;
   placeholder?: string;
 }) {
+  const router = useRouter();
   const cfg = useNotesConfig();
   const { config: settings, setValue } = cfg;
   const viewRef = useRef<EditorView | null>(null);
@@ -37,6 +39,7 @@ export default function LessonNoteEditor({
   // The editor reads its actions through a ref, so a new object each render is fine.
   const actions: NoteActions = {
     openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
+    openPath: (path) => router.push(path),
     setConfig: (key, value) => void setValue(key, value),
     config: () => settings,
   };
@@ -55,6 +58,9 @@ export default function LessonNoteEditor({
           <button type="button" title="Write music notation" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
           </button>
+          <button type="button" title="Insert a file or picture (or paste one)" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-surface-hover">
+            <ImageIcon className="h-3.5 w-3.5" /> File
+          </button>
           <span className="flex-1" />
           <VimSwitch on={settings.vimMode} onChange={(on) => void setValue("vimMode", on)} />
         </div>
@@ -62,7 +68,7 @@ export default function LessonNoteEditor({
       <NoteEditor
         initialText={markdown}
         readOnly={!editable}
-        lessonId={lessonId}
+        scoreContext={{ lessonId }}
         config={config}
         actions={actions}
         onChange={onChange ?? noop}

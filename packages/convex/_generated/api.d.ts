@@ -43,6 +43,8 @@ import type * as recordings from "../recordings.js";
 import type * as routines from "../routines.js";
 import type * as scores from "../scores.js";
 import type * as setlists from "../setlists.js";
+import type * as shedNoteShares from "../shedNoteShares.js";
+import type * as shedNoteTemplates from "../shedNoteTemplates.js";
 import type * as shedNotes from "../shedNotes.js";
 import type * as site from "../site.js";
 import type * as syncedSettings from "../syncedSettings.js";
@@ -92,6 +94,8 @@ declare const fullApi: ApiFromModules<{
   routines: typeof routines;
   scores: typeof scores;
   setlists: typeof setlists;
+  shedNoteShares: typeof shedNoteShares;
+  shedNoteTemplates: typeof shedNoteTemplates;
   shedNotes: typeof shedNotes;
   site: typeof site;
   syncedSettings: typeof syncedSettings;

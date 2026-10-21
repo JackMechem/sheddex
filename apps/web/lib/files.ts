@@ -125,20 +125,22 @@ export function formatFileDate(ms: number): string {
 }
 
 /** Uploads one file to the account (optionally attached to a tune): `generateUploadUrl` → POST →
-    `create`. Throws a readable message if it's too big or there's no room. */
-export async function uploadFile(
+    `create`, and returns what `create` did (the new file's id). Throws a readable message if it's
+    too big or there's no room. */
+export async function uploadFile<T>(
   file: File,
   generateUploadUrl: () => Promise<string>,
-  create: (args: { storageId: Id<"_storage">; name: string; tuneId?: string }) => Promise<unknown>,
+  create: (args: { storageId: Id<"_storage">; name: string; tuneId?: string }) => Promise<T>,
   tuneId?: string,
-) {
+  name = file.name,
+): Promise<T> {
   if (file.size > MAX_FILE_BYTES) throw new Error(`"${file.name}" is over 100 MB.`);
   if (!file.size) throw new Error(`"${file.name}" is empty.`);
   const uploadUrl = await generateUploadUrl();
   const res = await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
   if (!res.ok) throw new Error(`Uploading "${file.name}" failed (${res.status}).`);
   const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-  await create({ storageId, name: file.name, ...(tuneId ? { tuneId } : {}) });
+  return await create({ storageId, name, ...(tuneId ? { tuneId } : {}) });
 }
 
 /** Turns a Convex error into the sentence inside it. */

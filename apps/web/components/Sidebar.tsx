@@ -63,14 +63,6 @@ function PaletteIcon({ className }: { className?: string }) {
   );
 }
 
-function ChevronsIcon({ className, flip }: { className?: string; flip?: boolean }) {
-  return (
-    <svg {...svgProps(className)} style={flip ? { transform: "scaleX(-1)" } : undefined}>
-      <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />
-    </svg>
-  );
-}
-
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg {...svgProps(className)}>
@@ -703,7 +695,6 @@ export default function Sidebar() {
   const onHelp = currentPath === "/help";
 
   const setWidth = (w: number) => updateLayout({ width: clamp(w) });
-  const setCollapsed = (c: boolean) => updateLayout({ collapsed: c });
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -1064,15 +1055,6 @@ export default function Sidebar() {
                   </>
                 )}
               </Flyout>
-              <button
-                type="button"
-                onClick={() => setCollapsed(false)}
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-muted hover:bg-surface-hover hover:text-foreground"
-              >
-                <ChevronsIcon className="h-4 w-4" flip />
-              </button>
             </div>
           )}
           <AccountMenu collapsed={collapsed} />

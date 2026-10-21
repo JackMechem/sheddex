@@ -5,6 +5,7 @@ import type { SyntaxNode } from "@lezer/common";
 import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
 import type { NoteActions } from "./commands";
 import { addEmbed, ownerFacet, removeEmbed } from "./embedStore";
+import { type FileEmbed, findFileEmbeds } from "./fileEmbedSetup";
 
 /**
  * Obsidian-style live preview for the markdown editor: the text stays markdown, but marks hide
@@ -129,13 +130,32 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
               if (marks.length < 2 || !url) return;
               const textFrom = marks[0].to;
               const textTo = marks[1].from;
+              const href = state.sliceDoc(url.from, url.to);
+              const editing = touches(state, node.from, node.to);
+              // A link to a page of the site ("/tunes") is a pill, like a link to a note.
+              const page = href.startsWith("/") && !editing;
               if (textTo > textFrom) {
-                out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(url.from, url.to) } }).range(textFrom, textTo));
+                out.push(Decoration.mark({ class: `cm-md-link${page ? " cm-page-pill" : ""}`, attributes: { "data-url": href, ...(editing ? {} : { "data-live": "1" }) } }).range(textFrom, textTo));
               }
-              if (touches(state, node.from, node.to)) return;
+              if (editing) return;
               out.push(hide.range(marks[0].from, marks[0].to));
               out.push(hide.range(marks[1].from, node.to));
               return false;
+            }
+            case "Autolink": {
+              // <https://…>
+              const url = node.getChild("URL");
+              if (!url) return false;
+              const editing = touches(state, node.from, node.to);
+              out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(url.from, url.to), ...(editing ? {} : { "data-live": "1" }) } }).range(url.from, url.to));
+              if (!editing) for (const m of node.getChildren("LinkMark")) out.push(hide.range(m.from, m.to));
+              return false;
+            }
+            case "URL": {
+              // A bare https://… address (GFM autolink) — a link of its own.
+              if (node.parent?.name === "Link" || node.parent?.name === "Autolink" || node.parent?.name === "Image") return;
+              out.push(Decoration.mark({ class: "cm-md-link", attributes: { "data-url": state.sliceDoc(node.from, node.to), "data-live": "1" } }).range(node.from, node.to));
+              return;
             }
             case "Blockquote": {
               for (let pos = node.from; pos <= node.to; ) {
@@ -203,7 +223,8 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
           const bar = m[1].indexOf("|");
           const shownFrom = alias ? start + 2 + bar + 1 : start + 2;
           out.push(hide.range(start, shownFrom));
-          out.push(Decoration.mark({ class: cls, attributes: attrs }).range(shownFrom, end - 2));
+          // Shown as a pill with a page icon (a link to a note that doesn't exist yet: dashed).
+          out.push(Decoration.mark({ class: `${cls} cm-page-pill`, attributes: { ...attrs, "data-live": "1" } }).range(shownFrom, end - 2));
           out.push(hide.range(end - 2, end));
         } else {
           out.push(Decoration.mark({ class: cls, attributes: attrs }).range(start, end));
@@ -218,6 +239,12 @@ function addMarks(view: EditorView, out: Range<Decoration>[]) {
           out.push(hide.range(start, start + 2));
           out.push(hide.range(end - 2, end));
         }
+      }
+      // Template blanks: {{name}}.
+      for (const m of line.text.matchAll(/\{\{\s*[^{}\n]*?[^{}\s][^{}\n]*?\s*\}\}/g)) {
+        const start = line.from + (m.index ?? 0);
+        if (inCode(state, start)) continue;
+        out.push(Decoration.mark({ class: "cm-template-var" }).range(start, start + m[0].length));
       }
       for (const m of line.text.matchAll(/(^|[\s(])(#[\p{L}\p{N}_/-]*\p{L}[\p{L}\p{N}_/-]*)/gu)) {
         const start = line.from + (m.index ?? 0) + m[1].length;
@@ -326,11 +353,14 @@ export function renderNotation(el: HTMLElement, abc: string) {
 /** Puts the cursor into a block's source (which shows it), on a plain click. */
 function revealOnClick(wrap: HTMLElement, view: EditorView) {
   wrap.addEventListener("mousedown", (e) => {
-    if ((e.target as HTMLElement).closest("button, a, [data-note]")) return;
+    // Its own controls (buttons, a player, a PDF) work as they are.
+    if ((e.target as HTMLElement).closest("button, a, audio, video, iframe, [data-note]")) return;
     e.preventDefault();
     const pos = view.posAtDOM(wrap);
     const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
+    const file = block ? null : findFileEmbeds(view.state).find((f) => pos >= f.from && pos <= f.to + 1);
     if (block) view.dispatch({ selection: { anchor: block.bodyFrom } });
+    else if (file) view.dispatch({ selection: { anchor: file.to } });
     view.focus();
   });
 }
@@ -379,7 +409,7 @@ class ScoreWidget extends WidgetType {
   toDOM(view: EditorView) {
     const wrap = document.createElement("div");
     wrap.className = `cm-score${this.editing ? " cm-abc-editing" : ""}`;
-    addEmbed({ el: wrap, scoreId: this.scoreId, view, owner: view.state.facet(ownerFacet) });
+    addEmbed({ el: wrap, kind: "score", id: this.scoreId, view, owner: view.state.facet(ownerFacet) });
     if (!this.editing) revealOnClick(wrap, view);
     return wrap;
   }
@@ -391,9 +421,47 @@ class ScoreWidget extends WidgetType {
   }
 }
 
-function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
+/** A file in the note (`![name](file:…)` on a line of its own): an empty box the note's editor
+    renders the file into (`FileEmbeds`). */
+class FileWidget extends WidgetType {
+  constructor(
+    readonly ref: string,
+    readonly name: string,
+    readonly width: number | undefined,
+    readonly editing: boolean,
+  ) {
+    super();
+  }
+  eq(other: FileWidget) {
+    return other.ref === this.ref && other.name === this.name && other.width === this.width && other.editing === this.editing;
+  }
+  get estimatedHeight() {
+    return 240;
+  }
+  toDOM(view: EditorView) {
+    const wrap = document.createElement("div");
+    wrap.className = `cm-file${this.editing ? " cm-file-editing" : ""}`;
+    addEmbed({ el: wrap, kind: "file", id: this.ref, name: this.name, width: this.width, view, owner: view.state.facet(ownerFacet) });
+    if (!this.editing) revealOnClick(wrap, view);
+    return wrap;
+  }
+  destroy(dom: HTMLElement) {
+    removeEmbed(dom);
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+function notationDecos(state: EditorState, blocks: Block[], files: FileEmbed[]): DecorationSet {
   if (!state.facet(liveFacet)) return Decoration.none;
   const out: Range<Decoration>[] = [];
+  for (const f of files) {
+    const editing = touches(state, f.from, f.to);
+    const widget = new FileWidget(f.ref, f.name, f.width, editing);
+    if (editing) out.push(Decoration.widget({ widget, block: true, side: 1 }).range(f.to));
+    else out.push(Decoration.replace({ widget, block: true }).range(f.from, f.to));
+  }
   for (const b of blocks) {
     const editing = touches(state, b.from, b.to);
     const widget = b.kind === "score" ? new ScoreWidget(scoreIdOf(b.body), editing) : new AbcWidget(b.body, editing);
@@ -403,37 +471,47 @@ function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
   return Decoration.set(out, true);
 }
 
-const notationField = StateField.define<{ blocks: Block[]; decos: DecorationSet }>({
+const notationField = StateField.define<{ blocks: Block[]; files: FileEmbed[]; decos: DecorationSet }>({
   create(state) {
     const blocks = findBlocks(state);
-    return { blocks, decos: notationDecos(state, blocks) };
+    const files = findFileEmbeds(state);
+    return { blocks, files, decos: notationDecos(state, blocks, files) };
   },
   update(value, tr) {
     const liveChanged = tr.startState.facet(liveFacet) !== tr.state.facet(liveFacet);
     if (!tr.docChanged && !tr.selection && !liveChanged) return value;
     const blocks = tr.docChanged ? findBlocks(tr.state) : value.blocks;
-    return { blocks, decos: notationDecos(tr.state, blocks) };
+    const files = tr.docChanged ? findFileEmbeds(tr.state) : value.files;
+    return { blocks, files, decos: notationDecos(tr.state, blocks, files) };
   },
   provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
 });
 
-/** Clicking a `[[link]]` opens it (in source mode, with Ctrl/⌘); a markdown link opens its URL. */
+/** Opens a link's address: the web in a new tab, a page of the site in place, email/phone links
+    as they are. */
+export function openHref(href: string, actions: NoteActions) {
+  if (/^https?:\/\//i.test(href)) window.open(href, "_blank", "noopener,noreferrer");
+  else if (href.startsWith("/")) {
+    if (actions.openPath) actions.openPath(href);
+    else window.location.assign(href);
+  } else if (/^(mailto|tel):/i.test(href)) window.location.assign(href);
+  else if (/^www\./i.test(href)) window.open(`https://${href}`, "_blank", "noopener,noreferrer");
+}
+
+/** Clicking a link opens it — when it's showing as a link (live preview, cursor not inside it);
+    Ctrl/⌘-click opens it any time (and in source mode). Clicking a link whose source is showing
+    puts the cursor there instead, to edit it. */
 const linkClicks = EditorView.domEventHandlers({
   mousedown(e, view) {
     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-wikilink], [data-url]");
     if (!el || e.button !== 0) return false;
-    const live = view.state.facet(liveFacet);
     const mod = e.metaKey || e.ctrlKey;
-    if (!live && !mod) return false;
-    // In live preview, a link the cursor is in shows its source — clicking there edits it.
-    if (live && !mod && el.closest(".cm-line") && view.state.selection.ranges.some((r) => {
-      const pos = view.posAtDOM(el);
-      return r.from <= pos + el.textContent!.length + 4 && r.to >= pos - 4;
-    })) return false;
+    if (!mod && !(view.state.facet(liveFacet) && el.dataset.live)) return false;
     e.preventDefault();
+    const actions = view.state.facet(actionsFacet)();
     const target = el.dataset.wikilink;
-    if (target) view.state.facet(actionsFacet)().openNoteByTitle?.(target, { create: true });
-    else if (el.dataset.url && /^https?:\/\//i.test(el.dataset.url)) window.open(el.dataset.url, "_blank", "noopener,noreferrer");
+    if (target) actions.openNoteByTitle?.(target, { create: true });
+    else if (el.dataset.url) openHref(el.dataset.url, actions);
     return true;
   },
 });

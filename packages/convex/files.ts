@@ -6,6 +6,7 @@ import { action, internalMutation, internalQuery, mutation, query, type Mutation
 import { communityHidden, assertUploadsOpen } from "./lib/site";
 import { resolveLinkedChart } from "./lib/chordCharts";
 import { ownerTune } from "./lib/tunes";
+import { sharedInLesson, sharedInNote } from "./scores";
 import { MAX_FILE_BYTES, assertFits, assertHasRoom, bytesUsed, quotaFor, storedItems, type StoredKind } from "./lib/storage";
 import type { PublicRecording, PublicTune } from "@jam-practice/core/profileTunes";
 
@@ -89,6 +90,57 @@ async function ownedItem(ctx: QueryCtx, userId: Id<"users">, kind: StoredKind, i
   const meta = await ctx.db.system.get(id as Id<"_storage">);
   return { storageId: id as Id<"_storage">, name: which, mimeType: meta?.contentType ?? "image/jpeg", size: meta?.size ?? 0, createdAt: meta?._creationTime ?? 0 };
 }
+
+/** Who stores an item (by its kind and id), whoever is asking. Profile images aren't embeddable. */
+async function itemOwner(ctx: QueryCtx, kind: StoredKind, id: string): Promise<Id<"users"> | null> {
+  const rowOf = async <T extends "files" | "recordings" | "tuneSongs">(table: T) => {
+    const rowId = ctx.db.normalizeId(table, id);
+    return rowId ? await ctx.db.get(rowId) : null;
+  };
+  if (kind === "file") return (await rowOf("files"))?.userId ?? null;
+  if (kind === "recording") return (await rowOf("recordings"))?.userId ?? null;
+  if (kind === "song") return (await rowOf("tuneSongs"))?.userId ?? null;
+  if (kind === "lesson") {
+    const itemId = ctx.db.normalizeId("lessonItems", id);
+    return (itemId && (await ctx.db.get(itemId))?.teacherId) || null;
+  }
+  if (kind === "handin") {
+    const subId = ctx.db.normalizeId("lessonSubmissions", id.split(":")[0] ?? "");
+    return (subId && (await ctx.db.get(subId))?.studentId) || null;
+  }
+  return null;
+}
+
+const EMBED_KINDS: StoredKind[] = ["file", "recording", "song", "lesson", "handin"];
+
+/**
+ * A file shown inside a Shed Note (`![name](file:<ref>)`, where the ref is an upload's id or
+ * `<kind>/<id>` for anything else on the Files page). Yours; or someone else's when it's in a note
+ * you can see that they can edit (shared with you, or by its link: `noteId` / `token`), or in a
+ * lesson's notes (`lessonId`) — the same rule as scores in notes. Null when it's gone or hidden.
+ */
+export const embed = query({
+  args: { ref: v.string(), lessonId: v.optional(v.string()), noteId: v.optional(v.string()), token: v.optional(v.string()) },
+  handler: async (ctx, { ref, lessonId, noteId, token }) => {
+    const slash = ref.indexOf("/");
+    const kind = (slash < 0 ? "file" : ref.slice(0, slash)) as StoredKind;
+    const id = slash < 0 ? ref : ref.slice(slash + 1);
+    if (!EMBED_KINDS.includes(kind) || !id) return null;
+    const ownerId = await itemOwner(ctx, kind, id);
+    if (!ownerId) return null;
+    const userId = await getAuthUserId(ctx);
+    const mine = !!userId && userId === ownerId;
+    const needle = `file:${ref}`;
+    const visible =
+      mine ||
+      (!!userId && !!lessonId && (await sharedInLesson(ctx, userId, ownerId, needle, lessonId))) ||
+      ((!!noteId || !!token) && (await sharedInNote(ctx, userId, ownerId, needle, noteId, token)));
+    if (!visible) return null;
+    const item = await ownedItem(ctx, ownerId, kind, id);
+    if (!item) return null;
+    return { kind, id, name: item.name, mimeType: item.mimeType, size: item.size, createdAt: item.createdAt, url: await ctx.storage.getUrl(item.storageId), mine };
+  },
+});
 
 /** Removes the links to one item (it was deleted). */
 async function dropShares(ctx: MutationCtx, userId: Id<"users">, kind: StoredKind, itemId: string) {

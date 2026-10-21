@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <strong>Sign-in:</strong> your email address and password (stored hashed, so nobody can read it), or, with Google, your email and name.
           </li>
           <li>
-            <strong>Your stuff:</strong> tool settings, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (and their settings file), your Score Writer scores, recordings and any files you upload (PDFs,
+            <strong>Your stuff:</strong> tool settings, how long you used each tool on each day (for its streak and stats), tune lists, chord charts, setlists, your Shed Log, your Shed Notes (with their templates and settings file), your Score Writer scores, recordings and any files you upload (PDFs,
             images, audio, video and so on, on their own or attached to a tune). Each account can store up to 100 MB.
             When you sign in, soniroll uses what&apos;s saved to the account; it doesn&apos;t merge in what was saved in that browser.
           </li>
@@ -59,7 +59,12 @@ export default function PrivacyPage() {
             whoever has it. Recordings attached to a shared setlist can be played by them too. A shared tune shows its keys, tempos, chord chart, the
             files attached to it and its recordings (never its notes), and whoever has the link can download those files and save a copy. A shared file
             can be opened, downloaded and copied the same way; your username shows only if your profile is public. Stop sharing
-            at any time and the link stops working.
+            at any time and the link stops working. A Shed Note you share with someone (by username) can be read by them, and changed by them if you
+            let them edit; they see your username. A note&apos;s link opens it for the people you shared it with or, if you choose, for anyone who has the
+            link (to read, with your username and the scores in it). Pictures and files you put in a note (pasting one saves it to your files) can
+            be seen, played and downloaded by everyone who can open that note, and by your students when they&apos;re in a lesson&apos;s notes; a
+            picture someone else pastes into a note you share with them is stored in their account. Turn the link off or remove someone and they
+            can&apos;t open it any more.
           </li>
           <li>
             <strong>Lessons:</strong> once you join a teacher, they see a summary of your Shed Log, how you&apos;re doing on the routines they gave you

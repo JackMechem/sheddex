@@ -24,6 +24,7 @@ import { VimSwitch } from "./NotePane";
 export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: { noteId: string; onClose: () => void; onDetach?: () => void; detachLabel?: string }) {
   const router = useRouter();
   const { note, setBody, flush, saveState } = useNote(noteId);
+  const folder = note?.folder ?? "";
   const notes = useNoteList();
   const cfg = useNotesConfig();
   const rename = useMutation(api.shedNotes.rename);
@@ -67,11 +68,22 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
         flush();
         if (hit) router.push(`/shed-notes?id=${encodeURIComponent(hit.id)}`);
         else if (o?.create)
-          void create({ title })
+          void create({ title, folder })
             .then((m) => router.push(`/shed-notes?id=${encodeURIComponent(m.id)}`))
             .catch((e) => setNotice(errorText(e)));
       },
       openScore: (scoreId, onDone) => setNotation({ scoreId, onDone }),
+      createLinkedNote: async (title) => {
+        try {
+          await create({ title, folder });
+        } catch (e) {
+          setNotice(errorText(e));
+        }
+      },
+      openPath: (path) => {
+        flush();
+        router.push(path);
+      },
       setConfig: (key, value) => {
         if (!cfg.setValue(key, value)) setNotice("Fix the settings file first — it isn't valid JSON right now.");
       },
@@ -79,7 +91,7 @@ export default function NoteDialog({ noteId, onClose, onDetach, detachLabel }: {
       save: flush,
       closeNote: () => closeRef.current(),
     }),
-    [notes, flush, router, create, cfg],
+    [notes, flush, router, create, cfg, folder],
   );
   const titles = useMemo(() => (notes ?? []).map((n) => ({ title: n.title, folder: n.folder })), [notes]);
 

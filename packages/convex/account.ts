@@ -306,6 +306,24 @@ export const performDelete = internalMutation({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     for (const row of notes) await ctx.db.delete(row._id);
+    // Notes shared by or with this account.
+    for (const index of ["by_owner", "by_user"] as const) {
+      const rows = await ctx.db
+        .query("shedNoteShares")
+        .withIndex(index, (q) => q.eq(index === "by_owner" ? "ownerId" : "userId", userId))
+        .collect();
+      for (const row of rows) await ctx.db.delete(row._id);
+    }
+    const noteFolders = await ctx.db
+      .query("shedNoteFolders")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of noteFolders) await ctx.db.delete(row._id);
+    const noteTemplates = await ctx.db
+      .query("shedNoteTemplates")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const row of noteTemplates) await ctx.db.delete(row._id);
 
     // Bass Genius players and their transcriptions.
     for (const table of ["bassTranscriptions", "bassPlayers"] as const) {
