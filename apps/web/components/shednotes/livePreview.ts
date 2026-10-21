@@ -5,6 +5,7 @@ import type { SyntaxNode } from "@lezer/common";
 import { WIKILINK_RE, parseLinkInner, titleKey } from "@jam-practice/core/shedNotes";
 import type { NoteActions } from "./commands";
 import { addEmbed, ownerFacet, removeEmbed } from "./embedStore";
+import { type FileEmbed, findFileEmbeds } from "./fileEmbedSetup";
 
 /**
  * Obsidian-style live preview for the markdown editor: the text stays markdown, but marks hide
@@ -352,11 +353,14 @@ export function renderNotation(el: HTMLElement, abc: string) {
 /** Puts the cursor into a block's source (which shows it), on a plain click. */
 function revealOnClick(wrap: HTMLElement, view: EditorView) {
   wrap.addEventListener("mousedown", (e) => {
-    if ((e.target as HTMLElement).closest("button, a, [data-note]")) return;
+    // Its own controls (buttons, a player, a PDF) work as they are.
+    if ((e.target as HTMLElement).closest("button, a, audio, video, iframe, [data-note]")) return;
     e.preventDefault();
     const pos = view.posAtDOM(wrap);
     const block = findBlocks(view.state).find((b) => pos >= b.from && pos <= b.to + 1);
+    const file = block ? null : findFileEmbeds(view.state).find((f) => pos >= f.from && pos <= f.to + 1);
     if (block) view.dispatch({ selection: { anchor: block.bodyFrom } });
+    else if (file) view.dispatch({ selection: { anchor: file.to } });
     view.focus();
   });
 }
@@ -405,7 +409,7 @@ class ScoreWidget extends WidgetType {
   toDOM(view: EditorView) {
     const wrap = document.createElement("div");
     wrap.className = `cm-score${this.editing ? " cm-abc-editing" : ""}`;
-    addEmbed({ el: wrap, scoreId: this.scoreId, view, owner: view.state.facet(ownerFacet) });
+    addEmbed({ el: wrap, kind: "score", id: this.scoreId, view, owner: view.state.facet(ownerFacet) });
     if (!this.editing) revealOnClick(wrap, view);
     return wrap;
   }
@@ -417,9 +421,47 @@ class ScoreWidget extends WidgetType {
   }
 }
 
-function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
+/** A file in the note (`![name](file:…)` on a line of its own): an empty box the note's editor
+    renders the file into (`FileEmbeds`). */
+class FileWidget extends WidgetType {
+  constructor(
+    readonly ref: string,
+    readonly name: string,
+    readonly width: number | undefined,
+    readonly editing: boolean,
+  ) {
+    super();
+  }
+  eq(other: FileWidget) {
+    return other.ref === this.ref && other.name === this.name && other.width === this.width && other.editing === this.editing;
+  }
+  get estimatedHeight() {
+    return 240;
+  }
+  toDOM(view: EditorView) {
+    const wrap = document.createElement("div");
+    wrap.className = `cm-file${this.editing ? " cm-file-editing" : ""}`;
+    addEmbed({ el: wrap, kind: "file", id: this.ref, name: this.name, width: this.width, view, owner: view.state.facet(ownerFacet) });
+    if (!this.editing) revealOnClick(wrap, view);
+    return wrap;
+  }
+  destroy(dom: HTMLElement) {
+    removeEmbed(dom);
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
+
+function notationDecos(state: EditorState, blocks: Block[], files: FileEmbed[]): DecorationSet {
   if (!state.facet(liveFacet)) return Decoration.none;
   const out: Range<Decoration>[] = [];
+  for (const f of files) {
+    const editing = touches(state, f.from, f.to);
+    const widget = new FileWidget(f.ref, f.name, f.width, editing);
+    if (editing) out.push(Decoration.widget({ widget, block: true, side: 1 }).range(f.to));
+    else out.push(Decoration.replace({ widget, block: true }).range(f.from, f.to));
+  }
   for (const b of blocks) {
     const editing = touches(state, b.from, b.to);
     const widget = b.kind === "score" ? new ScoreWidget(scoreIdOf(b.body), editing) : new AbcWidget(b.body, editing);
@@ -429,16 +471,18 @@ function notationDecos(state: EditorState, blocks: Block[]): DecorationSet {
   return Decoration.set(out, true);
 }
 
-const notationField = StateField.define<{ blocks: Block[]; decos: DecorationSet }>({
+const notationField = StateField.define<{ blocks: Block[]; files: FileEmbed[]; decos: DecorationSet }>({
   create(state) {
     const blocks = findBlocks(state);
-    return { blocks, decos: notationDecos(state, blocks) };
+    const files = findFileEmbeds(state);
+    return { blocks, files, decos: notationDecos(state, blocks, files) };
   },
   update(value, tr) {
     const liveChanged = tr.startState.facet(liveFacet) !== tr.state.facet(liveFacet);
     if (!tr.docChanged && !tr.selection && !liveChanged) return value;
     const blocks = tr.docChanged ? findBlocks(tr.state) : value.blocks;
-    return { blocks, decos: notationDecos(tr.state, blocks) };
+    const files = tr.docChanged ? findFileEmbeds(tr.state) : value.files;
+    return { blocks, files, decos: notationDecos(tr.state, blocks, files) };
   },
   provide: (f) => EditorView.decorations.from(f, (v) => v.decos),
 });

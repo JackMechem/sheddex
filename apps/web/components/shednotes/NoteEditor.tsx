@@ -10,8 +10,11 @@ import { search, searchKeymap } from "@codemirror/search";
 import { Compartment, EditorState, Prec, Transaction } from "@codemirror/state";
 import { EditorView, drawSelection, keymap, lineNumbers, placeholder as placeholderExt } from "@codemirror/view";
 import { getCM, vim } from "@replit/codemirror-vim";
-import { useEffect, useId, useRef } from "react";
+import { useConvexAuth, useMutation } from "convex/react";
+import { useEffect, useId, useRef, useState } from "react";
+import { api } from "@jam-practice/convex/_generated/api";
 import { titleKey } from "@jam-practice/core/shedNotes";
+import { errorText, uploadFile } from "@/lib/files";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
 import { type NoteActions, runCommand } from "./commands";
 import { type NoteTitle, editorTheme, highlightStyle, noteTitlesFacet, wikilinkCompletion, wordCompletion, wordCompletionFacet } from "./editorSetup";
@@ -19,12 +22,14 @@ import { actionsFacet, liveFacet, livePreview, titlesFacet } from "./livePreview
 import { tables } from "./tables";
 import ScoreEmbeds, { type ScoreContext } from "./ScoreEmbeds";
 import { ownerFacet } from "./embedStore";
+import FileEmbeds, { FilePickDialog } from "./FileEmbeds";
+import { embedText, fileActionsFacet, fileEmbeds, insertOnOwnLine, uploadIntoNote } from "./fileEmbedSetup";
 import { applyVimConfig, registerVimEditor, vimMappingWait } from "./vimSetup";
 
 /**
  * The Shed Notes editor (CodeMirror 6, the editor Obsidian is built on): markdown with live
- * preview, `[[` suggestions, notation blocks, search (Ctrl/⌘-F), and vim when the settings file
- * turns it on. `language="json"` is the settings file itself. The text is only read when it
+ * preview, `[[` suggestions, notation blocks, files (paste or drop a picture: it goes to your
+ * Files and shows in the note), search (Ctrl/⌘-F), and vim when the settings file turns it on. `language="json"` is the settings file itself. The text is only read when it
  * mounts — give it a `key` per note.
  */
 export default function NoteEditor({
@@ -75,7 +80,14 @@ export default function NoteEditor({
   const actionsRef = useRef(actions);
   const onChangeRef = useRef(onChange);
   const lintRef = useRef(lint);
-  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes" | "words", Compartment> | null>(null);
+  const compartments = useRef<Record<"vim" | "keys" | "live" | "gutter" | "look" | "attrs" | "notes" | "words" | "files", Compartment> | null>(null);
+
+  // Files: pasted or dropped ones go up to your Files (signed in, in a note you can write in).
+  const { isAuthenticated } = useConvexAuth();
+  const canUpload = isAuthenticated && !readOnly && language === "markdown";
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const createFile = useMutation(api.files.create);
+  const [picking, setPicking] = useState<EditorView | null>(null);
 
   useEffect(() => {
     actionsRef.current = actions;
@@ -95,13 +107,14 @@ export default function NoteEditor({
       attrs: new Compartment(),
       notes: new Compartment(),
       words: new Compartment(),
+      files: new Compartment(),
     };
     compartments.current = c;
     const getActions = () => actionsRef.current;
     const lang =
       language === "json"
         ? [json(), linter((view) => [...jsonParseLinter()(view), ...(lintRef.current?.(view.state.doc.toString()) ?? [])], { delay: 300 })]
-        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion, wordCompletion], icons: false, optionClass: (c) => (c.type ? `cm-completion-${c.type}` : "") }), actionsFacet.of(getActions), ownerFacet.of(owner)];
+        : [markdown({ base: markdownLanguage }), livePreview, tables, autocompletion({ override: [wikilinkCompletion, wordCompletion], icons: false, optionClass: (c) => (c.type ? `cm-completion-${c.type}` : "") }), actionsFacet.of(getActions), ownerFacet.of(owner), fileEmbeds];
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -113,6 +126,7 @@ export default function NoteEditor({
           // Tab also takes a suggestion (Enter does already); with none open it does what it did.
           Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
           c.words.of([]),
+          c.files.of([]),
           history(),
           drawSelection(),
           closeBrackets(),
@@ -229,6 +243,26 @@ export default function NoteEditor({
     });
   }, [syncText]);
 
+  // What the editor can do with files (none signed out or read-only).
+  useEffect(() => {
+    const view = viewRef.current;
+    const c = compartments.current;
+    if (!view || !c || language !== "markdown") return;
+    const actions = canUpload
+      ? {
+          upload: async (file: File, name: string) => {
+            try {
+              return await uploadFile(file, () => generateUploadUrl(), (args) => createFile(args), undefined, name);
+            } catch (e) {
+              throw new Error(errorText(e, `Couldn't upload ${name}.`));
+            }
+          },
+          pick: (v: EditorView) => setPicking(v),
+        }
+      : null;
+    view.dispatch({ effects: c.files.reconfigure(fileActionsFacet.of(actions)) });
+  }, [canUpload, language, generateUploadUrl, createFile]);
+
   // The note list → link colours and `[[` suggestions.
   useEffect(() => {
     const view = viewRef.current;
@@ -241,6 +275,27 @@ export default function NoteEditor({
     <>
       <div ref={host} className={`min-h-0 ${className}`} />
       {language === "markdown" && <ScoreEmbeds owner={owner} context={scoreContext} />}
+      {language === "markdown" && <FileEmbeds owner={owner} context={scoreContext} />}
+      {picking && (
+        <FilePickDialog
+          onPick={(ref, name) => {
+            const v = picking;
+            setPicking(null);
+            insertOnOwnLine(v, v.state.selection.main.head, embedText(name.replace(/\.\w+$/, ""), ref));
+            v.focus();
+          }}
+          onUpload={(files) => {
+            const v = picking;
+            setPicking(null);
+            void uploadIntoNote(v, files, v.state.selection.main.head);
+            v.focus();
+          }}
+          onClose={() => {
+            picking.focus();
+            setPicking(null);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -3,6 +3,7 @@ import { EditorSelection, type ChangeSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { WIKILINK_RE, parseLinkInner } from "@jam-practice/core/shedNotes";
 import type { ShedNotesConfig } from "@/lib/shedNotesConfig";
+import { fileActionsFacet } from "./fileEmbedSetup";
 import { type Block, findBlocks, scoreIdOf } from "./livePreview";
 import { NEW_TABLE } from "./tables";
 
@@ -304,6 +305,17 @@ export const COMMANDS: Command[] = [
       const block = notationBlockAt(view, view.state.selection.main.head);
       if (block?.kind === "score") ctx.actions.openScore(scoreIdOf(block.body), () => {});
       else ctx.actions.openScore(null, (id) => insertScore(view, id));
+      return true;
+    },
+  },
+  {
+    id: "editor:insert-file",
+    name: "Insert a file (from your files, or upload one)",
+    editor: true,
+    run: (ctx) => {
+      const files = ctx.view?.state.facet(fileActionsFacet);
+      if (!ctx.view || !files) return false;
+      files.pick(ctx.view);
       return true;
     },
   },

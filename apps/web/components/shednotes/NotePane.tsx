@@ -24,6 +24,7 @@ import {
   SearchIcon,
   TrashIcon,
   UsersIcon,
+  ImageIcon,
 } from "@/components/tools";
 import { FONTS, getFont } from "@/lib/fonts";
 import ContextMenu, { type MenuState } from "@/components/ContextMenu";
@@ -366,6 +367,9 @@ export default function NotePane({
           ))}
           {mine && <button type="button" title={withKeys("Write music notation", "editor:insert-notation")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
+          </button>}
+          {canEdit && <button type="button" title={withKeys("Insert a file or picture (or paste one)", "editor:insert-file")} onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-surface-hover">
+            <ImageIcon className="h-3.5 w-3.5" /> File
           </button>}
         </div>
 

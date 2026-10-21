@@ -7,7 +7,7 @@ import ScoreDialog from "@/components/notation/ScoreDialog";
 import { type NoteActions, runCommand } from "@/components/shednotes/commands";
 import NoteEditor from "@/components/shednotes/NoteEditor";
 import { FORMAT, VimSwitch } from "@/components/shednotes/NotePane";
-import { NoteIcon } from "@/components/tools";
+import { ImageIcon, NoteIcon } from "@/components/tools";
 import { useNotesConfig } from "@/lib/useShedNotes";
 
 const noop = () => {};
@@ -57,6 +57,9 @@ export default function LessonNoteEditor({
           ))}
           <button type="button" title="Write music notation" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-notation")} className="flex shrink-0 items-center gap-1 rounded-lg bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent/25">
             <NoteIcon className="h-3.5 w-3.5" /> Notation
+          </button>
+          <button type="button" title="Insert a file or picture (or paste one)" onMouseDown={(e) => e.preventDefault()} onClick={() => run("editor:insert-file")} className="flex shrink-0 items-center gap-1 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-surface-hover">
+            <ImageIcon className="h-3.5 w-3.5" /> File
           </button>
           <span className="flex-1" />
           <VimSwitch on={settings.vimMode} onChange={(on) => void setValue("vimMode", on)} />

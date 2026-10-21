@@ -54,9 +54,9 @@ export const list = query({
   },
 });
 
-/** Whether `userId` may read the teacher's score `scoreId` because it's in a note of the lesson
-    `lessonId` they're part of (students: not in a lesson that's still hidden from them). */
-async function sharedInLesson(ctx: QueryCtx, userId: Id<"users">, ownerId: Id<"users">, scoreId: string, lessonId: string) {
+/** Whether `userId` may read the teacher's score (or file) `scoreId` because it's in a note of the
+    lesson `lessonId` they're part of (students: not in a lesson that's still hidden from them). */
+export async function sharedInLesson(ctx: QueryCtx, userId: Id<"users">, ownerId: Id<"users">, scoreId: string, lessonId: string) {
   const id = ctx.db.normalizeId("lessonStudents", lessonId);
   if (!id) return false;
   const lesson = await ctx.db.get(id);
@@ -71,9 +71,10 @@ async function sharedInLesson(ctx: QueryCtx, userId: Id<"users">, ownerId: Id<"u
   return items.some((it) => it.kind === "note" && !(it.sessionId && hidden.has(it.sessionId)) && it.body.includes(scoreId));
 }
 
-/** Whether a score is shown in a Shed Note that the viewer can see (shared with them, or by its
-    link) and that belongs to the score's owner. */
-async function sharedInNote(ctx: QueryCtx, userId: Id<"users"> | null, ownerId: Id<"users">, scoreId: string, noteId?: string, token?: string) {
+/** Whether a score (or file) is shown in a Shed Note that the viewer can see (shared with them, or
+    by its link) and that its owner can edit: their own note, or one shared with them to edit (a
+    picture someone pasted into your note is theirs). */
+export async function sharedInNote(ctx: QueryCtx, userId: Id<"users"> | null, ownerId: Id<"users">, scoreId: string, noteId?: string, token?: string) {
   let note = null;
   if (token) {
     note = await ctx.db
@@ -86,7 +87,8 @@ async function sharedInNote(ctx: QueryCtx, userId: Id<"users"> | null, ownerId: 
     note = id ? await ctx.db.get(id) : null;
     if (note && !(await noteAccess(ctx, note, userId))) return false;
   }
-  return !!note && note.userId === ownerId && note.body.includes(scoreId);
+  if (!note || !note.body.includes(scoreId)) return false;
+  return note.userId === ownerId || (await noteAccess(ctx, note, ownerId)) === "write";
 }
 
 /** One score with its music; null when it's gone or you can't see it. Yours; or someone else's

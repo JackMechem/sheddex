@@ -10,12 +10,14 @@ import { ScoreIcon } from "@/components/tools";
 import { cleanScore } from "@/lib/bassTranscription";
 import { loadAbcjs, renderNotation, scoreIdOf } from "./livePreview";
 import type { ScoreContext } from "./ScoreEmbeds";
+import { FileEmbedView } from "./FileEmbeds";
+import { parseEmbedLine } from "./fileEmbedSetup";
 
 /**
  * A note drawn as a page, not an editor — for printing (Export as PDF) and for a note opened from
  * its link. CodeMirror only draws the lines on screen, so a long note wouldn't print whole.
- * Markdown (with tables and checkboxes), [[links]] as pills, ==highlights==, and the notation
- * blocks as music. Any HTML typed in a note is shown as text, and links only go to web pages.
+ * Markdown (with tables and checkboxes), [[links]] as pills, ==highlights==, the notation
+ * blocks as music, and files (`![name](file:…)` lines) as pictures, players or cards. Any HTML typed in a note is shown as text, and links only go to web pages.
  */
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -74,7 +76,7 @@ md.use({
   ],
 });
 
-type Part = { kind: "md"; text: string } | { kind: "score"; id: string } | { kind: "abc"; abc: string };
+type Part = { kind: "md"; text: string } | { kind: "score"; id: string } | { kind: "abc"; abc: string } | { kind: "file"; ref: string; name: string; width?: number };
 
 /** The note's text, split around its notation blocks (the same fences the editor draws). */
 export function splitNote(body: string): Part[] {
@@ -88,6 +90,12 @@ export function splitNote(body: string): Part[] {
   for (let i = 0; i < lines.length; i++) {
     const fence = /^(```|~~~)\s*(\S*)/.exec(lines[i]);
     const kind = fence ? (/^score$/i.test(fence[2]) ? "score" : /^(abc|music)$/i.test(fence[2]) ? "abc" : null) : null;
+    const file = fence ? null : parseEmbedLine(lines[i]);
+    if (file) {
+      flush();
+      parts.push({ kind: "file", ...file });
+      continue;
+    }
     if (!fence || !kind) {
       buf.push(lines[i]);
       // Skip over other code blocks whole, so a fence inside them isn't read as notation.
@@ -159,6 +167,8 @@ export default function NoteDocument({ body, context, fontFamily, className = ""
           <div key={i} dangerouslySetInnerHTML={{ __html: (p as { html: string }).html }} />
         ) : p.kind === "score" ? (
           <ScoreBlock key={i} id={p.id} context={context} />
+        ) : p.kind === "file" ? (
+          <FileEmbedView key={i} fileRef={p.ref} name={p.name} width={p.width} context={context} />
         ) : (
           <AbcBlock key={i} abc={p.abc} />
         ),
@@ -167,5 +177,5 @@ export default function NoteDocument({ body, context, fontFamily, className = ""
   );
 }
 
-/** How many notation blocks a note has (the print page waits for them to draw). */
+/** How many notation blocks and files a note has (the print page waits for them to draw). */
 export const notationCount = (body: string) => splitNote(body).filter((p) => p.kind !== "md").length;

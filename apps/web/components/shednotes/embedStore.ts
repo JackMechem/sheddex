@@ -3,15 +3,16 @@ import type { EditorView } from "@codemirror/view";
 import { useSyncExternalStore } from "react";
 
 /**
- * Scores shown inside a note. CodeMirror widgets live outside React, but a score needs React (and
- * the app's Convex connection), so each widget only registers its empty DOM node here, and the
- * editor component that owns that view renders the score into it through a portal.
+ * Scores and files shown inside a note. CodeMirror widgets live outside React, but a score or a
+ * file needs React (and the app's Convex connection), so each widget only registers its empty DOM
+ * node here, and the editor component that owns that view renders into it through a portal.
  */
 
 /** Which editor component a view belongs to (so each renders only its own scores). */
 export const ownerFacet = Facet.define<string, string>({ combine: (v) => v[0] ?? "" });
 
-export type Embed = { el: HTMLElement; scoreId: string; view: EditorView; owner: string; key: number };
+/** `id` is a score's id, or a file's ref (what follows `file:`). A file can have a width (`|300`). */
+export type Embed = { el: HTMLElement; kind: "score" | "file"; id: string; view: EditorView; owner: string; key: number; name?: string; width?: number };
 
 let embeds: Embed[] = [];
 let nextKey = 1;

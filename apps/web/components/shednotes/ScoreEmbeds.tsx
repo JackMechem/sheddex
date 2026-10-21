@@ -20,8 +20,8 @@ const noop = () => {};
 export type ScoreContext = { lessonId?: string; noteId?: string; token?: string };
 
 export default function ScoreEmbeds({ owner, context }: { owner: string; context?: ScoreContext }) {
-  const embeds = useEmbeds().filter((e) => e.owner === owner);
-  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.scoreId} view={e.view} context={context} />, e.el, e.key))}</>;
+  const embeds = useEmbeds().filter((e) => e.owner === owner && e.kind === "score");
+  return <>{embeds.map((e) => createPortal(<ScoreEmbed scoreId={e.id} view={e.view} context={context} />, e.el, e.key))}</>;
 }
 
 /** A score in a note: its title, Edit (the notation editor) and the score itself, read-only. */

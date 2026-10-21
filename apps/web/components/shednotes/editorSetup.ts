@@ -185,6 +185,16 @@ export const editorTheme = EditorView.theme({
   ".cm-abc-paper svg": { maxWidth: "100%" },
   ".cm-abc-empty, .cm-abc-warning": { margin: "0", fontSize: "12px", color: "var(--muted)" },
   ".cm-score": { margin: "6px 0", padding: "10px 12px", borderRadius: "14px", backgroundColor: "var(--surface)", color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
+  // A file in the note: drawn by FileEmbeds (React) inside this box.
+  ".cm-file": { margin: "6px 0", color: "var(--foreground)", cursor: "text", whiteSpace: "normal", lineHeight: "1.4" },
+  ".cm-file-editing": { marginTop: "2px", padding: "6px", borderRadius: "14px", border: "1px dashed color-mix(in oklab, var(--accent) 50%, transparent)" },
+  ".cm-upload": { display: "flex", alignItems: "center", gap: "8px", margin: "4px 0", padding: "8px 12px", borderRadius: "12px", backgroundColor: "var(--surface)", color: "var(--muted)", fontSize: "13px", whiteSpace: "normal", lineHeight: "1.4" },
+  ".cm-upload:not(.cm-upload-failed)::before": { content: '""', flex: "none", width: "8px", height: "8px", borderRadius: "999px", backgroundColor: "var(--accent)", animation: "cm-upload-pulse 1s ease-in-out infinite alternate" },
+  ".cm-upload-failed": { color: "var(--danger)", backgroundColor: "color-mix(in oklab, var(--danger) 10%, transparent)" },
+  ".cm-upload span": { flex: "1", minWidth: "0" },
+  ".cm-upload button": { flex: "none", width: "24px", height: "24px", borderRadius: "999px", fontSize: "16px", lineHeight: "1", color: "inherit", cursor: "pointer" },
+  "@keyframes cm-upload-pulse": { from: { opacity: "0.3" }, to: { opacity: "1" } },
+  "@media (prefers-reduced-motion: reduce)": { ".cm-upload::before": { animation: "none" } },
 });
 
 /** Markdown (and JSON, for the settings file) colours. Marks are muted; content keeps its weight. */
@@ -286,8 +296,11 @@ function wordCounts(doc: Text): Map<string, number> {
   let counts = wordCache.get(doc);
   if (!counts) {
     counts = new Map();
-    // Not from code or notation blocks.
-    const prose = doc.toString().replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "");
+    // Not from code or notation blocks, or links' and files' addresses.
+    const prose = doc
+      .toString()
+      .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, "")
+      .replace(/\]\([^)\n]*\)/g, "]");
     for (const m of prose.matchAll(WORD)) if (m[0].length >= 4 && /\p{L}/u.test(m[0])) counts.set(m[0], (counts.get(m[0]) ?? 0) + 1);
     wordCache.set(doc, counts);
   }

@@ -447,3 +447,52 @@ selection when an ex command runs (`:'<,'>`); `runById` restores it from `vim.la
 (inclusive end; whole lines for V) when the command has a range, so
 `vnoremap <leader>b :editor:toggle-bold<CR>` bolds the selection. Checked in the harness: `<leader>fg`
 opens search; `ve` then `<leader>b` gives `**Jthird**`. Guide and help updated.
+
+## Pictures and files in notes (2026-10-20)
+
+Jack: "paste images and have them display nicely in notes… it should go to the files also… embed anything in
+the files into a note somehow".
+
+- **Syntax:** a line that is only `![name](file:<ref>)` shows the file. `<ref>` is an upload's id (`files`
+  table), or `<kind>/<id>` for anything else on the Files page (`recording/…`, `song/…`, `lesson/…`,
+  `handin/<sub>:<file>`; not profile images). `![name|300](…)` sets a picture's width. A lone
+  `![…](https://…)` shows that web picture. Standard markdown, so exports stay readable (the `file:` refs
+  only resolve inside soniroll). Embeds inside fenced code are ignored.
+- **Backend:** `files.embed({ref, lessonId?, noteId?, token?})`: yours, or someone else's when the note /
+  lesson that shows it is one you can see — the same checks as scores in notes (`sharedInNote`,
+  `sharedInLesson`, now exported from `scores.ts`, matching on `file:<ref>` in the body). `sharedInNote` now
+  also accepts an owner who has **edit** access to the note (a collaborator's pasted picture is stored in
+  their account), for scores too. Returns name, type, size, date, URL. No new table: pasted files are
+  ordinary `files` rows, so they're on the Files page, count toward the 100 MB, and account deletion
+  already removes them. Deleting the file leaves a "isn't available" card in the note.
+- **Editor** (`fileEmbedSetup.ts` — not `fileEmbeds.ts`, which would clash with `FileEmbeds.tsx` on
+  case-insensitive disks): paste (only when the clipboard has files and no plain text, so spreadsheet cells
+  still paste as text) or drop uploads through `fileActionsFacet` (set by `NoteEditor` when signed in and
+  not read-only). While uploading, a `pendingField` block widget says "Uploading … to your files…" at the
+  spot (its position maps through edits); nothing goes into the text until the file is saved, so closing a
+  note mid-upload leaves no broken line (the file is still in Files). Errors show in red for 8 s with ×;
+  an out-of-room error drops the rest of the batch. Pasted `image.png` is renamed
+  `Pasted image YYYY-MM-DD HHMMSS.png`. `insertOnOwnLine` always ends the line, so typing on doesn't join
+  the embed line (found in testing: the picture stopped showing).
+- **Rendering:** `FileWidget` in `livePreview.ts` (in the same state field as notation; live preview only)
+  registers an empty box in `embedStore` (now `{kind: "score" | "file", id}`), and `FileEmbeds.tsx` portals
+  `FileEmbedView` into it: picture (max 36rem tall, ⤢ / double-click → `FilePreviewDialog`), PDF (card with
+  Open + an iframe from `sm` up, hidden in print), audio/video players, other files a Download card.
+  Clicking it (not its controls) puts the cursor on the source line. `NoteDocument` (Export as PDF, a
+  note's link page) renders the same view and waits for pictures to load before printing.
+- **Insert a file:** the **File** button above a note (and in lesson notes) or `editor:insert-file` opens
+  `FilePickDialog`: everything in `files.storage`, searchable, plus Upload.
+- Word suggestions ignore link/file addresses now (ids were becoming suggestions).
+- Help (steps, features, "Pictures and files"), Files help, changelog (0.10.0), privacy (people who can open
+  a note can see and download its files; a collaborator's pasted pictures are in their account).
+
+**Verified** in the harness (nix Chromium, mock backend that captures the upload): pasting a canvas PNG
+(pending line, then the picture; typing on after it), the picker inserting a PDF (frame + Open), a
+recording (`recording/r9`, audio player) and a .zip (Download card); search in the picker; an
+out-of-room error; dropping a .txt at the end; `|200` width; a missing file's card; 390 px dark (no
+overflow), click → source line with the dashed box, ⤢ → full-size dialog; source mode shows no widgets;
+Export as PDF markup (files in order, code block untouched). `tsc`, eslint, Convex push to dev, and
+`files.embed` with bad refs on dev (null).
+**Not verified:** a real upload to Convex signed in, the shared-link page / shared-with-you / lesson student
+seeing someone else's picture on the real backend, real clipboard pastes from other apps (only synthetic
+paste events), iOS/Android paste, very large pictures.

@@ -41,6 +41,7 @@ export const RELEASES: Release[] = [
       { kind: "new", text: "**Shed Notes**: notes in markdown that look finished as you type. Link notes with [[ ]] and see what links back, use folders and #tags, and search everything." },
       { kind: "new", text: "Attach notes to a **routine on a day**, a **day**, a **tune** or your **lessons** with Add notes — a new note, or one you already have." },
       { kind: "new", text: "**Vim keys** in notes if you want them, and settings for your own keys, vim mappings and commands — as a page of switches or as the JSON file." },
+      { kind: "new", text: "**Pictures and files in notes:** paste a picture or drop files into a note and they're saved to your Files and shown right there. **File** above a note puts in anything from your Files: PDFs, recordings, audio and video play in the note." },
       { kind: "new", text: "**Word suggestions** as you type in notes: up to four words that finish what you're typing, yours first (Enter or Tab fills one in). Off until you turn it on in Shed Notes' settings." },
       { kind: "new", text: "**Score Writer**: write music in notation — treble or bass clef, any key and time, notes typed or clicked onto the staff, chord symbols — and play it back." },
       { kind: "new", text: "Put **notation in any note**: it's a Score Writer score, shown right in the note." },
